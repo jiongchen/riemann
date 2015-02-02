@@ -10,6 +10,7 @@ using namespace Eigen;
 
 MatrixXi tris;
 MatrixXd nods;
+MatrixXd uv;
 
 int main(int argc, char *argv[])
 {
@@ -19,8 +20,9 @@ int main(int argc, char *argv[])
     }
     boost::filesystem::create_directory("./geom");
     igl::readOFF(argv[1], nods, tris);
+    cout << "# tris size: " << tris.rows() << " " << tris.cols() << "\n";
+    cout << "# nods size: " << nods.rows() << " " << nods.cols() << "\n";
     igl::writeOBJ("./geom/camelhead.obj", nods, tris);
-
     cout << "# done\n";
     return 0;
 }
