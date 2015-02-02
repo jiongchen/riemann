@@ -1,3 +1,3 @@
 surf-param
 =========================================================
-trying to get familiar to ligigl, and may implement some classical algorithms for surface parameterization.
+trying to get familiar with libigl, and may implement some classical algorithms for surface parameterization gradually.
