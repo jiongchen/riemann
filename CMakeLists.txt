@@ -3,6 +3,9 @@ cmake_minimum_required(VERSION 2.8)
 
 list(APPEND CMAKE_CXX_FLAGS "-std=c++0x -fpermissive -fopenmp")
 
+include($ENV{HOME}/usr/share/cmake/Modules/geo_sim_sdk.cmake)
+include_geo_sim_sdk()
+link_geo_sim_sdk()
 include_directories(${CMAKE_SOURCE_DIR})
 
 # BOOST

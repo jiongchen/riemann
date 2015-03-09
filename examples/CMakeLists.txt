@@ -12,3 +12,10 @@ add_executable(test_harmonic test_harmonic.cc)
 target_link_libraries(test_harmonic
 ${Boost_LIBRARIES}
 )
+
+add_executable(test_curvature test_curvature.cc)
+target_link_libraries(test_curvature
+${Boost_LIBRARIES}
+)
+
+add_executable(test_cotmatrix test_cotmatrix.cc)
