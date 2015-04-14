@@ -19,3 +19,10 @@ ${Boost_LIBRARIES}
 )
 
 add_executable(test_cotmatrix test_cotmatrix.cc)
+
+add_executable(test_unit test_unit.cc)
+target_link_libraries(test_unit
+    surfparam
+    zjucad-ptree
+    ${Boost_LIBRARIES}
+)
