@@ -1,5 +1,7 @@
 #include "lscm.h"
 
+#include <jtflib/mesh/mesh.h>
+
 #include "energy.h"
 #include "util.h"
 
@@ -40,24 +42,25 @@ int lscm_param::apply() {
     }
 
     const size_t dim = conformal_energy_->Nx();
-    // assemble LHS
+    ///> assemble LHS
     vector<Triplet<double>> trips;
     conformal_energy_->Hes(uv_.data(), &trips);
-    SparseMatrix<double> K_(dim, dim);
-    K_.reserve(trips.size());
-    K_.setFromTriplets(trips.begin(), trips.end());
-    // assemble rhs
-    VectorXd rhs(dim);
+    SparseMatrix<double> K(dim, dim);
+    K.reserve(trips.size());
+    K.setFromTriplets(trips.begin(), trips.end());
+
+    ///> assemble rhs
+    VectorXd rhs = VectorXd::Zero(dim);
     conformal_energy_->Gra(uv_.data(), rhs.data());
     rhs = -rhs;
 
     if ( !fixed_dofs_.empty() ) {
-        rm_spmat_col_row(K_, g2l_);
+        rm_spmat_col_row(K, g2l_);
         rm_vector_row(rhs, g2l_);
     }
 
     SimplicialCholesky<SparseMatrix<double>> sol;
-    sol.compute(K_);
+    sol.compute(K);
     if ( sol.info() != Success ) {
         cerr << "# info: failed to precompute system matrix\n";
         return __LINE__;
@@ -75,6 +78,11 @@ int lscm_param::apply() {
         dx = delta;
     }
     uv_ += dx;
+
+    double value = 0;
+    conformal_energy_->Val(uv_.data(), &value);
+    cout << "# info: energy: " << value << endl;
+
     return 0;
 }
 

@@ -19,7 +19,7 @@ using boost::property_tree::ptree;
 int test_param_area(ptree &pt) {
     matrix<size_t> tris;
     matrix<double> nods, uv;
-    jtf::mesh::load_obj("../../dat/plane_with_hole.obj", tris, nods);
+    jtf::mesh::load_obj("../../dat/lilium_param.obj", tris, nods);
 
     uv.resize(2, nods.size(2));
 #pragma omp parallel for

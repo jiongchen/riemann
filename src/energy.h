@@ -27,7 +27,7 @@ class param_area : public Functional<double>
 public:
     typedef zjucad::matrix::matrix<size_t> mati_t;
     typedef zjucad::matrix::matrix<double> matd_t;
-    param_area(const mati_t &tris, const matd_t &nods, const double w=-1.0);
+    param_area(const mati_t &tris, const matd_t &nods, const double w=1.0);
     size_t Nx() const;
     int Val(const double *x, double *val) const;
     int Gra(const double *x, double *gra) const;

@@ -10,7 +10,7 @@ using namespace Eigen;
 using namespace jtf::mesh;
 
 namespace surfparam {
-
+//==============================================================================
 dirichlet_energy::dirichlet_energy(const mati_t &tris, const matd_t &nods, const double w)
     : dim_(2*nods.size(2)), w_(w) {
     cotmatrix(tris, nods, 2, &L_);
@@ -66,28 +66,21 @@ size_t param_area::Nx() const {
 
 int param_area::Val(const double *x, double *val) const {
     Map<const VectorXd> X(x, dim_);
-    double sign_v = X.dot(A_ * X);
-    double sign_w = (sign_v < 0.0) ? -w_ : w_;
-    *val += 0.5 * sign_w * X.dot(A_ * X);
+    *val += 0.5 * w_ * X.dot(A_ * X);
     return 0;
 }
 
 int param_area::Gra(const double *x, double *gra) const {
     Map<const VectorXd> X(x, dim_);
     Map<VectorXd> grad(gra, dim_);
-    double sign_v = X.dot(A_ * X);
-    double sign_w = (sign_v < 0.0) ? -w_ : w_;
-    grad += sign_w * A_ * X;
+    grad += w_ * A_ * X;
     return 0;
 }
 
 int param_area::Hes(const double *x, vector<Triplet<double>> *hes) const {
-    Map<const VectorXd> X(x, dim_);
-    double sign_v = X.dot(A_ * X);
-    double sign_w = (sign_v < 0.0) ? -w_ : w_;
     for (size_t j = 0; j < A_.outerSize(); ++j)
         for (SparseMatrix<double>::InnerIterator it(A_, j); it; ++it)
-            hes->push_back(Triplet<double>(it.row(), it.col(), sign_w*it.value()));
+            hes->push_back(Triplet<double>(it.row(), it.col(), w_*it.value()));
     return 0;
 }
 

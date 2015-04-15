@@ -12,7 +12,7 @@ using namespace surfparam;
 int main(int argc, char *argv[])
 {
     if ( argc != 2 ) {
-        cerr << "usage: " << argv[1] << " model.obj\n";
+        cerr << "usage: " << argv[0] << " model.obj\n";
         return __LINE__;
     }
     boost::filesystem::create_directory("./dcp");
@@ -23,6 +23,7 @@ int main(int argc, char *argv[])
         cerr << "# no input file\n";
         return __LINE__;
     }
+    jtf::mesh::reorder_face(tris);
     jtf::mesh::save_obj("./dcp/orgin.obj", tris, nods);
 
     shared_ptr<jtf::mesh::edge2cell_adjacent> e2c(jtf::mesh::edge2cell_adjacent::create(tris, false));
