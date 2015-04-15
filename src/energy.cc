@@ -14,7 +14,7 @@ namespace surfparam {
 dirichlet_energy::dirichlet_energy(const mati_t &tris, const matd_t &nods, const double w)
     : dim_(2*nods.size(2)), w_(w) {
     cotmatrix(tris, nods, 2, &L_);
-    //
+    L_ = -L_;
 }
 
 size_t dirichlet_energy::Nx() const {
@@ -37,7 +37,7 @@ int dirichlet_energy::Gra(const double *x, double *gra) const {
 int dirichlet_energy::Hes(const double *x, vector<Triplet<double>> *hes) const {
     for (size_t j = 0; j < L_.outerSize(); ++j)
         for (SparseMatrix<double>::InnerIterator it(L_, j); it; ++it)
-            hes->push_back(Triplet<double>(it.row(), it.col(), it.value()));
+            hes->push_back(Triplet<double>(it.row(), it.col(), w_*it.value()));
     return 0;
 }
 //==============================================================================
@@ -45,7 +45,7 @@ param_area::param_area(const mati_t &tris, const matd_t &nods, const double w)
     : dim_(2*nods.size(2)), w_(w) {
     mati_t bnd_edge;
     int no_boundary = GetBoundaryEdge(tris, bnd_edge);
-    ASSERT(no_boundary == 0);   // for disk topology
+    ASSERT(no_boundary == 0);   // check for disk like topology
     vector<Triplet<double>> trips;
     for (size_t i = 0; i < bnd_edge.size(2); ++i) {
         size_t pi = bnd_edge(0, i);
@@ -66,21 +66,28 @@ size_t param_area::Nx() const {
 
 int param_area::Val(const double *x, double *val) const {
     Map<const VectorXd> X(x, dim_);
-    *val += 0.5 * w_ * X.dot(A_ * X);
+    double sign_v = X.dot(A_ * X);
+    double sign_w = (sign_v < 0.0) ? -w_ : w_;
+    *val += 0.5 * sign_w * X.dot(A_ * X);
     return 0;
 }
 
 int param_area::Gra(const double *x, double *gra) const {
     Map<const VectorXd> X(x, dim_);
     Map<VectorXd> grad(gra, dim_);
-    grad += w_ * A_ * X;
+    double sign_v = X.dot(A_ * X);
+    double sign_w = (sign_v < 0.0) ? -w_ : w_;
+    grad += sign_w * A_ * X;
     return 0;
 }
 
 int param_area::Hes(const double *x, vector<Triplet<double>> *hes) const {
+    Map<const VectorXd> X(x, dim_);
+    double sign_v = X.dot(A_ * X);
+    double sign_w = (sign_v < 0.0) ? -w_ : w_;
     for (size_t j = 0; j < A_.outerSize(); ++j)
         for (SparseMatrix<double>::InnerIterator it(A_, j); it; ++it)
-            hes->push_back(Triplet<double>(it.row(), it.col(), w_*it.value()));
+            hes->push_back(Triplet<double>(it.row(), it.col(), sign_w*it.value()));
     return 0;
 }
 

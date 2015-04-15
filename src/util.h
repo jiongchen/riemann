@@ -80,6 +80,15 @@ void rm_vector_row(Eigen::Matrix<T, -1, 1> &b,
 }
 
 template <typename T>
+void up_vector_row(const Eigen::Matrix<T, -1, 1> &l, const std::vector<size_t> &g2l, Eigen::Matrix<T, -1, 1> &g) {
+#pragma omp parallel for
+    for (size_t i = 0; i < g2l.size(); ++i) {
+        if ( g2l[i] != -1 )
+            g[i] = l[g2l[i]];
+    }
+}
+
+template <typename T>
 Eigen::SparseMatrix<T> sparse_diag_matrix(const Eigen::DiagonalMatrix<T, -1> &diag) {
     std::vector<Eigen::Triplet<T>> trips;
     for (size_t i = 0; i < diag.cols(); ++i)

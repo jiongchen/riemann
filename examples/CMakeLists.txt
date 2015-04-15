@@ -26,3 +26,9 @@ target_link_libraries(test_unit
     zjucad-ptree
     ${Boost_LIBRARIES}
 )
+
+add_executable(test_dcp test_dcp.cc)
+target_link_libraries(test_dcp
+    surfparam
+    ${Boost_LIBRARIES}
+)

@@ -28,7 +28,7 @@ int test_param_area(ptree &pt) {
         uv(1, i) = nods(2, i);
     }
 
-    shared_ptr<param_area> pa(new param_area(tris, nods, 1.0));
+    shared_ptr<param_area> pa(new param_area(tris, nods));
     double area = 0;
     pa->Val(&uv[0], &area);
     cout << area << endl;
