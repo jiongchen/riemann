@@ -32,3 +32,9 @@ target_link_libraries(test_dcp
     surfparam
     ${Boost_LIBRARIES}
 )
+
+add_executable(test_green test_green.cc)
+target_link_libraries(test_green
+    surfparam
+    ${Boost_LIBRARIES}
+)
