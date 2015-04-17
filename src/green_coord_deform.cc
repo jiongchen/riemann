@@ -24,9 +24,9 @@ int green_deform_2d::load_mesh(const char *file) {
     ///> assign X
     X_.resize(2*nods.size(2));
 #pragma omp parallel for
-    for (size_t i = 0; i < nods_.size(2); ++i) {
-        X_[2*i+0] = nods_(0, i);
-        X_[2*i+1] = nods_(2, i);
+    for (size_t i = 0; i < nods.size(2); ++i) {
+        X_[2*i+0] = nods(0, i);
+        X_[2*i+1] = nods(2, i);
     }
     return 0;
 }
@@ -40,7 +40,7 @@ int green_deform_2d::load_cage(const char *file) {
     for (size_t i = 0; i < ele_num; ++i)
         is >> cage_cell_(0, i) >> cage_cell_(1, i);
     size_t nods_num;
-    cage_nods_.resize(3, nods_num);
+    Xcage_.resize(3, nods_num);
     for (size_t i = 0; i < nods_num; ++i);
 
     ///> assign N
@@ -55,6 +55,8 @@ int green_deform_2d::calc_outward_normal() {
         Vector2d dir = Xcage_.segment<2>(2*cage_cell_(1, i))
                 - Xcage_.segment<2>(2*cage_cell_(0, i));
         dir /= dir.norm();
+        N_[2*i+0] = -dir[1];
+        N_[2*i+1] = -dir[0];
     }
     return 0;
 }
@@ -64,10 +66,15 @@ int green_deform_2d::calc_green_coords() {
 }
 
 int green_deform_2d::move_cage(const size_t id, const double *dx) {
+    Vector2d off;
+    off << dx[0] << dx[1];
+
+
     return 0;
 }
 
 int green_deform_2d::deform() {
+    calc_outward_normal();
     return 0;
 }
 
