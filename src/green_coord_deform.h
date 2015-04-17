@@ -10,7 +10,7 @@ class green_deform
 public:
     green_deform() {}
     virtual ~green_deform() {}
-    virtual int load_mesh(const char *file) = 0;
+    virtual int load_sample_points(const char *file) = 0;
     virtual int load_cage(const char *file) = 0;
     virtual int calc_green_coords() = 0;
     virtual int move_cage(const size_t id, const double *dx) = 0;
@@ -24,7 +24,7 @@ class green_deform_2d : public green_deform
 {
 public:
     green_deform_2d();
-    int load_mesh(const char *file);
+    int load_sample_points(const char *file);
     int load_cage(const char *file);
     int calc_green_coords();
     int move_cage(const size_t id, const double *dx);
@@ -34,16 +34,17 @@ public:
     int dump_cage(const char *file);
 protected:
     int calc_outward_normal();
+    int update_cage_edge_length();
 private:
     Eigen::MatrixXi cell_;
-    Eigen::VectorXd X_;
+    Eigen::MatrixXd nods_;
 
     Eigen::MatrixXi cage_cell_;
-    Eigen::VectorXd Xcage_;
-    Eigen::VectorXd N_;
+    Eigen::MatrixXd cage_nods_;
+    Eigen::MatrixXd cage_normal_;
 
-    Eigen::VectorXd d_;
-    Eigen::VectorXd s_;
+    Eigen::VectorXd rest_len_;
+    Eigen::VectorXd curr_len_;
     Eigen::SparseMatrix<double> phi_;
     Eigen::SparseMatrix<double> psi_;
 };
