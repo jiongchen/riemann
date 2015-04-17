@@ -13,8 +13,8 @@ namespace surfparam {
 
 lscm_param::lscm_param(const mati_t &tris, const matd_t &nods)
     : tris_(tris) {
-    buff_.push_back(shared_ptr<Functional<double>>(new dirichlet_energy(tris, nods)));
-    buff_.push_back(shared_ptr<Functional<double>>(new param_area(tris, nods)));
+    buff_.push_back(shared_ptr<Functional<double>>(new dirichlet_energy(tris_, nods)));
+    buff_.push_back(shared_ptr<Functional<double>>(new param_area(tris_, nods)));
     try {
         conformal_energy_.reset(new energy_t<double>(buff_));
     } catch ( exception &e ) {
@@ -22,6 +22,11 @@ lscm_param::lscm_param(const mati_t &tris, const matd_t &nods)
         exit(0);
     }
     uv_ = VectorXd::Zero(2*nods.size(2));
+    get_boundary_loop(tris_, bnd_);
+}
+
+int lscm_param::get_boundary_loop(const mati_t &cell, vector<size_t> &bnd) {
+    return 0;
 }
 
 void lscm_param::set_fixed_bnd_vert(const size_t id, const double *x) {
@@ -83,6 +88,32 @@ int lscm_param::apply() {
     conformal_energy_->Val(uv_.data(), &value);
     cout << "# info: energy: " << value << endl;
 
+    return 0;
+}
+
+int lscm_param::apply_spetral() {
+    const size_t dim = conformal_energy_->Nx();
+    ///> assemble Lc
+    vector<Triplet<double>> trips;
+    conformal_energy_->Hes(uv_.data(), &trips);
+    SparseMatrix<double> K(dim, dim);
+    K.reserve(trips.size());
+    K.setFromTriplets(trips.begin(), trips.end());
+
+    ///> construct e
+    MatrixXd e = MatrixXd::Zero(dim, 2);
+    for (size_t i = 0; i < dim/2; ++i) {
+        e(2*i+0, 0) = 1.0;
+        e(2*i+1, 1) = 1.0;
+    }
+
+    ///> assemble B
+    vector<Triplet<double>> btrips;
+
+    ///> assemble B-1/Vb*(Be)(Be)^T
+
+    ///> solve generalized eigenvalue problem
+    ///> (B-1/Vb(Be)(Be)^T)*u = miu*Lc*u
     return 0;
 }
 
