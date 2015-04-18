@@ -34,7 +34,7 @@ public:
     int dump_cage(const char *file);
 protected:
     int calc_outward_normal();
-    int update_cage_edge_length();
+    int calc_cage_edge_length(bool is_rest);
 private:
     Eigen::MatrixXi cell_;
     Eigen::MatrixXd nods_;

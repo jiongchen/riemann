@@ -4,7 +4,10 @@
 #include <jtflib/mesh/io.h>
 #include <zjucad/matrix/io.h>
 
+#include "config.h"
 #include "vtk.h"
+
+#define PI 3.141592653589793238462643383279502884197
 
 using namespace std;
 using namespace zjucad::matrix;
@@ -38,7 +41,6 @@ int green_deform_2d::load_cage(const char *file) {
         cerr << "# can not open " << file << "\n";
         return __LINE__;
     }
-
     size_t ele_num;
     string CELL;
     is >> CELL >> ele_num;
@@ -53,12 +55,27 @@ int green_deform_2d::load_cage(const char *file) {
     for (size_t i = 0; i < nods_num; ++i)
         is >> cage_nods_(0, i) >> cage_nods_(1, i);
 
-//    // get rest segment element length
-//    len_.resize(ele_num);
+    // get rest segment element length
+    rest_len_.resize(cage_cell_.cols());
+    curr_len_.resize(cage_cell_.cols());
+    calc_cage_edge_length(true);
 
     // calc initial normal
     cage_normal_.resize(2, cage_cell_.cols());
     calc_outward_normal();
+    return 0;
+}
+
+int green_deform_2d::calc_cage_edge_length(bool is_rest) {
+    if ( is_rest ) {
+#pragma omp parallel for
+        for (size_t i = 0; i < cage_cell_.cols(); ++i)
+            rest_len_[i] = (cage_nods_.col(cage_cell_(0, i))-cage_nods_.col(cage_cell_(1, i))).norm();
+    } else {
+#pragma omp parallel for
+        for (size_t i = 0; i < cage_cell_.cols(); ++i)
+            curr_len_[i] = (cage_nods_.col(cage_cell_(0, i))-cage_nods_.col(cage_cell_(1, i))).norm();
+    }
     return 0;
 }
 
@@ -74,6 +91,40 @@ int green_deform_2d::calc_outward_normal() {
 }
 
 int green_deform_2d::calc_green_coords() {
+    vector<Triplet<double>> phi_trips, psi_trips;
+#pragma omp parallel for
+    for (size_t pid = 0; pid < nods_.cols(); ++pid) {
+        for (size_t i = 0; i < cage_cell_.cols(); ++i) {
+            Vector2d a = cage_nods_.col(cage_cell_(1, i))-cage_nods_.col(cage_cell_(0, i));
+            Vector2d b = cage_nods_.col(cage_cell_(0, i))-nods_.col(pid);
+            double Q = a.dot(a);
+            double S = b.dot(b);
+            double R = 2*a.dot(b);
+            double BA = b.dot(a.norm()*cage_normal_.col(i));
+            double SRT = sqrt(4*S*Q-R*R);
+            double L0 = log(S);
+            double L1 = log(S+Q+R);
+            double A0 = atan2(R, SRT)/SRT;
+            double A1 = atan2(2*Q+R, SRT)/SRT;
+            double A10 = A1 - A0;
+            double L10 = L1 - L0;
+            double psi_entry = -a.norm()/(4*PI)*((4*S-R*R/Q)*A10 + R/(2*Q)*L10 + L1 - 2);
+            double phi_entry1 = -BA/(2*PI)*(L10/(2*Q) - A10*R/Q);
+            double phi_entry0 = +BA/(2*PI)*(L10/(2*Q) - A10*(2+R/Q));
+#pragma omp critical
+            {
+                psi_trips.push_back(Triplet<double>(i, pid, psi_entry));
+                phi_trips.push_back(Triplet<double>(cage_cell_(1, i), pid, phi_entry1));
+                phi_trips.push_back(Triplet<double>(cage_cell_(0, i), pid, phi_entry0));
+            }
+        }
+    }
+    phi_.resize(cage_nods_.cols(), nods_.cols());
+    phi_.reserve(phi_trips.size());
+    phi_.setFromTriplets(phi_trips.begin(), phi_trips.end());
+    psi_.resize(cage_normal_.cols(), nods_.cols());
+    psi_.reserve(psi_trips.size());
+    psi_.setFromTriplets(psi_trips.begin(), psi_trips.end());
     return 0;
 }
 
@@ -83,17 +134,15 @@ int green_deform_2d::move_cage(const size_t id, const double *dx) {
     return 0;
 }
 
-int green_deform_2d::update_cage_edge_length() {
-    return 0;
-}
-
 int green_deform_2d::deform() {
     calc_outward_normal();
-    update_cage_edge_length();
+    calc_cage_edge_length(false);
     VectorXd ratio = curr_len_.cwiseQuotient(rest_len_);
+    ASSERT(cage_normal_.cols() == ratio.rows());
+    nods_ = cage_nods_*phi_;//+ (cage_normal_*ratio.asDiagonal())*psi_;
     return 0;
 }
-
+//==============================================================================
 int green_deform_2d::dump(const char *file) {
     MatrixXd nods_3d(3, nods_.cols());
 #pragma omp parallel for

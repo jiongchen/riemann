@@ -17,6 +17,10 @@ int main(int argc, char *argv[])
     green_deform_2d def;
     def.load_sample_points(argv[1]);
     def.load_cage(argv[2]);
+    def.calc_green_coords();
+//    const double disp[2] = {0.5, 0.5};
+//    def.move_cage(2, disp);
+    def.deform();
 
     def.dump("./green/mesh.vtk");
     def.dump_cage("./green/cage.vtk");

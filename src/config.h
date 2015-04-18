@@ -1,10 +1,10 @@
-#ifndef MCLOTH_CONFIG_H
-#define MCLOTH_CONFIG_H
+#ifndef CONFIG_H
+#define CONFIG_H
 
 #define ASSERT(x)                                               \
     do {                                                        \
       if (!(x)) {                                               \
-        std::cerr << "[ERROR] Assertion failed at\n";           \
+        std::cerr << "# error: assertion failed at\n";          \
         std::cerr << __FILE__ << " " << __LINE__ << "\n";       \
         exit(0);                                                \
       }                                                         \
