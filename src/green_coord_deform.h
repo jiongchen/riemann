@@ -45,8 +45,8 @@ private:
 
     Eigen::VectorXd rest_len_;
     Eigen::VectorXd curr_len_;
-    Eigen::SparseMatrix<double> phi_;
-    Eigen::SparseMatrix<double> psi_;
+    Eigen::MatrixXd phi_;
+    Eigen::MatrixXd psi_;
 };
 
 class green_deform_3d : public green_deform

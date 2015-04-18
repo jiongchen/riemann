@@ -91,40 +91,37 @@ int green_deform_2d::calc_outward_normal() {
 }
 
 int green_deform_2d::calc_green_coords() {
-    vector<Triplet<double>> phi_trips, psi_trips;
+    phi_ = MatrixXd::Zero(cage_nods_.cols(), nods_.cols());
+    psi_ = MatrixXd::Zero(cage_normal_.cols(), nods_.cols());
 #pragma omp parallel for
     for (size_t pid = 0; pid < nods_.cols(); ++pid) {
         for (size_t i = 0; i < cage_cell_.cols(); ++i) {
             Vector2d a = cage_nods_.col(cage_cell_(1, i))-cage_nods_.col(cage_cell_(0, i));
             Vector2d b = cage_nods_.col(cage_cell_(0, i))-nods_.col(pid);
-            double Q = a.dot(a);
-            double S = b.dot(b);
-            double R = 2*a.dot(b);
-            double BA = b.dot(a.norm()*cage_normal_.col(i));
-            double SRT = sqrt(4*S*Q-R*R);
-            double L0 = log(S);
-            double L1 = log(S+Q+R);
-            double A0 = atan2(R, SRT)/SRT;
-            double A1 = atan2(2*Q+R, SRT)/SRT;
-            double A10 = A1 - A0;
-            double L10 = L1 - L0;
-            double psi_entry = -a.norm()/(4*PI)*((4*S-R*R/Q)*A10 + R/(2*Q)*L10 + L1 - 2);
-            double phi_entry1 = -BA/(2*PI)*(L10/(2*Q) - A10*R/Q);
-            double phi_entry0 = +BA/(2*PI)*(L10/(2*Q) - A10*(2+R/Q));
+            double Q, S, R, BA, SRT, L0, L1, A0, A1, A10, L10, psi_entry, phi_entry1, phi_entry0;
+            Q = a.dot(a);
+            S = b.dot(b);
+            R = 2*a.dot(b);
+            BA = b.dot(a.norm()*cage_normal_.col(i));
+            SRT = sqrt(4*S*Q-R*R);
+            L0 = log(S);
+            L1 = log(S+Q+R);
+            A0 = atan2(R, SRT)/SRT;
+            A1 = atan2(2*Q+R, SRT)/SRT;
+            A10 = A1 - A0;
+            L10 = L1 - L0;
+            psi_entry = -a.norm()/(4*PI)*((4*S-R*R/Q)*A10 + R/(2*Q)*L10 + L1 - 2);
+            phi_entry1 = -BA/(2*PI)*(L10/(2*Q) - A10*R/Q);
+            phi_entry0 = +BA/(2*PI)*(L10/(2*Q) - A10*(2+R/Q));
 #pragma omp critical
             {
-                psi_trips.push_back(Triplet<double>(i, pid, psi_entry));
-                phi_trips.push_back(Triplet<double>(cage_cell_(1, i), pid, phi_entry1));
-                phi_trips.push_back(Triplet<double>(cage_cell_(0, i), pid, phi_entry0));
+                psi_(i, pid) += psi_entry;
+                phi_(cage_cell_(1, i), pid) += phi_entry1;
+                phi_(cage_cell_(0, i), pid) += phi_entry0;
             }
         }
     }
-    phi_.resize(cage_nods_.cols(), nods_.cols());
-    phi_.reserve(phi_trips.size());
-    phi_.setFromTriplets(phi_trips.begin(), phi_trips.end());
-    psi_.resize(cage_normal_.cols(), nods_.cols());
-    psi_.reserve(psi_trips.size());
-    psi_.setFromTriplets(psi_trips.begin(), psi_trips.end());
+    ///> =_=#
     for (size_t j = 0; j < phi_.cols(); ++j) {
         double sum = phi_.col(j).sum();
         phi_.col(j) /= sum;
