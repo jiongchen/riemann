@@ -125,12 +125,19 @@ int green_deform_2d::calc_green_coords() {
     psi_.resize(cage_normal_.cols(), nods_.cols());
     psi_.reserve(psi_trips.size());
     psi_.setFromTriplets(psi_trips.begin(), psi_trips.end());
+    for (size_t j = 0; j < phi_.cols(); ++j) {
+        double sum = phi_.col(j).sum();
+        phi_.col(j) /= sum;
+    }
     return 0;
 }
 
-int green_deform_2d::move_cage(const size_t id, const double *dx) {
-    Vector2d disp(dx[0], dx[1]);
-    cage_nods_.col(id) += disp;
+int green_deform_2d::move_cage(const size_t id, const double *dx, bool disp) {
+    Vector2d X(dx[0], dx[1]);
+    if ( disp )
+        cage_nods_.col(id) += X;
+    else
+        cage_nods_.col(id) = X;
     return 0;
 }
 
@@ -139,7 +146,7 @@ int green_deform_2d::deform() {
     calc_cage_edge_length(false);
     VectorXd ratio = curr_len_.cwiseQuotient(rest_len_);
     ASSERT(cage_normal_.cols() == ratio.rows());
-    nods_ = cage_nods_*phi_;//+ (cage_normal_*ratio.asDiagonal())*psi_;
+    nods_ = cage_nods_*phi_ + (cage_normal_*ratio.asDiagonal())*psi_;
     return 0;
 }
 //==============================================================================

@@ -18,8 +18,19 @@ int main(int argc, char *argv[])
     def.load_sample_points(argv[1]);
     def.load_cage(argv[2]);
     def.calc_green_coords();
-//    const double disp[2] = {0.5, 0.5};
-//    def.move_cage(2, disp);
+    {
+        const double pos[2] = {-0.1, 1.1};
+        def.move_cage(3, pos, false);
+    }
+    {
+        const double pos[2] = {0.9, 1.1};
+        def.move_cage(4, pos, false);
+    }
+    {
+        const double pos[2] = {0.9, -0.1};
+        def.move_cage(5, pos, false);
+    }
+    def.dump("./green/origin.vtk");
     def.deform();
 
     def.dump("./green/mesh.vtk");

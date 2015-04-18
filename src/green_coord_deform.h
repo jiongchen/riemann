@@ -13,7 +13,7 @@ public:
     virtual int load_sample_points(const char *file) = 0;
     virtual int load_cage(const char *file) = 0;
     virtual int calc_green_coords() = 0;
-    virtual int move_cage(const size_t id, const double *dx) = 0;
+    virtual int move_cage(const size_t id, const double *dx, bool disp) = 0;
     virtual int deform() = 0;
     virtual int dump(const char *file) = 0;
 protected:
@@ -27,7 +27,7 @@ public:
     int load_sample_points(const char *file);
     int load_cage(const char *file);
     int calc_green_coords();
-    int move_cage(const size_t id, const double *dx);
+    int move_cage(const size_t id, const double *dx, bool disp);
     int deform();
     int dump(const char *file);
     int dump_normal(const char *file);
