@@ -17,10 +17,19 @@ int main(int argc, char *argv[])
     green_deform_3d def;
     def.load_sample_points(argv[1]);
     def.load_cage(argv[2]);
+    def.calc_green_coords();
 
-    def.dump("./green/mesh.vtk");
-    def.dump_cage("./green/cage.vtk");
-    def.dump_normal("./green/cage_normal.vtk");
+    const double disp[3] = {0.0, 0.5, 0.0};
+    def.move_cage(4, disp, true);
+    def.move_cage(5, disp, true);
+    def.move_cage(6, disp, true);
+    def.move_cage(7, disp, true);
+
+    def.deform();
+
+    def.dump("./green3d/mesh.vtk");
+    def.dump_cage("./green3d/cage.vtk");
+    def.dump_normal("./green3d/cage_normal.vtk");
 
     cout << "done\n";
     return 0;

@@ -66,7 +66,10 @@ public:
     int dump_cage(const char *file);
 protected:
     int calc_outward_normal();
-    int calc_stretch_ratio();
+    int calc_stretch_ratio(matd_t &s);
+    int calc_cage_edge(matd_t &uv);
+    double GCTriInt(const matd_t &p, const matd_t &v1,
+                    const matd_t &v2, const matd_t &eta);
 private:
     mati_t cell_;
     matd_t nods_;
@@ -74,6 +77,8 @@ private:
     mati_t cage_cell_;
     matd_t cage_nods_;
     matd_t cage_normal_;
+    matd_t cage_rest_uv_;
+    matd_t cage_curr_uv_;
 
     matd_t rest_area_;
     matd_t phi_;
