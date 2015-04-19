@@ -2,6 +2,7 @@
 #define GREEN_COORD_DEFORM_H
 
 #include <Eigen/Sparse>
+#include <zjucad/matrix/matrix.h>
 
 namespace geom_deform {
 
@@ -52,6 +53,31 @@ private:
 class green_deform_3d : public green_deform
 {
 public:
+    typedef zjucad::matrix::matrix<size_t> mati_t;
+    typedef zjucad::matrix::matrix<double> matd_t;
+    green_deform_3d();
+    int load_sample_points(const char *file);
+    int load_cage(const char *file);
+    int calc_green_coords();
+    int move_cage(const size_t id, const double *dx, bool disp);
+    int deform();
+    int dump(const char *file);
+    int dump_normal(const char *file);
+    int dump_cage(const char *file);
+protected:
+    int calc_outward_normal();
+    int calc_stretch_ratio();
+private:
+    mati_t cell_;
+    matd_t nods_;
+
+    mati_t cage_cell_;
+    matd_t cage_nods_;
+    matd_t cage_normal_;
+
+    matd_t rest_area_;
+    matd_t phi_;
+    matd_t psi_;
 };
 
 }

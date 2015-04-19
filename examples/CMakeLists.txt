@@ -33,8 +33,14 @@ target_link_libraries(test_dcp
     ${Boost_LIBRARIES}
 )
 
-add_executable(test_green test_green.cc)
-target_link_libraries(test_green
+add_executable(test_green_2d test_green_2d.cc)
+target_link_libraries(test_green_2d
+    surfparam
+    ${Boost_LIBRARIES}
+)
+
+add_executable(test_green_3d test_green_3d.cc)
+target_link_libraries(test_green_3d
     surfparam
     ${Boost_LIBRARIES}
 )
