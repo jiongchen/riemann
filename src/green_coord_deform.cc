@@ -284,7 +284,7 @@ int green_deform_3d::dump_normal(const char *file) {
 }
 //==============================================================================
 double green_deform_3d::GCTriInt(const matd_t &p, const matd_t &v1,
-                              const matd_t &v2, const matd_t &eta) {
+                                 const matd_t &v2, const matd_t &eta) {
     double alpha = acos(dot(v2-v1, p-v1)/norm(v2-v1)/norm(p-v1));
     double beta = acos(dot(v1-p, v2-p)/norm(v1-p)/norm(v2-p));
     double lambda = dot(p-v1, p-v1)*sin(alpha)*sin(alpha);
@@ -328,11 +328,15 @@ int green_deform_3d::calc_green_coords() {
             }
         }
     }
-#pragma omp parallel for
-    for (size_t col = 0; col < phi_.size(2); ++col) {
-        double col_sum = sum(phi_(colon(), col));
-        phi_(colon(), col) /= col_sum;
-    }
+//#pragma omp parallel for
+//    for (size_t col = 0; col < phi_.size(2); ++col) {
+//        double col_sum = sum(phi_(colon(), col));
+//        phi_(colon(), col) /= col_sum;
+//    }
+//    for (size_t col = 0; col < psi_.size(2); ++col) {
+//        double col_sum = sum(psi_(colon(), col));
+//        psi_(colon(), col) /= col_sum;
+//    }
     return 0;
 }
 
@@ -350,10 +354,18 @@ int green_deform_3d::deform() {
     matd_t s;
     calc_stretch_ratio(s);
     ASSERT(s.size() == cage_normal_.size(2));
-    matd_t Ns = cage_normal_;
-    for (size_t col = 0; col < Ns.size(2); ++col)
-        Ns(colon(), col) *= s[col];
-    nods_ = cage_nods_*phi_ + Ns*psi_;
+    matd_t stretch_normal = cage_normal_;
+    for (size_t col = 0; col < stretch_normal.size(2); ++col)
+        stretch_normal(colon(), col) *= s[col];
+    nods_ = cage_nods_*phi_ + stretch_normal*psi_;
+//    matd_t Nc = psi_;
+//    for (size_t row = 0; row < Nc.size(1); ++row)
+//        Nc(row, colon()) *= s[row];
+//    for (size_t col = 0; col < Nc.size(2); ++col) {
+//        double col_sum = sum(Nc(colon(), col));
+//        Nc(colon(), col) /= col_sum;
+//    }
+//    nods_ = cage_nods_*phi_ + cage_normal_*Nc;
     return 0;
 }
 

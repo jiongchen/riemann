@@ -19,11 +19,11 @@ int main(int argc, char *argv[])
     def.load_cage(argv[2]);
     def.calc_green_coords();
 
-    const double disp[3] = {0.0, 0.5, 0.0};
-    def.move_cage(4, disp, true);
-    def.move_cage(5, disp, true);
-    def.move_cage(6, disp, true);
-    def.move_cage(7, disp, true);
+//    const double disp[3] = {0.0, 1, 0.0};
+//    def.move_cage(4, disp, true);
+//    def.move_cage(5, disp, true);
+//    def.move_cage(6, disp, true);
+//    def.move_cage(7, disp, true);
 
     def.deform();
 
