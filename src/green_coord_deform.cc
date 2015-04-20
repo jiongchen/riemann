@@ -59,7 +59,7 @@ int green_deform_2d::load_cage(const char *file) {
     // get rest segment element length
     rest_len_.resize(cage_cell_.cols());
     curr_len_.resize(cage_cell_.cols());
-    calc_cage_edge_length(true);
+    calc_cage_edge_length(rest_len_);
 
     // calc initial normal
     cage_normal_.resize(2, cage_cell_.cols());
@@ -67,16 +67,10 @@ int green_deform_2d::load_cage(const char *file) {
     return 0;
 }
 
-int green_deform_2d::calc_cage_edge_length(bool is_rest) {
-    if ( is_rest ) {
+int green_deform_2d::calc_cage_edge_length(VectorXd &len) {
 #pragma omp parallel for
-        for (size_t i = 0; i < cage_cell_.cols(); ++i)
-            rest_len_[i] = (cage_nods_.col(cage_cell_(0, i))-cage_nods_.col(cage_cell_(1, i))).norm();
-    } else {
-#pragma omp parallel for
-        for (size_t i = 0; i < cage_cell_.cols(); ++i)
-            curr_len_[i] = (cage_nods_.col(cage_cell_(0, i))-cage_nods_.col(cage_cell_(1, i))).norm();
-    }
+    for (size_t i = 0; i < cage_cell_.cols(); ++i)
+        len[i] = (cage_nods_.col(cage_cell_(0, i))-cage_nods_.col(cage_cell_(1, i))).norm();
     return 0;
 }
 
@@ -141,16 +135,10 @@ int green_deform_2d::move_cage(const size_t id, const double *dx, bool disp) {
 
 int green_deform_2d::deform() {
     calc_outward_normal();
-    calc_cage_edge_length(false);
+    calc_cage_edge_length(curr_len_);
     VectorXd ratio = curr_len_.cwiseQuotient(rest_len_);
     ASSERT(cage_normal_.cols() == ratio.rows());
     nods_ = cage_nods_*phi_ + (cage_normal_*ratio.asDiagonal())*psi_;
-//    ///> update
-//    MatrixXd normalized_psi = ratio.asDiagonal()*psi_;
-//    for (size_t col = 0; col < normalized_psi.cols(); ++col) {
-//        double col_sum = normalized_psi.col(col).sum();
-//        normalized_psi.col(col) /= col_sum;
-//    }
     return 0;
 }
 //==============================================================================
