@@ -9,8 +9,6 @@
 #include "config.h"
 #include "vtk.h"
 
-#define PI 3.141592653589793238462643383279502884197
-
 using namespace std;
 using namespace zjucad::matrix;
 using namespace Eigen;
@@ -113,9 +111,9 @@ int green_deform_2d::calc_green_coords() {
             A1 = atan2(2*Q+R, SRT)/SRT;
             A10 = A1 - A0;
             L10 = L1 - L0;
-            psi_entry = -a.norm()/(4*PI)*((4*S-R*R/Q)*A10 + R/(2*Q)*L10 + L1 - 2);
-            phi_entry1 = -BA/(2*PI)*(L10/(2*Q) - A10*R/Q);
-            phi_entry0 = +BA/(2*PI)*(L10/(2*Q) - A10*(2+R/Q));
+            psi_entry = -a.norm()/(4*M_PI)*((4*S-R*R/Q)*A10 + R/(2*Q)*L10 + L1 - 2);
+            phi_entry1 = -BA/(2*M_PI)*(L10/(2*Q) - A10*R/Q);
+            phi_entry0 = +BA/(2*M_PI)*(L10/(2*Q) - A10*(2+R/Q));
 #pragma omp critical
             {
                 psi_(i, pid) += psi_entry;
@@ -147,6 +145,12 @@ int green_deform_2d::deform() {
     VectorXd ratio = curr_len_.cwiseQuotient(rest_len_);
     ASSERT(cage_normal_.cols() == ratio.rows());
     nods_ = cage_nods_*phi_ + (cage_normal_*ratio.asDiagonal())*psi_;
+//    ///> update
+//    MatrixXd normalized_psi = ratio.asDiagonal()*psi_;
+//    for (size_t col = 0; col < normalized_psi.cols(); ++col) {
+//        double col_sum = normalized_psi.col(col).sum();
+//        normalized_psi.col(col) /= col_sum;
+//    }
     return 0;
 }
 //==============================================================================
@@ -285,22 +289,23 @@ int green_deform_3d::dump_normal(const char *file) {
 //==============================================================================
 double green_deform_3d::GCTriInt(const matd_t &p, const matd_t &v1,
                                  const matd_t &v2, const matd_t &eta) {
-    double alpha = acos(dot(v2-v1, p-v1)/norm(v2-v1)/norm(p-v1));
-    double beta = acos(dot(v1-p, v2-p)/norm(v1-p)/norm(v2-p));
+    double alpha = acos(std::min(1.0, std::max(-1.0, dot(v2-v1, p-v1)/norm(v2-v1)/norm(p-v1))));
+    double beta = acos(std::min(1.0, std::max(-1.0, dot(v1-p, v2-p)/norm(v1-p)/norm(v2-p))));
     double lambda = dot(p-v1, p-v1)*sin(alpha)*sin(alpha);
     double c = dot(p-eta, p-eta);
-    double theta[2] = {PI-alpha, PI-alpha-beta};
+
+    double theta[2] = {M_PI-alpha, M_PI-alpha-beta};
     double I[2];
     double sqrt_c = sqrt(c);
     double sqrt_lambda = sqrt(lambda);
-    for (int i = 2; i < 2; ++i) {
+    for (int i = 0; i < 2; ++i) {
         double S = sin(theta[i]);
         double C = cos(theta[i]);
         I[i] = -sign(S)/2.0*(2.0*sqrt_c*atan2(sqrt_c*C, sqrt(lambda+S*S*c))
                             + sqrt_lambda*log(2.0*sqrt_lambda*S*S/((1-C)*(1-C))
                                               *(1.0-2*c*C/(c+c*C+lambda+sqrt(lambda*lambda+lambda*c*S*S)))));
     }
-    return -1.0/(4*PI)*fabs(I[0]-I[1]-sqrt_c*beta);
+    return -1.0/(4*M_PI)*fabs(I[0]-I[1]-sqrt_c*beta);
 }
 
 int green_deform_3d::calc_green_coords() {
@@ -328,15 +333,12 @@ int green_deform_3d::calc_green_coords() {
             }
         }
     }
-//#pragma omp parallel for
-//    for (size_t col = 0; col < phi_.size(2); ++col) {
-//        double col_sum = sum(phi_(colon(), col));
-//        phi_(colon(), col) /= col_sum;
-//    }
-//    for (size_t col = 0; col < psi_.size(2); ++col) {
-//        double col_sum = sum(psi_(colon(), col));
-//        psi_(colon(), col) /= col_sum;
-//    }
+    ///> for translation invariance
+#pragma omp parallel for
+    for (size_t j = 0; j < phi_.size(2); ++j) {
+        double col_sum = sum(phi_(colon(), j));
+        phi_(colon(), j) /= col_sum;
+    }
     return 0;
 }
 
@@ -354,18 +356,10 @@ int green_deform_3d::deform() {
     matd_t s;
     calc_stretch_ratio(s);
     ASSERT(s.size() == cage_normal_.size(2));
-    matd_t stretch_normal = cage_normal_;
-    for (size_t col = 0; col < stretch_normal.size(2); ++col)
-        stretch_normal(colon(), col) *= s[col];
-    nods_ = cage_nods_*phi_ + stretch_normal*psi_;
-//    matd_t Nc = psi_;
-//    for (size_t row = 0; row < Nc.size(1); ++row)
-//        Nc(row, colon()) *= s[row];
-//    for (size_t col = 0; col < Nc.size(2); ++col) {
-//        double col_sum = sum(Nc(colon(), col));
-//        Nc(colon(), col) /= col_sum;
-//    }
-//    nods_ = cage_nods_*phi_ + cage_normal_*Nc;
+    matd_t stretch_psi = psi_;
+    for (size_t row = 0; row < stretch_psi.size(1); ++row)
+        stretch_psi(row, colon()) *= s[row];
+    nods_ = cage_nods_*phi_ + cage_normal_*psi_;
     return 0;
 }
 
