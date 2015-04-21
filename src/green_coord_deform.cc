@@ -347,7 +347,7 @@ int green_deform_3d::deform() {
     matd_t stretch_psi = psi_;
     for (size_t row = 0; row < stretch_psi.size(1); ++row)
         stretch_psi(row, colon()) *= s[row];
-    nods_ = cage_nods_*phi_ + cage_normal_*psi_;
+    nods_ = cage_nods_*phi_ + cage_normal_*stretch_psi;
     return 0;
 }
 
