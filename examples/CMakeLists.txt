@@ -44,3 +44,10 @@ target_link_libraries(test_green_3d
     surfparam
     ${Boost_LIBRARIES}
 )
+
+add_executable(test_tri_def_grad test_tri_def_grad.cc)
+target_link_libraries(test_tri_def_grad
+    jtf-mesh
+    ${Boost_LIBRARIES}
+    lapack
+)

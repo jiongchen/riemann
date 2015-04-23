@@ -1,0 +1,54 @@
+/* [wxMaxima batch file version 1] [ DO NOT EDIT BY HAND! ]*/
+/* [ Created with wxMaxima version 13.04.2 ] */
+
+/* [wxMaxima: input   start ] */
+load(cj_function);
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: input   start ] */
+def_grad_tri_2d(x, D) := block(
+[Dx],
+Dx: addcol(col(x, 2)-col(x, 1), col(x, 3)-col(x, 1)),
+FLATTEN(Dx . D)
+);
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: input   start ] */
+def_grad_tet_3d(x, D) := block(
+[Dx], 
+Dx: addcol(col(x, 2)-col(x, 1), col(x, 3)-col(x, 1), col(x, 4)-col(x, 1)),
+FLATTEN(Dx . D)
+);
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: input   start ] */
+def_grad_tri_3d(x, D) := block(
+[Dx, zero3d],
+zero3d: zeromatrix(3, 1),
+Dx: addcol(col(x, 2)-col(x, 1), col(x, 3)-col(X, 1), zero3d),
+FLATTEN(Dx . D)
+);
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: input   start ] */
+X: genmatrix(X, 3, 3);
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: input   start ] */
+D: genmatrix(D, 3, 3);
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: input   start ] */
+df: def_grad_tri_3d(X, D);
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: input   start ] */
+H: GRAD(df, X);
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: input   start ] */
+matrix_size(H);
+/* [wxMaxima: input   end   ] */
+
+/* Maxima can't load/batch files which end with a comment! */
+"Created with wxMaxima"$
