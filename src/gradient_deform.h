@@ -1,7 +1,7 @@
 #ifndef GRADIENT_BASED_DEFORM_H
 #define GRADIENT_BASED_DEFORM_H
 
-namespace surfparam {
+namespace geom_deform {
 
 class gradient_field_deform
 {
