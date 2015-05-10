@@ -40,6 +40,7 @@ int main(int argc, char *argv[])
     matrix<double> def_grad = zeros<double>(3, 3);
     def_grad(colon(), colon(0, 1)) = def_nods(colon(), colon(1, 2))-def_nods(colon(), 0)*ones<double>(1, 2);
     def_grad = temp(def_grad * G);
+    cout << "deformation gradient:\n" << def_grad << endl;
 
     matrix<double> dir0 = def_grad * (nods(colon(), 1)-nods(colon(), 0));
     matrix<double> dir1 = def_grad * (nods(colon(), 2)-nods(colon(), 0));
