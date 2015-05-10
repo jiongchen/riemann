@@ -1,0 +1,29 @@
+/* [wxMaxima batch file version 1] [ DO NOT EDIT BY HAND! ]*/
+/* [ Created with wxMaxima version 13.04.2 ] */
+
+/* [wxMaxima: input   start ] */
+load(bernstein);
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: input   start ] */
+b(r, ri, ro) := bernstein_poly(3, 4, (r-ri)/(ro-ri)) + bernstein_poly(4, 4, (r-ri)/(ro-ri));
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: input   start ] */
+b(r, ri, ro);
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: input   start ] */
+db_dr(r, ri, ro) := diff(b(r, ri, ro), r);
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: input   start ] */
+db_dr(r, ri, ro);
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: input   start ] */
+db_dr(ri, ri, ro);
+/* [wxMaxima: input   end   ] */
+
+/* Maxima can't load/batch files which end with a comment! */
+"Created with wxMaxima"$

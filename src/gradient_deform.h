@@ -4,7 +4,7 @@
 #include <Eigen/Sparse>
 #include <zjucad/matrix/matrix.h>
 
-namespace surfparam {
+namespace geom_deform {
 
 /// Lp = div w;
 class gradient_field_deform

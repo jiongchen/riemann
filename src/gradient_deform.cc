@@ -1,5 +1,5 @@
 #include "gradient_deform.h"
 
-namespace surfparam {
+namespace geom_deform {
 
 }
