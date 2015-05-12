@@ -9,6 +9,7 @@
 
 #include "src/config.h"
 #include "src/energy.h"
+#include "src/vec_field_deform.h"
 
 using namespace std;
 using namespace Eigen;
@@ -37,6 +38,16 @@ int test_param_area(ptree &pt) {
     return 0;
 }
 
+int test_quad_scalar_field(ptree &pt) {
+    double val = 0;
+    double x[3] = {0};
+    double a[3] = {0};
+    double c[3] = {0};
+    geom_deform::quad_scalar_field_(&val, x, a, c);
+    cout << val << endl;
+    return 0;
+}
+
 int main(int argc, char *argv[])
 {
     ptree pt;
@@ -44,6 +55,7 @@ int main(int argc, char *argv[])
     try {
         zjucad::read_cmdline(argc, argv, pt);
         CALL_SUB_PROG(test_param_area);
+        CALL_SUB_PROG(test_quad_scalar_field);
     } catch (const boost::property_tree::ptree_error &e) {
         cerr << "Usage: " << endl;
         zjucad::show_usage_info(std::cerr, pt);
