@@ -40,10 +40,11 @@ int test_param_area(ptree &pt) {
 
 int test_quad_scalar_field(ptree &pt) {
     double val = 0;
-    double x[3] = {0};
-    double a[3] = {0};
-    double c[3] = {0};
+    double a[3] = {3, 3, 0};
+    double x[3] = {1, 1, 0};
+    double c[3] = {2, 2, 0};
     geom_deform::quad_scalar_field_(&val, x, a, c);
+    cout << "value: ";
     cout << val << endl;
     return 0;
 }

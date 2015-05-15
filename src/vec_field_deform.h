@@ -15,8 +15,17 @@ static double  db_dr(const double r, const double ri, const double ro) {
     return 12*std::pow(r-ri, 2)*(1-(r-ri)/(ro-ri))/std::pow(ro-ri, 3);
 }
 
-static void get_orthonormal_basis(const double *v, double *u, double *w) {
-
+static void get_ortn_basis(const double *v, double *u, double *w) {
+    Eigen::Vector3d V(v[0], v[1], v[2]);
+    Eigen::Vector3d U = Eigen::Vector3d::Zero();
+    Eigen::Vector3d W = Eigen::Vector3d::Zero();
+    if ( V.segment<2>(0).squaredNorm() == 0.0 ) {
+        U[0] = 1.0;
+    } else {
+        U[0] = -V[1];
+        U[1] = V[0];
+        U /= U.norm();
+    }
 }
 
 extern "C" {
@@ -35,8 +44,16 @@ public:
     scalar_field(const Vec3 &a, const Vec3 &c) : a_(a), c_(c) {}
     virtual int eval_val(const double *x, double *val) const {}
     virtual int eval_gra(const double *x, double *gra) const {}
-    virtual int set_axis(const double *a) {}
-    virtual void set_center(const double *c) {}
+    virtual void set_axis(const double *a) {
+        a_[0] = a[0];
+        a_[1] = a[1];
+        a_[2] = a[2];
+    }
+    virtual void set_center(const double *c) {
+        c_[0] = c[0];
+        c_[1] = c[1];
+        c_[2] = c[2];
+    }
 protected:
     Vec3 a_, c_;
 };
@@ -44,29 +61,30 @@ protected:
 class linear_scalar_field : public scalar_field
 {
 public:
-//    linear_scalar_field(const Vec3 &a, const Vec3 &c);
-//    int eval_val(const double *x, double *val) const {
-//        Vec3 X(x[0], x[1], x[2]);
-//        *val = u_.dot(X-c_);
-//        return 0;
-//    }
-//    int eval_gra(const double *x, double *gra) const {
-//        Vec3 X(x[0], x[1], x[2]);
-//        Eigen::Map<Eigen::VectorXd>(gra, 3) = u_;
-//        return 0;
-//    }
-//    void set_direct(const double *u) {
-//        u_ = Vec3(u[0], u[1], u[2]);
-//    }
-//    void set_center(const double *c) {
-//        c_ = Vec3(c[0], c[1], c[2]);
-//    }
+    linear_scalar_field(const Vec3 &a, const Vec3 &c) : scalar_field(a, c) {}
+    virtual int eval_val(const double *x, double *val) const {
+        Vec3 X(x[0], x[1], x[2]);
+        *val = a_.dot(X-c_);
+        return 0;
+    }
+    virtual int eval_gra(const double *x, double *gra) const {
+        gra[0] = a_[0];
+        gra[1] = a_[1];
+        gra[2] = a_[2];
+        return 0;
+    }
+    void set_axis(const double *a) {
+        scalar_field::set_axis(a);
+    }
+    void set_center(const double *c) {
+        scalar_field::set_center(c);
+    }
 };
 
 class quadratic_scalar_field : public scalar_field
 {
 public:
-    quadratic_scalar_field(const Vec3 &a, const Vec3 &c);
+    quadratic_scalar_field(const Vec3 &a, const Vec3 &c) : scalar_field(a, c) {}
     int eval_val(const double *x, double *val) const {
         quad_scalar_field_(val, x, &a_[0], &c_[0]);
         return 0;
@@ -75,12 +93,12 @@ public:
         quad_scalar_field_jac_(gra, x, &a_[0], &c_[0]);
         return 0;
     }
-//    void set_direct(const double *u) {
-//        u_ = Vec3(u[0], u[1], u[2]);
-//    }
-//    void set_center(const double *c) {
-//        c_ = Vec3(c[0], c[1], c[2]);
-//    }
+    void set_axis(const double *a) {
+        scalar_field::set_axis(a);
+    }
+    void set_center(const double *c) {
+        scalar_field::set_center(c);
+    }
 };
 
 class implicit_tool
@@ -93,9 +111,16 @@ public:
     virtual int eval_gra(const double *x, double *gra) const {}
     virtual bool inner(const double *x) const {}
     virtual bool outer(const double *x) const {}
-    virtual bool inter(const double *x) const {}
-    virtual int set_center(const double *c) {}
-    virtual int set_range(const double ri, const double ro) {}
+    virtual bool intermediate(const double *x) const {}
+    virtual void set_center(const double *c) {
+        c_[0] = c[0];
+        c_[1] = c[1];
+        c_[2] = c[2];
+    }
+    virtual void set_range(const double ri, const double ro) {
+        ri_ = ri;
+        ro_ = ro;
+    }
 protected:
     Vec3 c_;
     double ri_, ro_;
@@ -106,13 +131,34 @@ class sphere_tool : public implicit_tool
 public:
     sphere_tool(const Vec3 &c, const double ri, const double ro)
         : implicit_tool(c, ri, ro) {}
-    int eval_val(const double *x, double *val) const;
-    int eval_gra(const double *x, double *gra) const;
-    virtual bool inner(const double *x) const;
-    virtual bool outer(const double *x) const;
-    virtual bool inter(const double *x) const;
-    virtual int set_center(const double *c);
-    virtual int set_range(const double ri, const double ro);
+    int eval_val(const double *x, double *val) const {
+        *val = x[0]*x[0] + x[1]*x[1] + x[2]*x[2];
+        return 0;
+    }
+    int eval_gra(const double *x, double *gra) const {
+        gra[0] = 2*x[0];
+        gra[1] = 2*x[1];
+        gra[2] = 2*x[2];
+        return 0;
+    }
+    bool inner(const double *x) const {
+        const double dist = x[0]*x[0] + x[1]*x[1] + x[2]*x[2];
+        return (dist < ri_);
+    }
+    bool intermediate(const double *x) const {
+        const double dist = x[0]*x[0] + x[1]*x[1] + x[2]*x[2];
+        return (ri_ <= dist && dist < ro_);
+    }
+    bool outer(const double *x) const {
+        const double dist = x[0]*x[0] + x[1]*x[1] + x[2]*x[2];
+        return (dist > ro_);
+    }
+    void set_center(const double *c) {
+        implicit_tool::set_center(c);
+    }
+    void set_range(const double ri, const double ro) {
+        implicit_tool::set_range(ri, ro);
+    }
 };
 
 
