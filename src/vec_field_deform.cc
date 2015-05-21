@@ -9,15 +9,15 @@ using namespace Eigen;
 
 namespace geom_deform {
 
-static double eval_blend_val(const double r, const double ri, const double ro) {
+double eval_blend_val(const double r, const double ri, const double ro) {
     return 4*std::pow(r-ri, 3)*(1-(r-ri)/(ro-ri))/std::pow(ro-ri, 3) + std::pow(r-ri, 4)/std::pow(ro-ri, 4);
 }
 
-static double eval_blend_jac(const double r, const double ri, const double ro) {
+double eval_blend_jac(const double r, const double ri, const double ro) {
     return 12*std::pow(r-ri, 2)*(1-(r-ri)/(ro-ri))/std::pow(ro-ri, 3);
 }
 
-static int get_ortn_basis(const double *v, double *u, double *w) {
+int get_ortn_basis(const double *v, double *u, double *w) {
     if ( v[0]*v[0] + v[1]*v[1] + v[2]*v[2] <= 1e-16 ) {
         cerr << "# zero direction\n";
         return 1;
@@ -35,8 +35,8 @@ static int get_ortn_basis(const double *v, double *u, double *w) {
     }
     W = V.cross(U);
     W /= W.norm();
-    u[0] = U[0]; u[1] = U[1]; u[2] = U[2];
-    w[0] = W[0]; w[1] = W[1]; w[2] = W[2];
+    std::copy(U.data(), U.data()+3, u);
+    std::copy(W.data(), W.data()+3, w);
     return 0;
 }
 
@@ -55,20 +55,16 @@ int vel_field_deform::load_model(const char *file) {
     return state;
 }
 
-int vel_field_deform::translate(const Vec3 &src, const Vec3 &des, const double ri, const double ro) {
+int vel_field_deform::translate_deform(const Vec3 &src, const Vec3 &des, const double ri, const double ro) {
     const double len = (des-src).norm();
     const Vec3 dir = (des-src) / len;
     for (size_t i = 0; i < 100; ++i) {
         Vec3 c = src + i/100.0*len*dir;
         vf_.push_back(std::make_shared<vector_field>(c, ri, ro, dir));
-    }
-    return 0;
-}
-
-int vel_field_deform::deform() {
-//#pragma omp parallel for
-    for (size_t i = 0; i < nods_.cols(); ++i) {
-        nods_.col(i) += (*advect_)(nods_.col(i));
+#pragma omp parallel for
+        for (size_t id = 0; id < nods_.cols(); ++id) {
+            nods_.col(id) += (*advect_)(nods_.col(id));
+        }
     }
     return 0;
 }

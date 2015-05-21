@@ -8,9 +8,9 @@
 
 namespace geom_deform {
 
-static double eval_blend_val(const double r, const double ri, const double ro);
-static double eval_blend_jac(const double r, const double ri, const double ro);
-static int get_ortn_basis(const double *v, double *u, double *w);
+double eval_blend_val(const double r, const double ri, const double ro);
+double eval_blend_jac(const double r, const double ri, const double ro);
+int get_ortn_basis(const double *v, double *u, double *w);
 
 extern "C" {
 void quad_scalar_field_(double *val, const double *x, const double *a, const double *c);
@@ -24,17 +24,13 @@ class scalar_field
 public:
     virtual ~scalar_field() {}
     scalar_field(const Vec3 &a, const Vec3 &c) : a_(a), c_(c) {}
-    virtual int eval_val(const double *x, double *val) const {}
-    virtual int eval_gra(const double *x, double *gra) const {}
+    virtual int eval_val(const double *x, double *val) const = 0;
+    virtual int eval_gra(const double *x, double *gra) const = 0;
     virtual void set_axis(const double *a) {
-        a_[0] = a[0];
-        a_[1] = a[1];
-        a_[2] = a[2];
+        std::copy(a, a+3, a_.data());
     }
     virtual void set_center(const double *c) {
-        c_[0] = c[0];
-        c_[1] = c[1];
-        c_[2] = c[2];
+        std::copy(c, c+3, c_.data());
     }
 protected:
     Vec3 a_, c_;
@@ -50,9 +46,7 @@ public:
         return 0;
     }
     virtual int eval_gra(const double *x, double *gra) const {
-        gra[0] = a_[0];
-        gra[1] = a_[1];
-        gra[2] = a_[2];
+        std::copy(a_.data(), a_.data()+a_.size(), gra);
         return 0;
     }
     void set_axis(const double *a) {
@@ -68,11 +62,11 @@ class quadratic_scalar_field : public scalar_field
 public:
     quadratic_scalar_field(const Vec3 &a, const Vec3 &c) : scalar_field(a, c) {}
     int eval_val(const double *x, double *val) const {
-        quad_scalar_field_(val, x, &a_[0], &c_[0]);
+//        quad_scalar_field_(val, x, &a_[0], &c_[0]);
         return 0;
     }
     int eval_gra(const double *x, double *gra) const {
-        quad_scalar_field_jac_(gra, x, &a_[0], &c_[0]);
+//        quad_scalar_field_jac_(gra, x, &a_[0], &c_[0]);
         return 0;
     }
     void set_axis(const double *a) {
@@ -89,15 +83,13 @@ public:
     virtual ~implicit_tool() {}
     implicit_tool(const Vec3 &c, const double ri, const double ro)
         : c_(c), ri_(ri), ro_(ro) {}
-    virtual int eval_val(const double *x, double *val) const {}
-    virtual int eval_gra(const double *x, double *gra) const {}
-    virtual bool inner(const double *x) const {}
-    virtual bool outer(const double *x) const {}
-    virtual bool intermediate(const double *x) const {}
+    virtual int eval_val(const double *x, double *val) const = 0;
+    virtual int eval_gra(const double *x, double *gra) const = 0;
+    virtual bool inner(const double *x) const = 0;
+    virtual bool outer(const double *x) const = 0;
+    virtual bool intermediate(const double *x) const = 0;
     virtual void set_center(const double *c) {
-        c_[0] = c[0];
-        c_[1] = c[1];
-        c_[2] = c[2];
+        std::copy(c, c+3, c_.data());
     }
     virtual void set_range(const double ri, const double ro) {
         ri_ = ri;
@@ -118,14 +110,19 @@ public:
         : implicit_tool(c, ri, ro) {}
     int eval_val(const double *x, double *val) const {
         Vec3 X(x[0], x[1], x[2]);
-        *val = (X-c_).squaredNorm();
+        *val = (X-c_).norm();
         return 0;
     }
     int eval_gra(const double *x, double *gra) const {
         Vec3 X(x[0], x[1], x[2]);
-        gra[0] = 2*(X[0]-c_[0]);
-        gra[1] = 2*(X[1]-c_[1]);
-        gra[2] = 2*(X[2]-c_[2]);
+        const double dist = (X-c_).norm();
+        if ( dist <= 1e-16 ) {
+            std::fill(gra, gra+3, 0);
+        } else {
+            gra[0] = (X[0]-c_[0]) / dist;
+            gra[1] = (X[1]-c_[1]) / dist;
+            gra[2] = (X[2]-c_[2]) / dist;
+        }
         return 0;
     }
     bool inner(const double *x) const {
@@ -150,13 +147,13 @@ public:
         implicit_tool::set_range(ri, ro);
     }
     double get_ri() const {
-        implicit_tool::get_ri();
+        return implicit_tool::get_ri();
     }
     double get_ro() const {
-        implicit_tool::get_ro();
+        return implicit_tool::get_ro();
     }
     Vec3 get_center() const {
-        implicit_tool::get_center();
+        return implicit_tool::get_center();
     }
 };
 
@@ -239,8 +236,7 @@ class vel_field_deform
 public:
     vel_field_deform();
     int load_model(const char *file);
-    int translate(const Vec3 &src, const Vec3 &des, const double ri, const double ro);
-    int deform();
+    int translate_deform(const Vec3 &src, const Vec3 &des, const double ri, const double ro);
     int save_model(const char *file);
 private:
     Eigen::MatrixXi cell_;
