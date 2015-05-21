@@ -51,3 +51,9 @@ target_link_libraries(test_tri_def_grad
     ${Boost_LIBRARIES}
     lapack
 )
+
+add_executable(test_vec_field_deform test_vec_field_deform.cc)
+target_link_libraries(test_vec_field_deform
+    surfparam
+    ${Boost_LIBRARIES}
+)
