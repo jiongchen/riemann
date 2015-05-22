@@ -39,16 +39,16 @@ int test_param_area(ptree &pt) {
     return 0;
 }
 
-//int test_quad_scalar_field(ptree &pt) {
-//    double val = 0;
-//    double a[3] = {3, 3, 0};
-//    double x[3] = {1, 1, 0};
-//    double c[3] = {2, 2, 0};
-//    geom_deform::quad_scalar_field_(&val, x, a, c);
-//    cout << "value: ";
-//    cout << val << endl;
-//    return 0;
-//}
+int test_quad_scalar_field(ptree &pt) {
+    double val = 0;
+    double a[3] = {3, 3, 0};
+    double x[3] = {1, 1, 0};
+    double c[3] = {2, 2, 0};
+    geom_deform::quad_scalar_field_(&val, x, a, c);
+    cout << "value: ";
+    cout << val << endl;
+    return 0;
+}
 
 int test_vector_field(ptree &pt) {
     Vector3d c(0, 0, 0);
@@ -69,7 +69,7 @@ int main(int argc, char *argv[])
     try {
         zjucad::read_cmdline(argc, argv, pt);
         CALL_SUB_PROG(test_param_area);
-//        CALL_SUB_PROG(test_quad_scalar_field);
+        CALL_SUB_PROG(test_quad_scalar_field);
         CALL_SUB_PROG(test_vector_field);
     } catch (const boost::property_tree::ptree_error &e) {
         cerr << "Usage: " << endl;

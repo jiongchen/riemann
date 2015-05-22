@@ -62,11 +62,11 @@ class quadratic_scalar_field : public scalar_field
 public:
     quadratic_scalar_field(const Vec3 &a, const Vec3 &c) : scalar_field(a, c) {}
     int eval_val(const double *x, double *val) const {
-//        quad_scalar_field_(val, x, &a_[0], &c_[0]);
+        quad_scalar_field_(val, x, &a_[0], &c_[0]);
         return 0;
     }
     int eval_gra(const double *x, double *gra) const {
-//        quad_scalar_field_jac_(gra, x, &a_[0], &c_[0]);
+        quad_scalar_field_jac_(gra, x, &a_[0], &c_[0]);
         return 0;
     }
     void set_axis(const double *a) {
@@ -77,11 +77,11 @@ public:
     }
 };
 
-class implicit_tool
+class metaphor
 {
 public:
-    virtual ~implicit_tool() {}
-    implicit_tool(const Vec3 &c, const double ri, const double ro)
+    virtual ~metaphor() {}
+    metaphor(const Vec3 &c, const double ri, const double ro)
         : c_(c), ri_(ri), ro_(ro) {}
     virtual int eval_val(const double *x, double *val) const = 0;
     virtual int eval_gra(const double *x, double *gra) const = 0;
@@ -103,11 +103,11 @@ protected:
     double ri_, ro_;
 };
 
-class sphere_tool : public implicit_tool
+class sphere_tool : public metaphor
 {
 public:
     sphere_tool(const Vec3 &c, const double ri, const double ro)
-        : implicit_tool(c, ri, ro) {}
+        : metaphor(c, ri, ro) {}
     int eval_val(const double *x, double *val) const {
         Vec3 X(x[0], x[1], x[2]);
         *val = (X-c_).norm();
@@ -141,19 +141,19 @@ public:
         return (dist > ro_*ro_);
     }
     void set_center(const double *c) {
-        implicit_tool::set_center(c);
+        metaphor::set_center(c);
     }
     void set_range(const double ri, const double ro) {
-        implicit_tool::set_range(ri, ro);
+        metaphor::set_range(ri, ro);
     }
     double get_ri() const {
-        return implicit_tool::get_ri();
+        return metaphor::get_ri();
     }
     double get_ro() const {
-        return implicit_tool::get_ro();
+        return metaphor::get_ro();
     }
     Vec3 get_center() const {
-        return implicit_tool::get_center();
+        return metaphor::get_center();
     }
 };
 
@@ -203,7 +203,7 @@ public:
         return rtn;
     }
 private:
-    std::shared_ptr<implicit_tool> tools_;
+    std::shared_ptr<metaphor> tools_;
     std::shared_ptr<scalar_field> e_, f_;
 };
 
