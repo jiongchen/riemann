@@ -37,7 +37,6 @@ int get_ortn_basis(const double *v, double *u, double *w) {
     W /= W.norm();
     std::copy(U.data(), U.data()+3, u);
     std::copy(W.data(), W.data()+3, w);
-    return 0;
 }
 
 vel_field_deform::vel_field_deform() {
@@ -56,11 +55,17 @@ int vel_field_deform::load_model(const char *file) {
 }
 
 int vel_field_deform::translate_deform(const Vec3 &src, const Vec3 &des, const double ri, const double ro) {
-    const double len = (des-src).norm();
-    const Vec3 dir = (des-src) / len;
-    for (size_t i = 0; i < 100; ++i) {
-        Vec3 c = src + i/100.0*len*dir;
+    const Vector3d dir = des - src;
+    const size_t substeps = 100;
+    for (size_t i = 0; i < substeps; ++i) {
+        Vec3 c = src + 1.0*i/substeps*dir;
         vf_.push_back(std::make_shared<vector_field>(c, ri, ro, dir));
+
+//        Vector3d a(0, 1.2, 0);
+//        Vector3d val;
+//        cout << (*vf_[vf_.size()-1])(a).transpose() << endl;
+//        getchar();
+
 #pragma omp parallel for
         for (size_t id = 0; id < nods_.cols(); ++id) {
             nods_.col(id) += (*advect_)(nods_.col(id));

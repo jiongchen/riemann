@@ -16,9 +16,9 @@ int main(int argc, char *argv[])
 
     geom_deform::vel_field_deform def;
     def.load_model(argv[1]);
-    Vector3d src(0, 1.01, 0);
-    Vector3d des(0, 1.5, 0);
-    const double ri = 0.2;
+    Vector3d src(0, 1.0, 0);
+    Vector3d des(0, 1.2, 0);
+    const double ri = 0.01;
     const double ro = 0.8;
 
     def.translate_deform(src, des, ri, ro);
