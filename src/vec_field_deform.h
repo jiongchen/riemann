@@ -12,44 +12,6 @@ double eval_blend_val(const double r, const double ri, const double ro);
 double eval_blend_jac(const double r, const double ri, const double ro);
 int get_ortn_basis(const double *v, double *u, double *w);
 
-void calcU(const Eigen::Vector3d &u_dest, Eigen::Vector3d &u0, Eigen::Vector3d &u1)
-{
-  const double eps = 1e-6;
-  size_t min_ind = 0;
-  double len = u_dest.norm();
-  if(len < eps) {    u0.setZero(); u1.setZero();    return;  }
-  if(fabs(u_dest[1]) < fabs(u_dest[min_ind]) ) min_ind = 1;
-  if(fabs(u_dest[2]) < fabs(u_dest[min_ind]) ) min_ind = 2;
-
-  Eigen::Vector3d u = u_dest/len;
-  u0[min_ind] = 0;
-  switch(min_ind) {
-  case 0:
-    u0[1] = u[2];
-    u0[2] = -u[1];
-    break;
-  case 1:
-    u0[0] = u[2];
-    u0[2] = -u[0];
-    break;
-  default: // 2
-    u0[1] = u[0];
-    u0[0] = -u[1];
-    break;
-  }
-  u1 = u.cross(u0);
-  if((u0.cross(u1)-u).squaredNorm() > eps) {
-    u1 = -u1;
-  }
-  u1 *= sqrt(len);
-  u0 *= sqrt(len);
-  // std::cerr << "u_dest:" << u_dest.transpose() << std::endl;
-  // std::cerr << "u0:" << u0.transpose() << std::endl;
-  // std::cerr << "u1:" << u1.transpose() << std::endl;
-  // std::cerr << "err u:" << (u0.cross(u1)-u_dest).squaredNorm() << std::endl;
-  assert((u0.cross(u1)-u_dest).squaredNorm() < eps);
-}
-
 extern "C" {
 void quad_scalar_field_(double *val, const double *x, const double *a, const double *c);
 void quad_scalar_field_jac_(double *jac, const double *x, const double *a, const double *c);
@@ -204,8 +166,7 @@ public:
     /// surpport translation only
     vector_field(const Vec3 &center, const double ri, const double ro, const Vec3 &v) {
         Vec3 u, w;
-//        get_ortn_basis(&v[0], &u[0], &w[0]);
-        calcU(v, u, w);
+        get_ortn_basis(&v[0], &u[0], &w[0]);
         e_ = std::make_shared<linear_scalar_field>(u, center);
         f_ = std::make_shared<linear_scalar_field>(w, center);
         tools_ = std::make_shared<sphere_tool>(center, ri, ro);
@@ -235,12 +196,6 @@ public:
             double blend_jac = eval_blend_jac(r_val, ri, ro);
             Vec3 p_gra = (1.0-blend_val)*e_gra - blend_jac*e_val*r_gra;
             Vec3 q_gra = (1.0-blend_val)*f_gra - blend_jac*f_val*r_gra;
-
-//            std::cout << e_gra.transpose() << "\n";
-//            std::cout << f_gra.transpose() << "\n";
-//            std::cout << p_gra.transpose() << "\n";
-//            std::cout << q_gra.transpose() << "\n";
-
             rtn = p_gra.cross(q_gra);
         } else if ( tools_->outer(&x[0]) ) {
             rtn.setZero();
@@ -259,7 +214,7 @@ public:
     advector(const std::vector<std::shared_ptr<vector_field>> &vfs)
         : vfs_(vfs) { }
     Vec3 operator()(const Vec3 &pos) const {
-        const double h = 0.01;
+        const double h = 0.005;
         if ( vfs_.size() < 3 ) {
             const Vec3 vel = (*vfs_[vfs_.size()-1])(pos);
             return vel*h;
