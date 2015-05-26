@@ -68,6 +68,18 @@ int vel_field_deform::translate_deform(const Vec3 &src, const Vec3 &des, const d
     return 0;
 }
 
+int vel_field_deform::twist_deform(const Vec3 &center, const double ri, const double ro,
+                                   const Vec3 &O, const Vec3 &n, const size_t times) {
+    for (size_t i = 0; i < times; ++i) {
+        vf_.push_back(std::make_shared<vector_field>(center, ri, ro, O, n));
+#pragma omp parallel for
+        for (size_t id = 0; id < nods_.cols(); ++id) {
+            nods_.col(id) += (*advect_)(nods_.col(id));
+        }
+    }
+    return 0;
+}
+
 int vel_field_deform::save_model(const char *file) {
     matrix<size_t> cell(cell_.rows(), cell_.cols());
     matrix<double> nods(nods_.rows(), nods_.cols());
