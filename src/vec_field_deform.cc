@@ -2,6 +2,7 @@
 
 #include <zjucad/matrix/itr_matrix.h>
 #include <jtflib/mesh/io.h>
+#include <Eigen/Geometry>
 
 using namespace std;
 using namespace zjucad::matrix;
@@ -76,6 +77,21 @@ int vel_field_deform::twist_deform(const Vec3 &center, const double ri, const do
         for (size_t id = 0; id < nods_.cols(); ++id) {
             nods_.col(id) += (*advect_)(nods_.col(id));
         }
+    }
+    return 0;
+}
+
+int vel_field_deform::bend_deform(const Vec3 &center, const double ri, const double ro, const Vec3 &axis, const Vec3 &n, const double theta) {
+    const size_t times = theta / (2*0.001);
+    Vec3 normal = n;
+    Matrix3d rot;
+    rot = AngleAxisd(1*0.001, axis);
+    for (size_t i = 0; i < times; ++i) {
+        vf_.push_back(std::make_shared<vector_field>(center, ri, ro, axis, normal));
+        normal = (rot * normal).eval();
+#pragma omp parallel for
+        for (size_t id = 0; id < nods_.cols(); ++id)
+            nods_.col(id) += (*advect_)(nods_.col(id));
     }
     return 0;
 }
