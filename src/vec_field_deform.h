@@ -19,6 +19,7 @@ void quad_scalar_field_jac_(double *jac, const double *x, const double *a, const
 
 typedef Eigen::Vector3d Vec3;
 
+//==============================================================================
 class scalar_field
 {
 public:
@@ -100,6 +101,7 @@ public:
     }
 };
 
+//==============================================================================
 class metaphor
 {
 public:
@@ -183,12 +185,11 @@ public:
 class twist_cylinder : public metaphor
 {
 public:
-    twist_cylinder(const Vec3 &c, const double ri, const double ro,
-                   const Vec3 &O, const Vec3 &n)
-        : metaphor(c, ri, ro), O_(O), n_(n) {}
+    twist_cylinder(const Vec3 &c, const double ri, const double ro, const Vec3 &n)
+        : metaphor(c, ri, ro), n_(n) {}
     int eval_val(const double *x, double *val) const {
         Vec3 X(x[0], x[1], x[2]);
-        *val = n_.dot(X-O_);
+        *val = n_.dot(X-c_);
         return 0;
     }
     int eval_gra(const double *x, double *gra) const {
@@ -226,26 +227,25 @@ public:
         return metaphor::get_center();
     }
 private:
-    const Vec3 O_, n_;
+    const Vec3 n_;
 };
 
+//==============================================================================
 class vector_field
 {
 public:
-    /// @brief options should be provided here for
-    /// different types of tools and scalar field
-    /// for some certain operations
-    vector_field(const Vec3 &center, const double ri, const double ro, const Vec3 &v) {
-        Vec3 u, w;
-        get_ortn_basis(&v[0], &u[0], &w[0]);
-        e_ = std::make_shared<linear_scalar_field>(u, center);
-        f_ = std::make_shared<linear_scalar_field>(w, center);
-        tools_ = std::make_shared<sphere_tool>(center, ri, ro);
-    }
-    vector_field(const Vec3 &center, const double ri, const double ro, const Vec3 &O, const Vec3 &n) {
-        e_ = std::make_shared<dot_scalar_field>(n, center);
-        f_ = std::make_shared<cross_scalar_field>(n, center);
-        tools_ = std::make_shared<twist_cylinder>(center, ri, ro, O, n);
+    vector_field(const Vec3 &center, const double ri, const double ro, const Vec3 &v, const std::string &type) {
+        if ( type == "translate" ) {
+            Vec3 u, w;
+            get_ortn_basis(&v[0], &u[0], &w[0]);
+            e_ = std::make_shared<linear_scalar_field>(u, center);
+            f_ = std::make_shared<linear_scalar_field>(w, center);
+            tools_ = std::make_shared<sphere_tool>(center, ri, ro);
+        } else if ( type == "twist" ) {
+            e_ = std::make_shared<dot_scalar_field>(v, center);
+            f_ = std::make_shared<cross_scalar_field>(v, center);
+            tools_ = std::make_shared<twist_cylinder>(center, ri, ro, v);
+        }
     }
     virtual Vec3 operator ()(const Vec3 &x) const {
         Vec3 rtn;
@@ -290,7 +290,7 @@ public:
     advector(const std::vector<std::shared_ptr<vector_field>> &vfs)
         : vfs_(vfs) { }
     Vec3 operator()(const Vec3 &pos) const {
-        const double h = 0.005;
+        const double h = 0.001;
         if ( vfs_.size() < 3 ) {
             const Vec3 vel = (*vfs_[vfs_.size()-1])(pos);
             return vel*h;
@@ -313,8 +313,7 @@ public:
     vel_field_deform();
     int load_model(const char *file);
     int translate_deform(const Vec3 &src, const Vec3 &des, const double ri, const double ro);
-    int twist_deform(const Vec3 &center, const double ri, const double ro,
-                     const Vec3 &O, const Vec3 &n, const size_t times);
+    int twist_deform(const Vec3 &center, const double ri, const double ro, const Vec3 &n, const size_t times);
     int save_model(const char *file);
 private:
     Eigen::MatrixXi cell_;

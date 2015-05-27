@@ -54,7 +54,7 @@ int test_vector_field(ptree &pt) {
     Vector3d c(0, 0, 0);
     Vector3d dir(1, 1, 1);
     const double ri = 1, ro = 2;
-    vector_field vf(c, ri, ro, dir);
+    vector_field vf(c, ri, ro, dir, "translate");
 
     Vector3d x(0, 1.5, 0);
     Vector3d vel = vf(x);

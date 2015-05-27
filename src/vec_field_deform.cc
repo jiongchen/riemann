@@ -59,7 +59,7 @@ int vel_field_deform::translate_deform(const Vec3 &src, const Vec3 &des, const d
     const size_t substeps = 100;
     for (size_t i = 0; i < substeps; ++i) {
         Vec3 c = src + 1.0*i/substeps*dir;
-        vf_.push_back(std::make_shared<vector_field>(c, ri, ro, dir));
+        vf_.push_back(std::make_shared<vector_field>(c, ri, ro, dir, "translate"));
 #pragma omp parallel for
         for (size_t id = 0; id < nods_.cols(); ++id) {
             nods_.col(id) += (*advect_)(nods_.col(id));
@@ -68,10 +68,10 @@ int vel_field_deform::translate_deform(const Vec3 &src, const Vec3 &des, const d
     return 0;
 }
 
-int vel_field_deform::twist_deform(const Vec3 &center, const double ri, const double ro,
-                                   const Vec3 &O, const Vec3 &n, const size_t times) {
+int vel_field_deform::twist_deform(const Vec3 &center, const double ri, const double ro, const Vec3 &n, const size_t times) {
     for (size_t i = 0; i < times; ++i) {
-        vf_.push_back(std::make_shared<vector_field>(center, ri, ro, O, n));
+        if ( i < 3 )
+            vf_.push_back(std::make_shared<vector_field>(center, ri, ro, n, "twist"));
 #pragma omp parallel for
         for (size_t id = 0; id < nods_.cols(); ++id) {
             nods_.col(id) += (*advect_)(nods_.col(id));
