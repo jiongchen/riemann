@@ -25,10 +25,10 @@ int main(int argc, char *argv[])
 //    def.translate_deform(src, des, ri, ro);
 
     // for bar
-    Vector3d center(0, 5, 0), n(0, 1, 0);
-    const double ri = 0;
-    const double ro = 1;
-    def.twist_deform(center, ri, ro, n, 425);
+    Vector3d center(-6, 0, 0), n(1, 0, 0);
+    const double ri = 12.05;
+    const double ro = 14;
+    def.twist_deform(center, ri, ro, n, 400);
 
     def.save_model("./vel_field_deform/deform.obj");
     cout << "done\n";
