@@ -314,6 +314,7 @@ public:
     int load_model(const char *file);
     int translate_deform(const Vec3 &src, const Vec3 &des, const double ri, const double ro);
     int twist_deform(const Vec3 &center, const double ri, const double ro, const Vec3 &n, const size_t times);
+    int bend_deform(const Vec3 &center, const double ri, const double ro);
     int save_model(const char *file);
 private:
     Eigen::MatrixXi cell_;
