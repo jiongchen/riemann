@@ -247,6 +247,11 @@ public:
             tools_ = std::make_shared<twist_cylinder>(center, ri, ro, v);
         }
     }
+    vector_field(const Vec3 &center, const double ri, const double ro, const Vec3 &axis, const Vec3 &normal) {
+        e_ = std::make_shared<linear_scalar_field>(axis, center);
+        f_ = std::make_shared<cross_scalar_field>(axis, center);
+        tools_ = std::make_shared<twist_cylinder>(center, ri, ro, normal);
+    }
     virtual Vec3 operator ()(const Vec3 &x) const {
         Vec3 rtn;
         Vec3 e_gra = Vec3::Zero();
@@ -314,7 +319,7 @@ public:
     int load_model(const char *file);
     int translate_deform(const Vec3 &src, const Vec3 &des, const double ri, const double ro);
     int twist_deform(const Vec3 &center, const double ri, const double ro, const Vec3 &n, const size_t times);
-    int bend_deform(const Vec3 &center, const double ri, const double ro);
+    int bend_deform(const Vec3 &center, const double ri, const double ro, const Vec3 &axis, const Vec3 &n, const double theta);
     int save_model(const char *file);
 private:
     Eigen::MatrixXi cell_;

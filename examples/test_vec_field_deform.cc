@@ -24,11 +24,17 @@ int main(int argc, char *argv[])
 //    const double ro = 0.8;
 //    def.translate_deform(src, des, ri, ro);
 
-    // for bar
-    Vector3d center(-6, 0, 0), n(1, 0, 0);
-    const double ri = 12.05;
-    const double ro = 14;
-    def.twist_deform(center, ri, ro, n, 400);
+//    // for beam twist
+//    Vector3d center(-6, 0, 0), n(1, 0, 0);
+//    const double ri = 12.05;
+//    const double ro = 14;
+//    def.twist_deform(center, ri, ro, n, 400);
+
+    // for beam bend
+    Vector3d center(0, 0, 0), n(1, 0, 0), axis(0, 0, -1);
+    const double ri = -2;
+    const double ro = 2;
+    def.bend_deform(center, ri, ro, axis, n, M_PI/2);
 
     def.save_model("./vel_field_deform/deform.obj");
     cout << "done\n";
