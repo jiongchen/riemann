@@ -57,3 +57,10 @@ target_link_libraries(test_vec_field_deform
     surfparam
     ${Boost_LIBRARIES}
 )
+
+add_executable(test_arap test_arap.cc)
+target_link_libraries(test_arap
+    surfparam
+    ${Boost_LIBRARIES}
+)
+
