@@ -2,34 +2,36 @@
 #define FRAME_FIELD_DEFORM_H
 
 #include <Eigen/Sparse>
+#include <zjucad/matrix/matrix.h>
 
 namespace geom_deform {
 
 class frame_field_deform
 {
 public:
-  typedef Eigen::MatrixXd matd_t;
-  typedef Eigen::MatrixXi mati_t;
-  typedef Eigen::VectorXd vec_t;
-  typedef Eigen::SparseMatrix<double> spmat_t;
+  typedef zjucad::matrix::matrix<size_t> mati_t;
+  typedef zjucad::matrix::matrix<double> matd_t;
   frame_field_deform();
   // IO
-  int load_mesh(const char *path);
-  int load_constraints(const char *path);
-  int save_origin_mesh(const char *path) const;
-  int save_deformed_mesh(const char *path) const;
-
+  int load_mesh(const char *file);
+  int load_constraints(const char *file);
+  int save_original_mesh(const char *file) const;
+  int save_deformed_mesh(const char *file) const;
   // prepare
   int interp_frame_fields();
-
   // deform
+  int precompute();
   int deform();
-
+  // debug
+  int save_local_frame(const char *file, const double len) const;
 private:
+  int build_local_frames();
   mati_t tris_;
-  matd_t nods_;
-  std::vector<Eigen::Matrix2d> B_;
-  std::vector<Eigen::Vector3d> W_;
+  matd_t nods_, _nods_;
+  std::vector<Eigen::Matrix3d> B_;
+  std::vector<size_t> fidx_;
+  std::vector<size_t> g2l_;
+  Eigen::VectorXd W_;
 };
 
 }

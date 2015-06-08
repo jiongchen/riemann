@@ -121,5 +121,10 @@ inline T cal_cot_val(const T *point_set) {
   return cal_cot_val<T>(&point_set[0], &point_set[3], &point_set[6]);
 }
 
+template <typename T>
+inline T safe_acos(const T cosval) {
+  return std::acos(std::min(1.0, std::max(-1.0, cosval)));
+}
+
 }
 #endif

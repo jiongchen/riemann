@@ -12,4 +12,5 @@ add_custom_command(OUTPUT quad_scalar_field.f90
 add_library(surfparam SHARED ${header} ${source} quad_scalar_field.f90)
 target_link_libraries(surfparam
     jtf-mesh
+    ${UMFPACK_LIBRARIES}
 )

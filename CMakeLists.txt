@@ -20,5 +20,11 @@ if(EIGEN3_FOUND)
     include_directories(${EIGEN3_INCLUDE_DIR})
 endif(EIGEN3_FOUND)
 
+# UMFPACK
+find_package(UMFPACK REQUIRED)
+if(UMFPACK_FOUND)
+    include_directories(${UMFPACK_INCLUDES})
+endif(UMFPACK_FOUND)
+
 add_subdirectory(src)
 add_subdirectory(examples)

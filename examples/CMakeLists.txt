@@ -64,3 +64,9 @@ target_link_libraries(test_arap
     ${Boost_LIBRARIES}
 )
 
+add_executable(test_ff_deform test_ff_deform.cc)
+target_link_libraries(test_ff_deform
+    surfparam
+    ${Boost_LIBRARIES}
+)
+
