@@ -27,6 +27,8 @@ public:
   int visualize_local_bases(const char *file, const double len) const;
   int visualize_init_frames(const char *file, const double scale=1.0) const;
   int visualize_frame_fields(const char *file, const double scale=1.0);
+  int visualize_tensor_fields(const char *file);
+  bool check_spd_tensor_fields() const;
 private:
   int build_local_bases();
   int interp_cross_fields();

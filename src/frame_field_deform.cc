@@ -11,6 +11,7 @@
 
 #include "util.h"
 #include "vtk.h"
+#include "def.h"
 
 using namespace std;
 using namespace Eigen;
@@ -23,6 +24,17 @@ int get_ortn_basis(const double *v, double *u, double *w);
 //--------------------------
 //  energy definition part
 //--------------------------
+
+class deform_energy : surfparam::Functional<double>
+{
+public:
+  deform_energy();
+  size_t Nx() const;
+  int Val(const double *x, double *val) const;
+  int Gra(const double *x, double *gra) const;
+  int Hes(const double *x, vector<Triplet<double>> *hes) const;
+private:
+};
 
 frame_field_deform::frame_field_deform() {}
 
@@ -167,6 +179,7 @@ int frame_field_deform::save_deformed_mesh(const char *file) const {
 }
 
 int frame_field_deform::interp_frame_fields() {
+  cout << "[INFO] interpolating tensor fields\n";
   using jtf::mesh::edge2cell_adjacent;
   shared_ptr<edge2cell_adjacent> e2c(edge2cell_adjacent::create(tris_, false));
 
@@ -174,36 +187,37 @@ int frame_field_deform::interp_frame_fields() {
   for (auto &e : e2c->edges_) {
     pair<size_t, size_t> facet = e2c->query(e.first, e.second);
     const size_t IJ[2] = {facet.first, facet.second};
+    if ( IJ[0] == -1 || IJ[1] == -1 )
+      continue;
     for (size_t k = 0; k < 1; ++k) {
       const size_t I = IJ[k];
       const size_t J = IJ[1-k];
-      Vector3d axis = B_.col(3*J+2).cross(B_.col(3*I+2));
+      Vector3d axis = Vector3d(&B_(0, 3*J+2)).cross(Vector3d(&B_(0, 3*I+2)));
       axis /= axis.norm();
-      double angle = surfparam::safe_acos(B_[J].col(2).dot(B_[I].col(2)));
+      double angle = surfparam::safe_acos(B_.col(3*J+2).dot(B_.col(3*I+2)));
       Matrix3d rot;
       rot = AngleAxisd(angle, axis);
-      Matrix2d Rij = B_[I].block<3, 2>(0, 0).transpose()*rot*B_[J].block<3, 2>(0, 0);
-      Matrix2d W;
-      W << W_[3*J+0], W_[3*J+1], W_[3*J+1], W_[3*J+2];
-      Matrix2d Wij = Rij*W*Rij.transpose();
-      trips.push_back(Triplet<double>(3*I+0, 3*I+0));
-      trips.push_back(Triplet<double>(3*I+0, 3*J+0));
-      trips.push_back(Triplet<double>(3*I+0, 3*J+1));
-      trips.push_back(Triplet<double>(3*I+0, 3*J+2));
-      trips.push_back(Triplet<double>(3*I+1, 3*I+1));
-      trips.push_back(Triplet<double>(3*I+1, 3*J+0));
-      trips.push_back(Triplet<double>(3*I+1, 3*J+1));
-      trips.push_back(Triplet<double>(3*I+1, 3*J+2));
-      trips.push_back(Triplet<double>(3*I+2, 3*I+2));
-      trips.push_back(Triplet<double>(3*I+2, 3*J+0));
-      trips.push_back(Triplet<double>(3*I+2, 3*J+1));
-      trips.push_back(Triplet<double>(3*I+2, 3*J+2));
+      Matrix2d Rij = B_.block<3, 2>(0, 3*I).transpose()*rot*B_.block<3, 2>(0, 3*J);
+      const double rija = Rij(0, 0), rijb = Rij(0, 1), rijc = Rij(1, 0), rijd = Rij(1, 1);
+      trips.push_back(Triplet<double>(3*I+0, 3*I+0, -1));
+      trips.push_back(Triplet<double>(3*I+0, 3*J+0, rija*rija));
+      trips.push_back(Triplet<double>(3*I+0, 3*J+1, 2*rija*rijb));
+      trips.push_back(Triplet<double>(3*I+0, 3*J+2, rijb*rijb));
+      trips.push_back(Triplet<double>(3*I+1, 3*I+1, -1));
+      trips.push_back(Triplet<double>(3*I+1, 3*J+0, rija*rijc));
+      trips.push_back(Triplet<double>(3*I+1, 3*J+1, rijb*rijc+rija*rijd));
+      trips.push_back(Triplet<double>(3*I+1, 3*J+2, rijb*rijd));
+      trips.push_back(Triplet<double>(3*I+2, 3*I+2, -1));
+      trips.push_back(Triplet<double>(3*I+2, 3*J+0, rijc*rijc));
+      trips.push_back(Triplet<double>(3*I+2, 3*J+1, 2*rijc*rijd));
+      trips.push_back(Triplet<double>(3*I+2, 3*J+2, rijd*rijd));
     }
   }
+  const size_t dim = 3*tris_.size(2);
   SparseMatrix<double> Lb;
-  Lb.resize(3*tris_.size(2), 3*tris_.size(2));
+  Lb.resize(dim, dim);
   Lb.setFromTriplets(trips.begin(), trips.end());
-  VectorXd b = VectorXd::Zero(3*tris_.size(2));
+  VectorXd b = -Lb * W_;
 
   surfparam::rm_spmat_col_row(Lb, g2l_);
   surfparam::rm_vector_row(b, g2l_);
@@ -211,11 +225,53 @@ int frame_field_deform::interp_frame_fields() {
   UmfPackLU<SparseMatrix<double>> sol;
   sol.compute(Lb);
   ASSERT(sol.info() == Success);
-  VectorXd x = sol.solve(b);
+  VectorXd dx = sol.solve(b);
   ASSERT(sol.info() == Success);
 
-  surfparam::up_vector_row(x, g2l_, W_);
+  VectorXd DX = VectorXd::Zero(dim);
+  surfparam::up_vector_row(dx, g2l_, DX);
+  W_ += DX;
+
   return 0;
+}
+
+int frame_field_deform::visualize_tensor_fields(const char *file) {
+  ofstream os(file);
+  if ( os.fail() )
+    return __LINE__;
+
+  vector<string> dat_name{"spd_a", "spd_b", "spd_c", "spd_u", "spd_v"};
+  MatrixXd cell_da(tris_.size(2), 5);
+#pragma omp parallel for
+  for (size_t i = 0; i < cell_da.rows(); ++i) {
+    cell_da(i, 0) = W_[3*i+0];
+    cell_da(i, 1) = W_[3*i+1];
+    cell_da(i, 2) = W_[3*i+2];
+    Matrix2d w;
+    w << W_[3*i+0], W_[3*i+1], W_[3*i+1], W_[3*i+2];
+    JacobiSVD<Matrix2d> svd(w);
+    cell_da(i, 3) = svd.singularValues()[0];
+    cell_da(i, 4) = svd.singularValues()[1];
+  }
+
+  os.precision(15);
+  tri2vtk(os, &nods_[0], nods_.size(2), &tris_[0], tris_.size(2));
+
+  if ( cell_da.cols() == 0 )
+    return 0;
+  cell_data(os, &cell_da(0, 0), cell_da.rows(), dat_name[0].c_str(),dat_name[0].c_str());
+  for (size_t j = 1; j < cell_da.cols(); ++j)
+    vtk_data(os, &cell_da(0, j), cell_da.rows(), dat_name[j].c_str(), dat_name[j].c_str());
+  return 0;
+}
+
+bool frame_field_deform::check_spd_tensor_fields() const {
+  for (size_t i = 0; i < tris_.size(2); ++i) {
+    if ( W_[3*i+0] <= 0 || W_[3*i+0]*W_[3*i+2]-W_[3*i+1]*W_[3*i+1] <= 0 ) {
+      return false;
+    }
+  }
+  return true;
 }
 
 int frame_field_deform::interp_cross_fields() {

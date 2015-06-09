@@ -23,6 +23,11 @@ int main(int argc, char *argv[])
   deformer.visualize_init_frames("./ff_deform/init_ff.vtk");
   deformer.visualize_frame_fields("./ff_deform/interp_ff.vtk");
 
+  deformer.interp_frame_fields();
+  bool spd = deformer.check_spd_tensor_fields();
+  cout << "[INFO] spd tensor: " << spd << endl;
+  deformer.visualize_tensor_fields("./ff_deform/tensor.vtk");
+
   cout << "[INFO] done\n";
   return 0;
 }
