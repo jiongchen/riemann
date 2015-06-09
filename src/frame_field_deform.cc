@@ -189,7 +189,7 @@ int frame_field_deform::interp_frame_fields() {
     const size_t IJ[2] = {facet.first, facet.second};
     if ( IJ[0] == -1 || IJ[1] == -1 )
       continue;
-    for (size_t k = 0; k < 1; ++k) {
+    for (size_t k = 0; k < 2; ++k) {
       const size_t I = IJ[k];
       const size_t J = IJ[1-k];
       Vector3d axis = Vector3d(&B_(0, 3*J+2)).cross(Vector3d(&B_(0, 3*I+2)));
@@ -241,27 +241,27 @@ int frame_field_deform::visualize_tensor_fields(const char *file) {
     return __LINE__;
 
   vector<string> dat_name{"spd_a", "spd_b", "spd_c", "spd_u", "spd_v"};
-  MatrixXd cell_da(tris_.size(2), 5);
+  MatrixXd cell_dat(tris_.size(2), 5);
 #pragma omp parallel for
-  for (size_t i = 0; i < cell_da.rows(); ++i) {
-    cell_da(i, 0) = W_[3*i+0];
-    cell_da(i, 1) = W_[3*i+1];
-    cell_da(i, 2) = W_[3*i+2];
+  for (size_t i = 0; i < cell_dat.rows(); ++i) {
+    cell_dat(i, 0) = W_[3*i+0];
+    cell_dat(i, 1) = W_[3*i+1];
+    cell_dat(i, 2) = W_[3*i+2];
     Matrix2d w;
     w << W_[3*i+0], W_[3*i+1], W_[3*i+1], W_[3*i+2];
     JacobiSVD<Matrix2d> svd(w);
-    cell_da(i, 3) = svd.singularValues()[0];
-    cell_da(i, 4) = svd.singularValues()[1];
+    cell_dat(i, 3) = svd.singularValues()[0];
+    cell_dat(i, 4) = svd.singularValues()[1];
   }
 
   os.precision(15);
   tri2vtk(os, &nods_[0], nods_.size(2), &tris_[0], tris_.size(2));
 
-  if ( cell_da.cols() == 0 )
+  if ( cell_dat.cols() == 0 )
     return 0;
-  cell_data(os, &cell_da(0, 0), cell_da.rows(), dat_name[0].c_str(),dat_name[0].c_str());
-  for (size_t j = 1; j < cell_da.cols(); ++j)
-    vtk_data(os, &cell_da(0, j), cell_da.rows(), dat_name[j].c_str(), dat_name[j].c_str());
+  cell_data(os, &cell_dat(0, 0), cell_dat.rows(), dat_name[0].c_str(),dat_name[0].c_str());
+  for (size_t j = 1; j < cell_dat.cols(); ++j)
+    vtk_data(os, &cell_dat(0, j), cell_dat.rows(), dat_name[j].c_str(), dat_name[j].c_str());
   return 0;
 }
 
