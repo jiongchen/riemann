@@ -3,6 +3,7 @@
 
 #include <Eigen/Sparse>
 #include <zjucad/matrix/matrix.h>
+#include <unordered_set>
 
 namespace geom_deform {
 
@@ -23,15 +24,22 @@ public:
   int precompute();
   int deform();
   // debug
-  int save_local_frame(const char *file, const double len) const;
+  int visualize_local_bases(const char *file, const double len) const;
+  int visualize_init_frames(const char *file, const double scale=1.0) const;
+  int visualize_frame_fields(const char *file, const double scale=1.0);
 private:
-  int build_local_frames();
+  int build_local_bases();
+  int interp_cross_fields();
   mati_t tris_;
   matd_t nods_, _nods_;
-  std::vector<Eigen::Matrix3d> B_;
-  std::vector<size_t> fidx_;
+  Eigen::MatrixXd B_;
+
+  std::vector<size_t> cons_face_;
+  std::unordered_set<size_t> ffc_;
   std::vector<size_t> g2l_;
   Eigen::VectorXd W_;
+  Eigen::MatrixXd X_;
+  Eigen::MatrixXd F_;
 };
 
 }

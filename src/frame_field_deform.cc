@@ -29,11 +29,23 @@ frame_field_deform::frame_field_deform() {}
 int frame_field_deform::load_mesh(const char *file) {
   int state = 0;
   state |= jtf::mesh::load_obj(file, tris_, nods_);
-  state |= build_local_frames();
+  state |= build_local_bases();
   return state;
 }
 
-int frame_field_deform::save_local_frame(const char *file, const double len) const {
+int frame_field_deform::build_local_bases() {
+  matd_t normal;
+  jtf::mesh::cal_face_normal(tris_, nods_, normal, true);
+  B_.resize(3, 3*tris_.size(2));
+#pragma omp parallel for
+  for (size_t i = 0; i < tris_.size(2); ++i) {
+    get_ortn_basis(&normal(0, i), &B_(0, 3*i+0), &B_(0, 3*i+1));
+    std::copy(&normal(0, i), &normal(0, i)+3, &B_(0, 3*i+2));
+  }
+  return 0;
+}
+
+int frame_field_deform::visualize_local_bases(const char *file, const double len) const {
   mati_t lines(2, 3*tris_.size(2));
   matd_t verts(3, 4*tris_.size(2));
 #pragma omp parallel for
@@ -45,9 +57,9 @@ int frame_field_deform::save_local_frame(const char *file, const double len) con
     lines(0, 3*i+2) = 4*i+0;
     lines(1, 3*i+2) = 4*i+3;
     verts(colon(), 4*i+0) = nods_(colon(), tris_(colon(), i))*ones<double>(3, 1)/3.0;
-    verts(colon(), 4*i+1) = verts(colon(), 4*i+0)+len*itr_matrix<const double*>(3, 1, &B_[i](0, 0));
-    verts(colon(), 4*i+2) = verts(colon(), 4*i+0)+len*itr_matrix<const double*>(3, 1, &B_[i](0, 1));
-    verts(colon(), 4*i+3) = verts(colon(), 4*i+0)+len*itr_matrix<const double*>(3, 1, &B_[i](0, 2));
+    verts(colon(), 4*i+1) = verts(colon(), 4*i+0)+len*itr_matrix<const double*>(3, 1, &B_(0, 3*i+0));
+    verts(colon(), 4*i+2) = verts(colon(), 4*i+0)+len*itr_matrix<const double*>(3, 1, &B_(0, 3*i+1));
+    verts(colon(), 4*i+3) = verts(colon(), 4*i+0)+len*itr_matrix<const double*>(3, 1, &B_(0, 3*i+2));
   }
   ofstream os(file);
   line2vtk(os, &verts[0], verts.size(2), &lines[0], lines.size(2));
@@ -60,29 +72,89 @@ int frame_field_deform::load_constraints(const char *file) {
     cerr << "[ERROR] can't load constraints\n";
     return __LINE__;
   }
-  size_t fid;
-  W_ = VectorXd::Zero(3*tris_.size(2));
-  Vector3d v, w;
-  while ( is >> fid >> v[0] >> v[1] >> v[2] >> w[0] >> w[1] >> w[2] ) {
-    Matrix2d V, W;
-    V(0, 0) = 0;
-    V(0, 1) = 0;
-    V(1, 0) = 0;
-    V(1, 1) = 0;
+  W_ = VectorXd::Zero(3*tris_.size(2));     // SPD tensor field
+  X_ = MatrixXd::Zero(2, 2*tris_.size(2));  // 2d cross field
+  F_ = MatrixXd::Zero(3, 2*tris_.size(2));  // 3d frame field
+
+  size_t nbr_cons;
+  is >> nbr_cons;
+  cout << "[INFO] constraint number: " << nbr_cons << endl;
+  while ( nbr_cons-- ) {
+    size_t fid;
+    is >> fid;
+    is >> F_(0, 2*fid+0) >> F_(1, 2*fid+0) >> F_(2, 2*fid+0);
+    is >> F_(0, 2*fid+1) >> F_(1, 2*fid+1) >> F_(2, 2*fid+1);
+    cons_face_.push_back(fid);
+    ffc_.insert(3*fid+0);
+    ffc_.insert(3*fid+1);
+    ffc_.insert(3*fid+2);
   }
-  /// init g2l
+#pragma omp parallel for
+  for (size_t i = 0; i < cons_face_.size(); ++i) {
+    const size_t fid = cons_face_[i];
+    Matrix2d V;
+    V(0, 0) = F_.col(2*fid+0).dot(B_.col(3*fid+0));
+    V(1, 0) = F_.col(2*fid+0).dot(B_.col(3*fid+1));
+    V(0, 1) = F_.col(2*fid+1).dot(B_.col(3*fid+0));
+    V(1, 1) = F_.col(2*fid+1).dot(B_.col(3*fid+1));
+    JacobiSVD<Matrix2d> sol(V, ComputeFullU|ComputeFullV);
+    Matrix2d U = sol.matrixU()*sol.matrixV().transpose();
+    Matrix2d P = sol.matrixV()*sol.singularValues().asDiagonal()*sol.matrixV().transpose();
+    Matrix2d W = U*P*U.transpose();
+    W_[3*fid+0] = W(0, 0);
+    W_[3*fid+1] = W(0, 1);
+    W_[3*fid+2] = W(1, 1);
+    X_.block<2, 2>(0, 2*fid) = U;
+  }
+  /// init global to local map
+  g2l_.resize(3*tris_.size(2));
+  size_t ptr = 0;
+  for (size_t i = 0; i < g2l_.size(); ++i) {
+    if ( ffc_.find(i) != ffc_.end() )
+      g2l_[i] = -1;
+    else
+      g2l_[i] = ptr++;
+  }
   return 0;
 }
 
-int frame_field_deform::build_local_frames() {
-  matd_t normal;
-  jtf::mesh::cal_face_normal(tris_, nods_, normal, true);
-  B_.resize(tris_.size(2));
+int frame_field_deform::visualize_init_frames(const char *file, const double scale) const {
+  mati_t lines(2, 2*tris_.size(2));
+  matd_t verts(3, 3*tris_.size(2));
 #pragma omp parallel for
   for (size_t i = 0; i < tris_.size(2); ++i) {
-    get_ortn_basis(&normal(0, i), &B_[i](0, 0), &B_[i](0, 1));
-    std::copy(&normal(0, i), &normal(0, i)+3, &B_[i](0, 2));
+    lines(0, 2*i+0) = 3*i+0;
+    lines(1, 2*i+0) = 3*i+1;
+    lines(0, 2*i+1) = 3*i+0;
+    lines(1, 2*i+1) = 3*i+2;
+    verts(colon(), 3*i+0) = nods_(colon(), tris_(colon(), i))*ones<double>(3, 1)/3.0;
+    verts(colon(), 3*i+1) = verts(colon(), 3*i)+scale*itr_matrix<const double*>(3, 1, &F_(0, 2*i+0));
+    verts(colon(), 3*i+2) = verts(colon(), 3*i)+scale*itr_matrix<const double*>(3, 1, &F_(0, 2*i+1));
   }
+  ofstream os(file);
+  line2vtk(os, &verts[0], verts.size(2), &lines[0], lines.size(2));
+  return 0;
+}
+
+int frame_field_deform::visualize_frame_fields(const char *file, const double scale) {
+  interp_cross_fields();
+  mati_t lines(2, 2*tris_.size(2));
+  matd_t verts(3, 3*tris_.size(2));
+#pragma omp parallel for
+  for (size_t i = 0; i < tris_.size(2); ++i) {
+    lines(0, 2*i+0) = 3*i+0;
+    lines(1, 2*i+0) = 3*i+1;
+    lines(0, 2*i+1) = 3*i+0;
+    lines(1, 2*i+1) = 3*i+2;
+    Matrix2d w;
+    w << W_[3*i+0], W_[3*i+1], W_[3*i+1], W_[3*i+2];
+    Matrix<double, 3, 2> fr = B_.block<3, 2>(0, 3*i)* w * X_.block<2, 2>(0, 2*i);
+    verts(colon(), 3*i+0) = nods_(colon(), tris_(colon(), i))*ones<double>(3, 1)/3.0;
+    verts(colon(), 3*i+1) = verts(colon(), 3*i)+scale*itr_matrix<const double*>(3, 1, &fr(0, 0));
+    verts(colon(), 3*i+2) = verts(colon(), 3*i)+scale*itr_matrix<const double*>(3, 1, &fr(0, 1));
+  }
+  ofstream os(file);
+  line2vtk(os, &verts[0], verts.size(2), &lines[0], lines.size(2));
   return 0;
 }
 
@@ -101,21 +173,31 @@ int frame_field_deform::interp_frame_fields() {
   vector<Triplet<double>> trips;
   for (auto &e : e2c->edges_) {
     pair<size_t, size_t> facet = e2c->query(e.first, e.second);
-    const size_t I = facet.first;
-    const size_t J = facet.second;
-    // J->I
-    {
-      Vector3d axis = B_[J].col(2).cross(B_[I].col(2));
+    const size_t IJ[2] = {facet.first, facet.second};
+    for (size_t k = 0; k < 1; ++k) {
+      const size_t I = IJ[k];
+      const size_t J = IJ[1-k];
+      Vector3d axis = B_.col(3*J+2).cross(B_.col(3*I+2));
       axis /= axis.norm();
       double angle = surfparam::safe_acos(B_[J].col(2).dot(B_[I].col(2)));
       Matrix3d rot;
       rot = AngleAxisd(angle, axis);
-      // Matrix3d R = ;
-    }
-    // I->J
-    {
-      Vector3d axis = B_[I].col(2).cross(B_[J].col(2));
-      axis /= axis.norm();
+      Matrix2d Rij = B_[I].block<3, 2>(0, 0).transpose()*rot*B_[J].block<3, 2>(0, 0);
+      Matrix2d W;
+      W << W_[3*J+0], W_[3*J+1], W_[3*J+1], W_[3*J+2];
+      Matrix2d Wij = Rij*W*Rij.transpose();
+      trips.push_back(Triplet<double>(3*I+0, 3*I+0));
+      trips.push_back(Triplet<double>(3*I+0, 3*J+0));
+      trips.push_back(Triplet<double>(3*I+0, 3*J+1));
+      trips.push_back(Triplet<double>(3*I+0, 3*J+2));
+      trips.push_back(Triplet<double>(3*I+1, 3*I+1));
+      trips.push_back(Triplet<double>(3*I+1, 3*J+0));
+      trips.push_back(Triplet<double>(3*I+1, 3*J+1));
+      trips.push_back(Triplet<double>(3*I+1, 3*J+2));
+      trips.push_back(Triplet<double>(3*I+2, 3*I+2));
+      trips.push_back(Triplet<double>(3*I+2, 3*J+0));
+      trips.push_back(Triplet<double>(3*I+2, 3*J+1));
+      trips.push_back(Triplet<double>(3*I+2, 3*J+2));
     }
   }
   SparseMatrix<double> Lb;
@@ -133,6 +215,18 @@ int frame_field_deform::interp_frame_fields() {
   ASSERT(sol.info() == Success);
 
   surfparam::up_vector_row(x, g2l_, W_);
+  return 0;
+}
+
+int frame_field_deform::interp_cross_fields() {
+  return 0;
+}
+
+int frame_field_deform::precompute() {
+  return 0;
+}
+
+int frame_field_deform::deform() {
   return 0;
 }
 
