@@ -4,6 +4,9 @@
 #include <Eigen/Sparse>
 #include <zjucad/matrix/matrix.h>
 #include <unordered_set>
+#include <boost/property_tree/ptree.hpp>
+
+#include "def.h"
 
 namespace geom_deform {
 
@@ -12,7 +15,12 @@ class frame_field_deform
 public:
   typedef zjucad::matrix::matrix<size_t> mati_t;
   typedef zjucad::matrix::matrix<double> matd_t;
+  enum EnergyType {
+    DEFORM,
+    SMOOTH
+  };
   frame_field_deform();
+  frame_field_deform(const boost::property_tree::ptree &pt);
   // IO
   int load_mesh(const char *file);
   int load_constraints(const char *file);
@@ -42,6 +50,13 @@ private:
   Eigen::VectorXd W_;
   Eigen::MatrixXd X_;
   Eigen::MatrixXd F_;
+
+  std::vector<std::shared_ptr<surfparam::Functional<double>>> buff_;
+  std::shared_ptr<surfparam::Functional<double>> e_;
+  Eigen::SimplicialCholesky<Eigen::SparseMatrix<double>> sol_;
+  Eigen::SparseMatrix<double> LHS_;
+  size_t max_iter_;
+  double tolerance_;
 };
 
 }

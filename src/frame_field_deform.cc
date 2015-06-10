@@ -11,11 +11,12 @@
 
 #include "util.h"
 #include "vtk.h"
-#include "def.h"
+#include "cotmatrix.h"
 
 using namespace std;
 using namespace Eigen;
 using namespace zjucad::matrix;
+using namespace jtf::mesh;
 
 namespace geom_deform {
 
@@ -25,15 +26,113 @@ int get_ortn_basis(const double *v, double *u, double *w);
 //  energy definition part
 //--------------------------
 
-class deform_energy : surfparam::Functional<double>
+class deform_energy : public surfparam::Functional<double>
 {
 public:
-  deform_energy();
-  size_t Nx() const;
-  int Val(const double *x, double *val) const;
-  int Gra(const double *x, double *gra) const;
-  int Hes(const double *x, vector<Triplet<double>> *hes) const;
+  typedef zjucad::matrix::matrix<size_t> mati_t;
+  typedef zjucad::matrix::matrix<double> matd_t;
+  deform_energy(const mati_t &tris, const matd_t &nods, const double w)
+    : tris_(tris), nods_(nods), w_(w) {
+    // init W and Q
+    Q_.resize(tris_.size(2));
+#pragma omp parallel for
+    for (size_t i = 0; i < Q_.size(); ++i)
+      Q_[i] = Matrix3d::Identity();
+    e2c_.reset(edge2cell_adjacent::create(tris_, false));
+    cotval_.resize(2, e2c_->edges_.size());
+#pragma omp parallel for
+    for (size_t i = 0; i < e2c_->edges_.size(); ++i) {
+      const size_t ei = e2c_->edges_[i].first;
+      const size_t ej = e2c_->edges_[i].second;
+      pair<size_t, size_t> fa = e2c_->query(ei, ej);
+      const size_t face[2] = {fa.first, fa.second};
+      for (size_t k = 0; k < 2; ++k) {
+        if ( face[k] == -1 ) {
+          cotval_(k, i) = 0.0;
+          continue;
+        }
+        const size_t eo = sum(tris_(colon(), face[k]))-ei-ej;
+        cotval_(k, i) = surfparam::cal_cot_val(&nods_(0, ei), &nods_(0, eo), &nods_(0, ej));
+      }
+    }
+  }
+  size_t Nx() const {
+    return nods_.size();
+  }
+  int Val(const double *x, double *val) const {
+    Map<const MatrixXd> X(x, 3, Nx()/3);
+    Map<const MatrixXd> P(&nods_[0], 3, Nx()/3);
+    for (size_t i = 0; i < e2c_->edges_.size(); ++i) {
+
+    }
+    return 0;
+  }
+  int Gra(const double *x, double *gra) const {
+    Map<const MatrixXd> X(x, 3, Nx()/3);
+    Map<const MatrixXd> P(&nods_[0], 3, Nx()/3);
+    Map<MatrixXd> grad(gra, 3, Nx()/3);
+    for (size_t i = 0; i < e2c_->edges_.size(); ++i) {
+
+    }
+    return 0;
+  }
+  int Hes(const double *x, vector<Triplet<double>> *hes) const {
+    for (size_t i = 0; i < e2c_->edges_.size(); ++i) {
+
+    }
+    return 0;
+  }
+  int EvalQ() {
+    return 0;
+  }
 private:
+  const mati_t &tris_;
+  const matd_t &nods_;
+  const double w_;
+  vector<Matrix3d> Winv_;
+  vector<Matrix3d> Q_;
+  matd_t cotval_;
+  shared_ptr<edge2cell_adjacent> e2c_;
+};
+
+class smooth_energy : public surfparam::Functional<double>
+{
+public:
+  typedef zjucad::matrix::matrix<size_t> mati_t;
+  typedef zjucad::matrix::matrix<double> matd_t;
+  smooth_energy(const mati_t &tris, const matd_t &nods, const double w)
+    : tris_(tris), nods_(nods), w_(w) {
+    surfparam::cotmatrix(tris_, nods_, 3, &L_);
+    LtL_ = L_.transpose()*L_;
+  }
+  size_t Nx() const {
+    return nods_.size();
+  }
+  int Val(const double *x, double *val) const {
+    Map<const VectorXd> X(x, Nx());
+    Map<const VectorXd> p(&nods_[0], Nx());
+    *val += w_*(L_*(X-p)).squaredNorm();
+    return 0;
+  }
+  int Gra(const double *x, double *gra) const {
+    Map<const VectorXd> X(x, Nx());
+    Map<const VectorXd> p(&nods_[0], Nx());
+    Map<VectorXd> grad(gra, Nx());
+    grad += 2.0*w_*LtL_*(X-p);
+    return 0;
+  }
+  int Hes(const double *x, vector<Triplet<double>> *hes) const {
+    for (size_t j = 0; j < LtL_.outerSize(); ++j) {
+      for (SparseMatrix<double>::InnerIterator it(LtL_, j); it; ++it)
+        hes->push_back(Triplet<double>(it.row(), it.col(), 2*w_*it.value()));
+    }
+    return 0;
+  }
+private:
+  const mati_t &tris_;
+  const matd_t &nods_;
+  const double w_;
+  SparseMatrix<double> L_, LtL_;
 };
 
 frame_field_deform::frame_field_deform() {}
@@ -81,7 +180,7 @@ int frame_field_deform::visualize_local_bases(const char *file, const double len
 int frame_field_deform::load_constraints(const char *file) {
   ifstream is(file);
   if ( is.fail() ) {
-    cerr << "[ERROR] can't load constraints\n";
+    cerr << "[error] can't load constraints\n";
     return __LINE__;
   }
   W_ = VectorXd::Zero(3*tris_.size(2));     // SPD tensor field
@@ -90,7 +189,7 @@ int frame_field_deform::load_constraints(const char *file) {
 
   size_t nbr_cons;
   is >> nbr_cons;
-  cout << "[INFO] constraint number: " << nbr_cons << endl;
+  cout << "[info] constraint number: " << nbr_cons << endl;
   while ( nbr_cons-- ) {
     size_t fid;
     is >> fid;
@@ -237,8 +336,10 @@ int frame_field_deform::interp_frame_fields() {
 
 int frame_field_deform::visualize_tensor_fields(const char *file) {
   ofstream os(file);
-  if ( os.fail() )
+  if ( os.fail() ) {
+    cerr << "[error] can't open write " << file << endl;
     return __LINE__;
+  }
 
   vector<string> dat_name{"spd_a", "spd_b", "spd_c", "spd_u", "spd_v"};
   MatrixXd cell_dat(tris_.size(2), 5);
@@ -256,7 +357,6 @@ int frame_field_deform::visualize_tensor_fields(const char *file) {
 
   os.precision(15);
   tri2vtk(os, &nods_[0], nods_.size(2), &tris_[0], tris_.size(2));
-
   if ( cell_dat.cols() == 0 )
     return 0;
   cell_data(os, &cell_dat(0, 0), cell_dat.rows(), dat_name[0].c_str(),dat_name[0].c_str());
@@ -279,10 +379,48 @@ int frame_field_deform::interp_cross_fields() {
 }
 
 int frame_field_deform::precompute() {
+  // build transformation w.r.t global bases
+  std::vector<Matrix3d> Winv(tris_.size(2));
+#pragma omp parallel for
+  for (size_t i = 0; i < Winv.size(); ++i) {
+    Matrix2d w;
+    w << W_[3*i+0], W_[3*i+1], W_[3*i+1], W_[3*i+2];
+    Winv[i] = B_.block<3, 2>(0, 3*i)*w*B_.block<3, 2>(0, 3*i).transpose();
+    FullPivLU<Matrix3d> sol(Winv[i]);
+    cout << sol.rank() << endl;
+    if ( sol.isInvertible() ) {
+      Winv[i] = sol.inverse();
+    } else {
+      cerr << "[error] W" << i << " is not invertible\n";
+    }
+  }
+
+  // construct energy
+  buff_.resize(2);
+  buff_[DEFORM] = std::make_shared<deform_energy>(tris_, nods_, 1.0);
+  try {
+    e_ = std::make_shared<surfparam::energy_t<double>>(buff_);
+  } catch ( exception &e ) {
+    cerr << "[error] " << e.what() << endl;
+  }
+
+  // query constant system matrix
+  vector<Triplet<double>> trips;
+  e_->Hes(nullptr, &trips);
+  LHS_.resize(e_->Nx(), e_->Nx());
+  LHS_.setFromTriplets(trips.begin(), trips.end());
+  sol_.compute(LHS_);
+  ASSERT(sol_.info() == Success);
+
   return 0;
 }
 
 int frame_field_deform::deform() {
+  _nods_ = nods_;
+
+  for (size_t iter = 0; iter < max_iter_; ++iter) {
+
+  }
   return 0;
 }
 
