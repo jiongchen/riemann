@@ -80,7 +80,7 @@ void rm_vector_row(Eigen::Matrix<T, -1, 1> &b,
 }
 
 template <typename T>
-void up_vector_row(const Eigen::Matrix<T, -1, 1> &l, const std::vector<size_t> &g2l, Eigen::Matrix<T, -1, 1> &g) {
+void rc_vector_row(const Eigen::Matrix<T, -1, 1> &l, const std::vector<size_t> &g2l, Eigen::Matrix<T, -1, 1> &g) {
 #pragma omp parallel for
   for (size_t i = 0; i < g2l.size(); ++i) {
     if ( g2l[i] != -1 )

@@ -78,7 +78,7 @@ int lscm_param::apply() {
 
   VectorXd dx = VectorXd::Zero(dim);
   if ( !fixed_dofs_.empty() ) {
-    up_vector_row(delta, g2l_, dx);
+    rc_vector_row(delta, g2l_, dx);
   } else {
     dx = delta;
   }

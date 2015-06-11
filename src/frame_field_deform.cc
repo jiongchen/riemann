@@ -63,7 +63,13 @@ public:
     Map<const MatrixXd> X(x, 3, Nx()/3);
     Map<const MatrixXd> P(&nods_[0], 3, Nx()/3);
     for (size_t i = 0; i < e2c_->edges_.size(); ++i) {
+      const size_t ei = e2c_->edges_[i].first;
+      const size_t ej = e2c_->edges_[i].second;
+      pair<size_t, size_t> fa = e2c_->query(ei, ej);
+      const size_t face[2] = {fa.first, fa.second};
+      for (size_t k = 0; k < 2; ++k) {
 
+      }
     }
     return 0;
   }
@@ -328,7 +334,7 @@ int frame_field_deform::interp_frame_fields() {
   ASSERT(sol.info() == Success);
 
   VectorXd DX = VectorXd::Zero(dim);
-  surfparam::up_vector_row(dx, g2l_, DX);
+  surfparam::rc_vector_row(dx, g2l_, DX);
   W_ += DX;
 
   return 0;

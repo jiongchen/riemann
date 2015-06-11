@@ -28,7 +28,7 @@ int main(int argc, char *argv[])
   cout << "[INFO] spd tensor: " << spd << endl;
   deformer.visualize_tensor_fields("./ff_deform/tensor.vtk");
 
-  deformer.precompute();
+//  deformer.precompute();
 
   cout << "[INFO] done\n";
   return 0;
