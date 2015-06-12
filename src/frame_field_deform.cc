@@ -20,10 +20,8 @@ using namespace jtf::mesh;
 
 namespace geom_deform {
 
-int get_ortn_basis(const double *v, double *u, double *w);
-
 //--------------------------
-//  energy definition part
+//- energy definition part -
 //--------------------------
 
 class deform_energy : public surfparam::Functional<double>
@@ -31,13 +29,14 @@ class deform_energy : public surfparam::Functional<double>
 public:
   typedef zjucad::matrix::matrix<size_t> mati_t;
   typedef zjucad::matrix::matrix<double> matd_t;
-  deform_energy(const mati_t &tris, const matd_t &nods, const double w)
-    : tris_(tris), nods_(nods), w_(w) {
-    // init W and Q
+  deform_energy(const mati_t &tris, const matd_t &nods, const vector<Matrix3d> Winv, const double w)
+    : tris_(tris), nods_(nods), Winv_(Winv), w_(w) {
+    // init Q
     Q_.resize(tris_.size(2));
 #pragma omp parallel for
     for (size_t i = 0; i < Q_.size(); ++i)
       Q_[i] = Matrix3d::Identity();
+
     e2c_.reset(edge2cell_adjacent::create(tris_, false));
     cotval_.resize(2, e2c_->edges_.size());
 #pragma omp parallel for
@@ -68,7 +67,10 @@ public:
       pair<size_t, size_t> fa = e2c_->query(ei, ej);
       const size_t face[2] = {fa.first, fa.second};
       for (size_t k = 0; k < 2; ++k) {
-
+        if ( face[k] == -1 )
+          continue;
+        *val += w_*cotval_(k, i)*
+            (X.col(ei)-X.col(ej)-Q_[face[k]]*Winv_[face[k]]*(P.col(ei)-P.col(ej))).squaredNorm();
       }
     }
     return 0;
@@ -78,24 +80,43 @@ public:
     Map<const MatrixXd> P(&nods_[0], 3, Nx()/3);
     Map<MatrixXd> grad(gra, 3, Nx()/3);
     for (size_t i = 0; i < e2c_->edges_.size(); ++i) {
-
+      const size_t ei = e2c_->edges_[i].first;
+      const size_t ej = e2c_->edges_[i].second;
+      pair<size_t, size_t> fa = e2c_->query(ei, ej);
+      const size_t face[2] = {fa.first, fa.second};
+      for (size_t k = 0; k < 2; ++k) {
+        if ( face[k] == -1 )
+          continue;
+//        Vector3d temp = ;
+//        grad.col(ei) +=;
+//        grad.col(ej) +=;
+      }
     }
     return 0;
   }
   int Hes(const double *x, vector<Triplet<double>> *hes) const {
     for (size_t i = 0; i < e2c_->edges_.size(); ++i) {
-
+      const size_t ei = e2c_->edges_[i].first;
+      const size_t ej = e2c_->edges_[i].second;
+      pair<size_t, size_t> fa = e2c_->query(ei, ej);
+      const size_t face[2] = {fa.first, fa.second};
+      for (size_t k = 0; k < 2; ++k) {
+        if ( face[k] == -1 )
+          continue;
+//        surfparam::add_diag_block();
+//        surfparam::add_diag_block();
+      }
     }
     return 0;
   }
-  int EvalQ() {
+  int UpdateRotation() {
     return 0;
   }
 private:
   const mati_t &tris_;
   const matd_t &nods_;
+  const vector<Matrix3d> Winv_;
   const double w_;
-  vector<Matrix3d> Winv_;
   vector<Matrix3d> Q_;
   matd_t cotval_;
   shared_ptr<edge2cell_adjacent> e2c_;
@@ -156,7 +177,12 @@ int frame_field_deform::build_local_bases() {
   B_.resize(3, 3*tris_.size(2));
 #pragma omp parallel for
   for (size_t i = 0; i < tris_.size(2); ++i) {
-    get_ortn_basis(&normal(0, i), &B_(0, 3*i+0), &B_(0, 3*i+1));
+    matd_t u = nods_(colon(), tris_(1, i))-nods_(colon(), tris_(0, i));
+    u /= norm(u);
+    matd_t v = cross(normal(colon(), i), u);
+    v /= norm(v);
+    std::copy(&u[0], &u[0]+3, &B_(0, 3*i+0));
+    std::copy(&v[0], &v[0]+3, &B_(0, 3*i+1));
     std::copy(&normal(0, i), &normal(0, i)+3, &B_(0, 3*i+2));
   }
   return 0;
@@ -403,7 +429,7 @@ int frame_field_deform::precompute() {
 
   // construct energy
   buff_.resize(2);
-  buff_[DEFORM] = std::make_shared<deform_energy>(tris_, nods_, 1.0);
+  buff_[DEFORM] = std::make_shared<deform_energy>(tris_, nods_, Winv, 1.0);
   try {
     e_ = std::make_shared<surfparam::energy_t<double>>(buff_);
   } catch ( exception &e ) {
@@ -423,9 +449,31 @@ int frame_field_deform::precompute() {
 
 int frame_field_deform::deform() {
   _nods_ = nods_;
-
+  Map<VectorXd> X(&_nods_[0], _nods_.size());
   for (size_t iter = 0; iter < max_iter_; ++iter) {
+    cout << "[info] iteration " << iter << endl;
+    // query energy value
+    double val = 0;
+    e_->Val(&X[0], &val);
+    cout << "[info] energy: " << val << "\n\n";
 
+    // assemble rhs
+    VectorXd rhs = VectorXd::Zero(e_->Nx());
+    e_->Gra(&X[0], &rhs[0]);
+    rhs = -rhs;
+
+    VectorXd dx = sol_.solve(rhs);
+    ASSERT(sol_.info() == Success);
+
+    double x0norm = X.norm();
+    X += dx;
+    std::dynamic_pointer_cast<deform_energy>(buff_[DEFORM])
+        ->UpdateRotation();
+    // convergence test
+    if ( dx.norm() <= tolerance_*x0norm ) {
+      cout << "[info] converged!\n";
+      break;
+    }
   }
   return 0;
 }

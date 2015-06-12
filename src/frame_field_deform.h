@@ -21,7 +21,7 @@ public:
   };
   frame_field_deform();
   frame_field_deform(const boost::property_tree::ptree &pt);
-  // IO
+  // io
   int load_mesh(const char *file);
   int load_constraints(const char *file);
   int save_original_mesh(const char *file) const;

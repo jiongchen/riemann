@@ -17,7 +17,7 @@ int main(int argc, char *argv[])
   frame_field_deform deformer;
   deformer.load_mesh(argv[1]);
   deformer.save_original_mesh("./ff_deform/origin.obj");
-  deformer.visualize_local_bases("./ff_deform/local_frame.vtk", 0.005);
+  deformer.visualize_local_bases("./ff_deform/local_frame.vtk", 0.01);
 
   deformer.load_constraints(argv[2]);
   deformer.visualize_init_frames("./ff_deform/init_ff.vtk");
