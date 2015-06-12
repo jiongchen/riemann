@@ -57,6 +57,7 @@ private:
   Eigen::SparseMatrix<double> LHS_;
   size_t max_iter_;
   double tolerance_;
+  double lambda_;
 };
 
 }

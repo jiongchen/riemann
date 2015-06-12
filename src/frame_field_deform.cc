@@ -29,7 +29,7 @@ class deform_energy : public surfparam::Functional<double>
 public:
   typedef zjucad::matrix::matrix<size_t> mati_t;
   typedef zjucad::matrix::matrix<double> matd_t;
-  deform_energy(const mati_t &tris, const matd_t &nods, const vector<Matrix3d> Winv, const double w)
+  deform_energy(const mati_t &tris, const matd_t &nods, const vector<Matrix3d> &Winv, const double w)
     : tris_(tris), nods_(nods), Winv_(Winv), w_(w) {
     // init Q
     Q_.resize(tris_.size(2));
@@ -87,9 +87,10 @@ public:
       for (size_t k = 0; k < 2; ++k) {
         if ( face[k] == -1 )
           continue;
-//        Vector3d temp = ;
-//        grad.col(ei) +=;
-//        grad.col(ej) +=;
+        Vector3d temp = 2.0*w_*cotval_(k, i)*
+            (X.col(ei)-X.col(ej)-Q_[face[k]]*Winv_[face[k]]*(P.col(ei)-P.col(ej)));
+        grad.col(ei) += temp;
+        grad.col(ej) -= temp;
       }
     }
     return 0;
@@ -103,13 +104,28 @@ public:
       for (size_t k = 0; k < 2; ++k) {
         if ( face[k] == -1 )
           continue;
-//        surfparam::add_diag_block();
-//        surfparam::add_diag_block();
+        const double wgt = 2.0*w_*cotval_(k, i);
+        surfparam::add_diag_block(ei, ei, +wgt, hes);
+        surfparam::add_diag_block(ei, ej, -wgt, hes);
+        surfparam::add_diag_block(ej, ej, +wgt, hes);
+        surfparam::add_diag_block(ej, ei, -wgt, hes);
       }
     }
     return 0;
   }
-  int UpdateRotation() {
+  int UpdateRotation(const double *x) {
+    itr_matrix<const double *> X(3, Nx()/3, x);
+#pragma omp parallel for
+    for (size_t i = 0; i < tris_.size(2); ++i) {
+      matd_t xx = X(colon(), tris_(colon(), i))-X(colon(), tris_(colon(), i))*ones<double>(3, 1)/3.0;
+      matd_t yy = nods_(colon(), tris_(colon(), i))-nods_(colon(), tris_(colon(), i))*ones<double>(3, 1)/3.0;
+      matd_t ss = xx*trans(yy);
+      Map<const Matrix3d> S(&ss[0]);
+      JacobiSVD<Matrix3d> sol(S, ComputeFullU|ComputeFullV);
+      Matrix3d I = Matrix3d::Identity();
+      I(2, 2) = (sol.matrixV()*sol.matrixU().transpose()).determinant();
+      Q_[i] = sol.matrixV()*I*sol.matrixU().transpose();
+    }
     return 0;
   }
 private:
@@ -162,7 +178,16 @@ private:
   SparseMatrix<double> L_, LtL_;
 };
 
-frame_field_deform::frame_field_deform() {}
+frame_field_deform::frame_field_deform()
+  : max_iter_(1000),
+    tolerance_(1e-12),
+    lambda_(0.1) {}
+
+frame_field_deform::frame_field_deform(const boost::property_tree::ptree &pt) {
+  max_iter_  = pt.get<size_t>("max_iter");
+  tolerance_ = pt.get<double>("tolerance");
+  lambda_    = pt.get<double>("lambda");
+}
 
 int frame_field_deform::load_mesh(const char *file) {
   int state = 0;
@@ -417,11 +442,9 @@ int frame_field_deform::precompute() {
   for (size_t i = 0; i < Winv.size(); ++i) {
     Matrix2d w;
     w << W_[3*i+0], W_[3*i+1], W_[3*i+1], W_[3*i+2];
-    Winv[i] = B_.block<3, 2>(0, 3*i)*w*B_.block<3, 2>(0, 3*i).transpose();
-    FullPivLU<Matrix3d> sol(Winv[i]);
-    cout << sol.rank() << endl;
+    FullPivLU<Matrix2d> sol(w);
     if ( sol.isInvertible() ) {
-      Winv[i] = sol.inverse();
+      Winv[i] = B_.block<3, 2>(0, 3*i)*sol.inverse()*B_.block<3, 2>(0, 3*i).transpose();
     } else {
       cerr << "[error] W" << i << " is not invertible\n";
     }
@@ -429,7 +452,8 @@ int frame_field_deform::precompute() {
 
   // construct energy
   buff_.resize(2);
-  buff_[DEFORM] = std::make_shared<deform_energy>(tris_, nods_, Winv, 1.0);
+  buff_[DEFORM] = std::make_shared<deform_energy>(tris_, nods_, Winv, 1.0-lambda_);
+  buff_[SMOOTH] = std::make_shared<smooth_energy>(tris_, nods_, lambda_);
   try {
     e_ = std::make_shared<surfparam::energy_t<double>>(buff_);
   } catch ( exception &e ) {
@@ -455,12 +479,13 @@ int frame_field_deform::deform() {
     // query energy value
     double val = 0;
     e_->Val(&X[0], &val);
-    cout << "[info] energy: " << val << "\n\n";
+    cout << "[info] energy: " << val << "\n";
 
     // assemble rhs
     VectorXd rhs = VectorXd::Zero(e_->Nx());
     e_->Gra(&X[0], &rhs[0]);
     rhs = -rhs;
+    cout << "[info] gradient norm: " << rhs.norm() << "\n\n";
 
     VectorXd dx = sol_.solve(rhs);
     ASSERT(sol_.info() == Success);
@@ -468,7 +493,8 @@ int frame_field_deform::deform() {
     double x0norm = X.norm();
     X += dx;
     std::dynamic_pointer_cast<deform_energy>(buff_[DEFORM])
-        ->UpdateRotation();
+        ->UpdateRotation(&X[0]);
+
     // convergence test
     if ( dx.norm() <= tolerance_*x0norm ) {
       cout << "[info] converged!\n";
