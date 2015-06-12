@@ -115,10 +115,11 @@ public:
   }
   int UpdateRotation(const double *x) {
     itr_matrix<const double *> X(3, Nx()/3, x);
+    static const matrix<double> op = identity_matrix<double>(3)- ones<double>(3, 3) / 3.0;
 #pragma omp parallel for
     for (size_t i = 0; i < tris_.size(2); ++i) {
-      matd_t xx = X(colon(), tris_(colon(), i))-X(colon(), tris_(colon(), i))*ones<double>(3, 1)/3.0;
-      matd_t yy = nods_(colon(), tris_(colon(), i))-nods_(colon(), tris_(colon(), i))*ones<double>(3, 1)/3.0;
+      matd_t xx = X(colon(), tris_(colon(), i))*op;
+      matd_t yy = nods_(colon(), tris_(colon(), i))*op;
       matd_t ss = xx*trans(yy);
       Map<const Matrix3d> S(&ss[0]);
       JacobiSVD<Matrix3d> sol(S, ComputeFullU|ComputeFullV);
@@ -179,7 +180,7 @@ private:
 };
 
 frame_field_deform::frame_field_deform()
-  : max_iter_(1000),
+  : max_iter_(5000),
     tolerance_(1e-12),
     lambda_(0.1) {}
 
@@ -252,6 +253,8 @@ int frame_field_deform::load_constraints(const char *file) {
     is >> fid;
     is >> F_(0, 2*fid+0) >> F_(1, 2*fid+0) >> F_(2, 2*fid+0);
     is >> F_(0, 2*fid+1) >> F_(1, 2*fid+1) >> F_(2, 2*fid+1);
+//    F_.col(2*fid+0) = (int)(F_.col(2*fid+0).norm()+0.5)*B_.col(3*fid+0);
+//    F_.col(2*fid+1) = (int)(F_.col(2*fid+1).norm()+0.5)*B_.col(3*fid+1);
     cons_face_.push_back(fid);
     ffc_.insert(3*fid+0);
     ffc_.insert(3*fid+1);
@@ -447,6 +450,7 @@ int frame_field_deform::precompute() {
       Winv[i] = B_.block<3, 2>(0, 3*i)*sol.inverse()*B_.block<3, 2>(0, 3*i).transpose();
     } else {
       cerr << "[error] W" << i << " is not invertible\n";
+      exit(EXIT_FAILURE);
     }
   }
 
@@ -458,6 +462,7 @@ int frame_field_deform::precompute() {
     e_ = std::make_shared<surfparam::energy_t<double>>(buff_);
   } catch ( exception &e ) {
     cerr << "[error] " << e.what() << endl;
+    exit(EXIT_FAILURE);
   }
 
   // query constant system matrix

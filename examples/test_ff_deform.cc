@@ -31,6 +31,7 @@ int main(int argc, char *argv[])
   deformer.precompute();
   deformer.deform();
 
+  deformer.save_original_mesh("./ff_deform/origin_post.obj");
   deformer.save_deformed_mesh("./ff_deform/deform.obj");
 
   cout << "[INFO] done\n";
