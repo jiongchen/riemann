@@ -31,11 +31,20 @@ public:
   typedef zjucad::matrix::matrix<double> matd_t;
   deform_energy(const mati_t &tris, const matd_t &nods, const vector<Matrix3d> &Winv, const double w)
     : tris_(tris), nods_(nods), Winv_(Winv), w_(w) {
-    // init Q
+    // init optimal rotation
     Q_.resize(tris_.size(2));
 #pragma omp parallel for
     for (size_t i = 0; i < Q_.size(); ++i)
       Q_[i] = Matrix3d::Identity();
+
+    face_cot_.resize(3, tris_.size(2));
+#pragma omp parallel for
+    for (size_t i = 0; i < face_cot_.size(2); ++i) {
+      matd_t vert = nods_(colon(), tris_(colon(), i));
+      face_cot_(0, i) = surfparam::cal_cot_val(&vert(0, 0), &vert(0, 2), &vert(0, 1));
+      face_cot_(1, i) = surfparam::cal_cot_val(&vert(0, 1), &vert(0, 0), &vert(0, 2));
+      face_cot_(2, i) = surfparam::cal_cot_val(&vert(0, 2), &vert(0, 1), &vert(0, 0));
+    }
 
     e2c_.reset(edge2cell_adjacent::create(tris_, false));
     cotval_.resize(2, e2c_->edges_.size());
@@ -113,19 +122,32 @@ public:
     }
     return 0;
   }
-  int UpdateRotation(const double *x) {
-    itr_matrix<const double *> X(3, Nx()/3, x);
-    static const matrix<double> op = identity_matrix<double>(3)- ones<double>(3, 3) / 3.0;
+  int EvaluateOptimalRotation(const double *x) {
+    Map<const MatrixXd> X(x, 3, Nx()/3);
+    Map<const MatrixXd> P(&nods_[0], 3, Nx()/3);
 #pragma omp parallel for
     for (size_t i = 0; i < tris_.size(2); ++i) {
-      matd_t xx = X(colon(), tris_(colon(), i))*op;
-      matd_t yy = nods_(colon(), tris_(colon(), i))*op;
-      matd_t ss = xx*trans(yy);
-      Map<const Matrix3d> S(&ss[0]);
-      JacobiSVD<Matrix3d> sol(S, ComputeFullU|ComputeFullV);
-      Matrix3d I = Matrix3d::Identity();
-      I(2, 2) = (sol.matrixV()*sol.matrixU().transpose()).determinant();
-      Q_[i] = sol.matrixV()*I*sol.matrixU().transpose();
+      Matrix3d curr_pts, rest_pts;
+      Vector3d wgt(face_cot_(0, i), face_cot_(1, i), face_cot_(2, i));
+
+      rest_pts.col(0) = P.col(tris_(1, i))-P.col(tris_(0, i));
+      rest_pts.col(1) = P.col(tris_(2, i))-P.col(tris_(1, i));
+      rest_pts.col(2) = P.col(tris_(0, i))-P.col(tris_(2, i));
+      rest_pts = (Winv_[i]*rest_pts).eval();
+
+      curr_pts.col(0) = X.col(tris_(1, i))-X.col(tris_(0, i));
+      curr_pts.col(1) = X.col(tris_(2, i))-X.col(tris_(1, i));
+      curr_pts.col(2) = X.col(tris_(0, i))-X.col(tris_(2, i));
+
+      Matrix3d S = curr_pts*wgt.asDiagonal()*rest_pts.transpose();
+      JacobiSVD<Matrix3d> svd(S, ComputeFullU|ComputeFullV);
+      Matrix3d su = svd.matrixU();
+      Matrix3d sv = svd.matrixV();
+      Q_[i] = su*sv.transpose();
+      if ( Q_[i].determinant() < 0 ) {
+        su.col(2) = -su.col(2);
+        Q_[i] = su*sv.transpose();
+      }
     }
     return 0;
   }
@@ -136,6 +158,7 @@ private:
   const double w_;
   vector<Matrix3d> Q_;
   matd_t cotval_;
+  matd_t face_cot_;
   shared_ptr<edge2cell_adjacent> e2c_;
 };
 
@@ -180,7 +203,7 @@ private:
 };
 
 frame_field_deform::frame_field_deform()
-  : max_iter_(5000),
+  : max_iter_(2000),
     tolerance_(1e-12),
     lambda_(0.1) {}
 
@@ -253,8 +276,6 @@ int frame_field_deform::load_constraints(const char *file) {
     is >> fid;
     is >> F_(0, 2*fid+0) >> F_(1, 2*fid+0) >> F_(2, 2*fid+0);
     is >> F_(0, 2*fid+1) >> F_(1, 2*fid+1) >> F_(2, 2*fid+1);
-//    F_.col(2*fid+0) = (int)(F_.col(2*fid+0).norm()+0.5)*B_.col(3*fid+0);
-//    F_.col(2*fid+1) = (int)(F_.col(2*fid+1).norm()+0.5)*B_.col(3*fid+1);
     cons_face_.push_back(fid);
     ffc_.insert(3*fid+0);
     ffc_.insert(3*fid+1);
@@ -498,7 +519,7 @@ int frame_field_deform::deform() {
     double x0norm = X.norm();
     X += dx;
     std::dynamic_pointer_cast<deform_energy>(buff_[DEFORM])
-        ->UpdateRotation(&X[0]);
+        ->EvaluateOptimalRotation(&X[0]);
 
     // convergence test
     if ( dx.norm() <= tolerance_*x0norm ) {

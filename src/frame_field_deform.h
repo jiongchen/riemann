@@ -58,6 +58,7 @@ private:
   size_t max_iter_;
   double tolerance_;
   double lambda_;
+  double perturb_;
 };
 
 }
