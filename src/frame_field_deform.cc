@@ -203,7 +203,7 @@ private:
 };
 
 frame_field_deform::frame_field_deform()
-  : max_iter_(2000),
+  : max_iter_(20000),
     tolerance_(1e-12),
     lambda_(0.1) {}
 
@@ -501,17 +501,20 @@ int frame_field_deform::deform() {
   _nods_ = nods_;
   Map<VectorXd> X(&_nods_[0], _nods_.size());
   for (size_t iter = 0; iter < max_iter_; ++iter) {
-    cout << "[info] iteration " << iter << endl;
     // query energy value
-    double val = 0;
-    e_->Val(&X[0], &val);
-    cout << "[info] energy: " << val << "\n";
+    if ( iter % 100 == 0 ) {
+      cout << "[info] iteration " << iter << endl;
+      double val = 0;
+      e_->Val(&X[0], &val);
+      cout << "[info] energy: " << val << "\n";
+    }
 
     // assemble rhs
     VectorXd rhs = VectorXd::Zero(e_->Nx());
     e_->Gra(&X[0], &rhs[0]);
     rhs = -rhs;
-    cout << "[info] gradient norm: " << rhs.norm() << "\n\n";
+    if ( iter % 100 == 0 )
+      cout << "[info] gradient norm: " << rhs.norm() << "\n\n";
 
     VectorXd dx = sol_.solve(rhs);
     ASSERT(sol_.info() == Success);

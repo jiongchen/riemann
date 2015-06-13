@@ -1,5 +1,6 @@
 #include <iostream>
 #include <boost/filesystem.hpp>
+#include <boost/property_tree/ptree.hpp>
 
 #include "src/frame_field_deform.h"
 
@@ -14,7 +15,12 @@ int main(int argc, char *argv[])
   }
   boost::filesystem::create_directory("./ff_deform");
 
-  frame_field_deform deformer;
+  boost::property_tree::ptree pt;
+  pt.put("max_iter", 50000);
+  pt.put("tolerance", 1e-12);
+  pt.put("lambda", 0.1);
+
+  frame_field_deform deformer(pt);
   deformer.load_mesh(argv[1]);
   deformer.save_original_mesh("./ff_deform/origin.obj");
   deformer.visualize_local_bases("./ff_deform/local_frame.vtk", 0.01);
