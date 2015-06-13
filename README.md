@@ -13,3 +13,5 @@ trying to get familiar with libigl, and may implement some classical algorithms 
 [2015-5-22] Partially implement [[Funck06]](https://isgwww.cs.uni-magdeburg.de/visual/files/publications/Archive/Funck_2006_SIGGRAPH.pdf). More modeling metaphors may be included in future.
 
 [2015-5-27] Implement twisting and bending effects based on vector field.
+
+[2015-6-13] Implement frame-driven deformation proposed by [[Panozzo14]](http://igl.ethz.ch/projects/frame-fields/frame-fields.pdf). The other part about frame-field aligned quadrangulation may included later, which consistis of processes to paramterize and remesh the deformed surface for obtaining a uniform quadrilateral mesh. 
