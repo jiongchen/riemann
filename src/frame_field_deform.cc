@@ -151,6 +151,38 @@ public:
     }
     return 0;
   }
+  int EvaluateOptimalRotationOther(const double *x) {
+    Map<const MatrixXd> X(x, 3, Nx()/3);
+    Map<const MatrixXd> P(&nods_[0], 3, Nx()/3);
+#pragma omp parallel for
+    for (size_t i = 0; i < tris_.size(2); ++i) {
+      Matrix3d curr_pts, rest_pts;
+      Vector3d wgt(face_cot_(0, i), face_cot_(1, i), face_cot_(2, i));
+      Vector3d curr_cent, rest_cent;
+
+      rest_pts.col(0) = P.col(tris_(1, i))-P.col(tris_(0, i));
+      rest_pts.col(1) = P.col(tris_(2, i))-P.col(tris_(1, i));
+      rest_pts.col(2) = P.col(tris_(0, i))-P.col(tris_(2, i));
+      rest_pts = (Winv_[i]*rest_pts).eval();
+      rest_cent = rest_pts*wgt/wgt.sum();
+
+      curr_pts.col(0) = X.col(tris_(1, i))-X.col(tris_(0, i));
+      curr_pts.col(1) = X.col(tris_(2, i))-X.col(tris_(1, i));
+      curr_pts.col(2) = X.col(tris_(0, i))-X.col(tris_(2, i));
+      curr_cent = curr_pts*wgt/wgt.sum();
+
+      Matrix3d XX = rest_pts-rest_cent*Vector3d::Ones().transpose();
+      Matrix3d YY = curr_pts-curr_cent*Vector3d::Ones().transpose();
+      Matrix3d SS = XX*wgt.asDiagonal()*YY.transpose();
+      JacobiSVD<Matrix3d> svd(SS, ComputeFullU|ComputeFullV);
+      Matrix3d su = svd.matrixU();
+      Matrix3d sv = svd.matrixV();
+      Matrix3d I = Matrix3d::Identity();
+      I(2, 2) = (sv*su.transpose()).determinant();
+      Q_[i] = sv*I*su.transpose();
+    }
+    return 0;
+  }
 private:
   const mati_t &tris_;
   const matd_t &nods_;
@@ -522,7 +554,7 @@ int frame_field_deform::deform() {
     double x0norm = X.norm();
     X += dx;
     std::dynamic_pointer_cast<deform_energy>(buff_[DEFORM])
-        ->EvaluateOptimalRotation(&X[0]);
+        ->EvaluateOptimalRotationOther(&X[0]);
 
     // convergence test
     if ( dx.norm() <= tolerance_*x0norm ) {
