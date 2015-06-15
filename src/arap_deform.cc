@@ -301,18 +301,28 @@ public:
     itr_matrix<const double *> X(3, dim()/3, x);
     matd_t def_normal;
     jtf::mesh::cal_face_normal(tris_, X, def_normal, true);
-#pragma omp parallel for
+//#pragma omp parallel for
     for (size_t i = 0; i < tris_.size(2); ++i) {
       matd_t vt = X(colon(), tris_(colon(), i));
       Map<const VectorXd> U(vt.begin(), 9);
       VectorXd def_grad = G_[i]*U;
       Map<Matrix3d> dg(def_grad.data());
-      JacobiSVD<Matrix3d> sol(dg, ComputeFullU|ComputeFullV);
-      Matrix3d S = sol.matrixU();
-      Matrix3d T = sol.matrixV();
+//      cout << dg << endl;
+//      getchar();
+      JacobiSVD<Matrix3d> svd(dg, ComputeFullU|ComputeFullV);
+//      cout << sol.singularValues().transpose() << endl;
+//      getchar();
+      Matrix3d S = svd.matrixU();
+      Matrix3d T = svd.matrixV();
       S.col(2) = Vector3d(normal_(0, i), normal_(1, i), normal_(2, i));
       T.col(2) = Vector3d(def_normal(0, i), def_normal(1, i), def_normal(2, i));
       R_[i] = S*T.transpose();
+//      static int count = 0;
+//      if ( count == 0 && std::fabs(R_[i].squaredNorm()-3) > 1e-12 ) {
+//        cout << "id: " << i << endl;
+//        cout << R_[i] << endl << endl;
+//        getchar();
+//      }
     }
     return 0;
   }
@@ -330,7 +340,8 @@ arap_deform::arap_deform(const mati_t &tris, const matd_t &nods)
   : tris_(tris), nods_(nods) {}
 
 int arap_deform::pre_compute(const vector<size_t> &idx) {
-  e_.reset(new one_ring_arap_energy(tris_, nods_, 1.0));
+//  e_.reset(new one_ring_arap_energy(tris_, nods_, 1.0));
+  e_.reset(new tri_centric_arap_energy(tris_, nods_, 1.0));
   e_->hes(nullptr, &L_);
 
   fixed_dofs_.clear();
@@ -351,7 +362,7 @@ int arap_deform::pre_compute(const vector<size_t> &idx) {
     rm_spmat_col_row(L_, g2l_);
   sol_.compute(L_);
   if ( sol_.info() != Success ) {
-    cerr << "# INFO: prefactorization failed\n";
+    cerr << "[info] prefactorization failed\n";
     return __LINE__;
   }
   return 0;
@@ -364,6 +375,12 @@ int arap_deform::deformation(double *x) {
   VectorXd Dx(e_->dim());
   for (size_t iter = 0; iter < max_iter; ++iter) {
     e_->eval_rotation(Xstar.data());
+    if ( iter % 100 == 0 ) {
+      double value = 0;
+      e_->val(Xstar.data(), &value);
+      cout << "[info] iteration " << iter << endl;
+      cout << "[info] energy value: " << value << endl << endl;
+    }
     VectorXd grad(e_->dim());
     grad.setZero();
     e_->gra(Xstar.data(), grad.data());

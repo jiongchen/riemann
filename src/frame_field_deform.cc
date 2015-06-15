@@ -572,11 +572,54 @@ int frame_field_deform::deform() {
   return 0;
 }
 
-int frame_field_deform::gen_cross_field() {
+int frame_field_deform::calc_defo_grad_oper() {
+  D_.resize(3, 3*tris_.size(2));
+  matd_t normal;
+  jtf::mesh::cal_face_normal(tris_, nods_, normal, true);
+#pragma omp parallel for
+  for (size_t i = 0; i < tris_.size(2); ++i) {
+    matd_t D(3, 3);
+    D(colon(), colon(0, 1)) = nods_(colon(), tris_(colon(1, 2), i))-nods_(colon(), tris_(colon(0, 1), i));
+    D(colon(), 2) = normal(colon(), i);
+    std::copy(D.begin(), D.end(), &D_(0, 3*i));
+    FullPivLU<Matrix3d> flu(D_.block<3, 3>(0, 3*i));
+    if ( flu.isInvertible() )
+      D_.block<3, 3>(0, 3*i) = flu.inverse();
+    else
+      cerr << "[info] [e0, e1, n] is not invertible\n";
+  }
   return 0;
 }
 
-int frame_field_deform::save_corss_field(const char *file) const {
+int frame_field_deform::gen_cross_field() {
+  X_ = MatrixXd::Zero(3, 2*tris_.size(2));
+#pragma omp parallel for
+  for (size_t i = 0; i < cons_face_.size(); ++i) {
+    const size_t fid = cons_face_[i];
+    matd_t temp = zeros<double>(3, 3);
+    temp(colon(), colon(0, 1)) = _nods_(colon(), tris_(colon(1, 2), fid))-_nods_(colon(), tris_(colon(0, 1), fid));
+    Matrix3d DG = Matrix3d(temp.begin())*D_.block<3, 3>(0, 3*fid);
+    X_.col(2*fid+0) = DG*F_.col(2*fid+0);
+    X_.col(2*fid+1) = DG*F_.col(2*fid+1);
+  }
+  return 0;
+}
+
+int frame_field_deform::visualize_cross_fields(const char *file, const double scale) const {
+  mati_t lines(2, 2*tris_.size(2));
+  matd_t verts(3, 3*tris_.size(2));
+#pragma omp parallel for
+  for (size_t i = 0; i < tris_.size(2); ++i) {
+    lines(0, 2*i+0) = 3*i+0;
+    lines(1, 2*i+0) = 3*i+1;
+    lines(0, 2*i+1) = 3*i+0;
+    lines(1, 2*i+1) = 3*i+2;
+    verts(colon(), 3*i+0) = _nods_(colon(), tris_(colon(), i))*ones<double>(3, 1)/3.0;
+    verts(colon(), 3*i+1) = verts(colon(), 3*i)+scale*itr_matrix<const double*>(3, 1, &X_(0, 2*i+0));
+    verts(colon(), 3*i+2) = verts(colon(), 3*i)+scale*itr_matrix<const double*>(3, 1, &X_(0, 2*i+1));
+  }
+  ofstream os(file);
+  line2vtk(os, &verts[0], verts.size(2), &lines[0], lines.size(2));
   return 0;
 }
 

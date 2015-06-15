@@ -16,7 +16,7 @@ int main(int argc, char *argv[])
   boost::filesystem::create_directory("./ff_deform");
 
   boost::property_tree::ptree pt;
-  pt.put("max_iter", 50000);
+  pt.put("max_iter", 20000);
   pt.put("tolerance", 1e-12);
   pt.put("lambda", 0.1);
   pt.put("perturb", 0.1);
@@ -40,6 +40,10 @@ int main(int argc, char *argv[])
 
   deformer.save_original_mesh("./ff_deform/origin_post.obj");
   deformer.save_deformed_mesh("./ff_deform/deform.obj");
+
+  deformer.calc_defo_grad_oper();
+  deformer.gen_cross_field();
+  deformer.visualize_cross_fields("./ff_deform/cross.vtk");
 
   cout << "[INFO] done\n";
   return 0;

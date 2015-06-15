@@ -26,19 +26,20 @@ public:
   int load_constraints(const char *file);
   int save_original_mesh(const char *file) const;
   int save_deformed_mesh(const char *file) const;
-  int save_corss_field(const char *file) const;
   // prepare
   int interp_frame_fields();
   // deform
   int precompute();
   int deform();
   // frame to cross
+  int calc_defo_grad_oper();
   int gen_cross_field();
   // debug
   int visualize_local_bases(const char *file, const double len) const;
   int visualize_init_frames(const char *file, const double scale=1.0) const;
   int visualize_frame_fields(const char *file, const double scale=1.0);
   int visualize_tensor_fields(const char *file);
+  int visualize_cross_fields(const char *file, const double scale=1.0) const;
   bool check_spd_tensor_fields() const;
 private:
   int build_local_bases(const mati_t &tris, const matd_t &nods, Eigen::MatrixXd &B);
@@ -62,6 +63,8 @@ private:
   double tolerance_;
   double lambda_;
   double perturb_;
+
+  Eigen::MatrixXd D_;
 };
 
 }

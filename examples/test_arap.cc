@@ -24,11 +24,11 @@ int main(int argc, char *argv[])
 #define TEST1 1
 #if TEST1
     vector<size_t> idx{0, 1, 2, 3, 4, 5, 6, 7};
-    matrix<double> temp = nods(colon(), 4);
-    nods(colon(), 4) = nods(colon(), 5);
-    nods(colon(), 5) = nods(colon(), 6);
-    nods(colon(), 6) = nods(colon(), 7);
-    nods(colon(), 7) = temp;
+//    matrix<double> temp = nods(colon(), 4);
+//    nods(colon(), 4) = nods(colon(), 5);
+//    nods(colon(), 5) = nods(colon(), 6);
+//    nods(colon(), 6) = nods(colon(), 7);
+//    nods(colon(), 7) = temp;
 # endif
 #if TEST2
     vector<size_t> idx{15, 391};
