@@ -26,11 +26,14 @@ public:
   int load_constraints(const char *file);
   int save_original_mesh(const char *file) const;
   int save_deformed_mesh(const char *file) const;
+  int save_corss_field(const char *file) const;
   // prepare
   int interp_frame_fields();
   // deform
   int precompute();
   int deform();
+  // frame to cross
+  int gen_cross_field();
   // debug
   int visualize_local_bases(const char *file, const double len) const;
   int visualize_init_frames(const char *file, const double scale=1.0) const;
@@ -38,11 +41,11 @@ public:
   int visualize_tensor_fields(const char *file);
   bool check_spd_tensor_fields() const;
 private:
-  int build_local_bases();
+  int build_local_bases(const mati_t &tris, const matd_t &nods, Eigen::MatrixXd &B);
   int interp_cross_fields();
   mati_t tris_;
   matd_t nods_, _nods_;
-  Eigen::MatrixXd B_;
+  Eigen::MatrixXd B_, _B_;
 
   std::vector<size_t> cons_face_;
   std::unordered_set<size_t> ffc_;

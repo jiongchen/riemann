@@ -237,34 +237,36 @@ private:
 frame_field_deform::frame_field_deform()
   : max_iter_(20000),
     tolerance_(1e-12),
-    lambda_(0.1) {}
+    lambda_(0.1),
+    perturb_(0.1) {}
 
 frame_field_deform::frame_field_deform(const boost::property_tree::ptree &pt) {
-  max_iter_  = pt.get<size_t>("max_iter");
-  tolerance_ = pt.get<double>("tolerance");
-  lambda_    = pt.get<double>("lambda");
+  max_iter_  =  pt.get<size_t>("max_iter");
+  tolerance_ =  pt.get<double>("tolerance");
+  lambda_    =  pt.get<double>("lambda");
+  perturb_   =  pt.get<double>("perturb");
 }
 
 int frame_field_deform::load_mesh(const char *file) {
   int state = 0;
   state |= jtf::mesh::load_obj(file, tris_, nods_);
-  state |= build_local_bases();
+  state |= build_local_bases(tris_, nods_, B_);
   return state;
 }
 
-int frame_field_deform::build_local_bases() {
+int frame_field_deform::build_local_bases(const mati_t &tris, const matd_t &nods, MatrixXd &B) {
   matd_t normal;
-  jtf::mesh::cal_face_normal(tris_, nods_, normal, true);
-  B_.resize(3, 3*tris_.size(2));
+  jtf::mesh::cal_face_normal(tris, nods, normal, true);
+  B.resize(3, 3*tris.size(2));
 #pragma omp parallel for
-  for (size_t i = 0; i < tris_.size(2); ++i) {
-    matd_t u = nods_(colon(), tris_(1, i))-nods_(colon(), tris_(0, i));
+  for (size_t i = 0; i < tris.size(2); ++i) {
+    matd_t u = nods(colon(), tris(1, i))-nods(colon(), tris(0, i));
     u /= norm(u);
     matd_t v = cross(normal(colon(), i), u);
     v /= norm(v);
-    std::copy(&u[0], &u[0]+3, &B_(0, 3*i+0));
-    std::copy(&v[0], &v[0]+3, &B_(0, 3*i+1));
-    std::copy(&normal(0, i), &normal(0, i)+3, &B_(0, 3*i+2));
+    std::copy(&u[0], &u[0]+3, &B(0, 3*i+0));
+    std::copy(&v[0], &v[0]+3, &B(0, 3*i+1));
+    std::copy(&normal(0, i), &normal(0, i)+3, &B(0, 3*i+2));
   }
   return 0;
 }
@@ -531,6 +533,11 @@ int frame_field_deform::precompute() {
 
 int frame_field_deform::deform() {
   _nods_ = nods_;
+#pragma omp parallel for
+  for (size_t j = 0; j < _nods_.size(2); ++j)
+    for (size_t i = 0; i < _nods_.size(1); ++i)
+      _nods_(i, j) += (double(rand())/double(RAND_MAX))*10e-4*perturb_;
+
   Map<VectorXd> X(&_nods_[0], _nods_.size());
   for (size_t iter = 0; iter < max_iter_; ++iter) {
     // query energy value
@@ -554,7 +561,7 @@ int frame_field_deform::deform() {
     double x0norm = X.norm();
     X += dx;
     std::dynamic_pointer_cast<deform_energy>(buff_[DEFORM])
-        ->EvaluateOptimalRotationOther(&X[0]);
+        ->EvaluateOptimalRotation(&X[0]);
 
     // convergence test
     if ( dx.norm() <= tolerance_*x0norm ) {
@@ -562,6 +569,14 @@ int frame_field_deform::deform() {
       break;
     }
   }
+  return 0;
+}
+
+int frame_field_deform::gen_cross_field() {
+  return 0;
+}
+
+int frame_field_deform::save_corss_field(const char *file) const {
   return 0;
 }
 

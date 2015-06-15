@@ -19,6 +19,7 @@ int main(int argc, char *argv[])
   pt.put("max_iter", 50000);
   pt.put("tolerance", 1e-12);
   pt.put("lambda", 0.1);
+  pt.put("perturb", 0.1);
 
   frame_field_deform deformer(pt);
   deformer.load_mesh(argv[1]);
