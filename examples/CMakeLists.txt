@@ -70,3 +70,8 @@ target_link_libraries(test_ff_deform
     ${Boost_LIBRARIES}
 )
 
+add_executable(test_deform_transfer test_deform_transfer.cc)
+target_link_libraries(test_deform_transfer
+    surfparam
+    ${Boost_LIBRARIES}
+)

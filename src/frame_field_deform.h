@@ -26,6 +26,7 @@ public:
   int load_constraints(const char *file);
   int save_original_mesh(const char *file) const;
   int save_deformed_mesh(const char *file) const;
+  int save_cross_fields(const char *file) const;
   // prepare
   int interp_frame_fields();
   // deform
