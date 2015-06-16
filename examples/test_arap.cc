@@ -1,11 +1,13 @@
 #include <iostream>
 #include <boost/filesystem.hpp>
 #include <jtflib/mesh/io.h>
+#include <Eigen/Geometry>
 
 #include "src/arap_deform.h"
 
 using namespace std;
 using namespace zjucad::matrix;
+using namespace Eigen;
 
 int main(int argc, char *argv[])
 {
@@ -24,11 +26,14 @@ int main(int argc, char *argv[])
 #define TEST1 1
 #if TEST1
     vector<size_t> idx{0, 1, 2, 3, 4, 5, 6, 7};
-//    matrix<double> temp = nods(colon(), 4);
-//    nods(colon(), 4) = nods(colon(), 5);
-//    nods(colon(), 5) = nods(colon(), 6);
-//    nods(colon(), 6) = nods(colon(), 7);
-//    nods(colon(), 7) = temp;
+    Matrix3d rot;
+    rot = AngleAxisd(M_PI/2, Vector3d::UnitX());
+    matrix<double> R(3, 3);
+    std::copy(rot.data(), rot.data()+9, R.begin());
+    nods(colon(), 0) = temp(R*nods(colon(), 0));
+    nods(colon(), 1) = temp(R*nods(colon(), 1));
+    nods(colon(), 5) = temp(R*nods(colon(), 5));
+    nods(colon(), 4) = temp(R*nods(colon(), 4));
 # endif
 #if TEST2
     vector<size_t> idx{15, 391};

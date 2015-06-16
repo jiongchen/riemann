@@ -340,8 +340,8 @@ arap_deform::arap_deform(const mati_t &tris, const matd_t &nods)
   : tris_(tris), nods_(nods) {}
 
 int arap_deform::pre_compute(const vector<size_t> &idx) {
-//  e_.reset(new one_ring_arap_energy(tris_, nods_, 1.0));
-  e_.reset(new tri_centric_arap_energy(tris_, nods_, 1.0));
+  e_.reset(new one_ring_arap_energy(tris_, nods_, 1.0));
+//  e_.reset(new tri_centric_arap_energy(tris_, nods_, 1.0));
   e_->hes(nullptr, &L_);
 
   fixed_dofs_.clear();
@@ -370,7 +370,7 @@ int arap_deform::pre_compute(const vector<size_t> &idx) {
 
 int arap_deform::deformation(double *x) {
   Map<VectorXd> X(x, e_->dim());
-  const size_t max_iter = 10000;
+  const size_t max_iter = 20000;
   VectorXd Xstar = X;
   VectorXd Dx(e_->dim());
   for (size_t iter = 0; iter < max_iter; ++iter) {
@@ -396,7 +396,7 @@ int arap_deform::deformation(double *x) {
     double xstar_norm = Xstar.norm();
     Xstar += Dx;
     // convergence test
-    if ( Dx.norm() <= 1e-8 * xstar_norm ) {
+    if ( Dx.norm() <= 1e-12 * xstar_norm ) {
       printf("# INFO: converged after %zu iteration\n", iter);
       break;
     }
