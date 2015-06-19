@@ -15,6 +15,7 @@ public :
   virtual int Val(const T *x, T *val) const = 0;
   virtual int Gra(const T *x, T *gra) const = 0;
   virtual int Hes(const T *x, std::vector<Eigen::Triplet<T>> *hes) const = 0;
+  virtual int ResetWeight(const double w) {}
   virtual int operator ()(const T *x, T *val, T *gra, const T step, bool graON) { // for LBFGS
     this->Val(x, val);
     if ( graON )
