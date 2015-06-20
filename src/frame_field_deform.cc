@@ -406,11 +406,17 @@ int frame_field_deform::interp_frame_fields() {
     for (size_t k = 0; k < 2; ++k) {
       const size_t I = IJ[k];
       const size_t J = IJ[1-k];
-      Vector3d axis = Vector3d(&B_(0, 3*J+2)).cross(Vector3d(&B_(0, 3*I+2)));
-      axis /= axis.norm();
-      double angle = surfparam::safe_acos(B_.col(3*J+2).dot(B_.col(3*I+2)));
       Matrix3d rot;
-      rot = AngleAxisd(angle, axis);
+      double angle = surfparam::safe_acos(B_.col(3*J+2).dot(B_.col(3*I+2)));
+      if ( std::fabs(angle) < 1e-16 ) {
+        rot = Matrix3d::Identity();
+      } else if ( std::fabs(angle - 3.141592653589793238462643383279502884) < 1e-16 ) {
+        rot = -Matrix3d::Identity();
+      } else {
+        Vector3d axis = Vector3d(&B_(0, 3*J+2)).cross(Vector3d(&B_(0, 3*I+2)));
+        axis /= axis.norm();
+        rot = AngleAxisd(angle, axis);
+      }
       Matrix2d Rij = B_.block<3, 2>(0, 3*I).transpose()*rot*B_.block<3, 2>(0, 3*J);
       const double rija = Rij(0, 0), rijb = Rij(0, 1), rijc = Rij(1, 0), rijd = Rij(1, 1);
       trips.push_back(Triplet<double>(3*I+0, 3*I+0, -1));
