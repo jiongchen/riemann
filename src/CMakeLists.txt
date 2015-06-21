@@ -9,7 +9,12 @@ add_custom_command(OUTPUT quad_scalar_field.f90
     DEPENDS quad_scalar_field.mac
 )
 
-add_library(surfparam SHARED ${header} ${source} quad_scalar_field.f90)
+add_custom_command(OUTPUT dt_energy.f90
+    COMMAND "maxima" ARGS --userdir=${SRC_DIR} -b dt_energy.mac
+    DEPENDS dt_energy.mac
+)
+
+add_library(surfparam SHARED ${header} ${source} quad_scalar_field.f90 dt_energy.f90)
 target_link_libraries(surfparam
     jtf-mesh
     ${UMFPACK_LIBRARIES}

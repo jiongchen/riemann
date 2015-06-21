@@ -1,0 +1,34 @@
+load(hj_fortran2)$
+load(cj_function)$
+
+optimprefix : tt$
+
+f: openw("dt_energy.f90")$
+
+block(
+  [X, D1, D2],
+  X: genmatrix(X, 3, 8),
+  D1: genmatrix(D1, 3, 3),
+  D2: genmatrix(D2, 3, 3),
+  unit_smooth_energy(X, D1, D2) := block(
+    [X1, X2],
+    X1: addcol(col(X, 2)-col(X, 1), col(X, 3)-col(X, 1), col(X, 4)-col(X, 1)),
+    X2: addcol(col(X, 6)-col(X, 5), col(X, 7)-col(X, 5), col(X, 8)-col(X, 5)),
+    matrix([mat_norm(X1.D1-X2.D2, frobenius)^2])
+  ),
+  with_stdout(f, val_jac_hes_to_f90(unit_smooth_energy, [X, D1, D2]))
+)$
+
+block (
+  [X, D],
+  X: genmatrix(X, 3, 4),
+  D: genmatrix(D, 3, 3),
+  unit_identity_energy(X, D) := block(
+    [F],
+    F: addcol(col(X, 2)-col(X, 1), col(X, 3)-col(X, 1), col(X, 4)-col(X, 1)),
+    matrix([mat_norm(F.D-ident(3), frobenius)^2])
+  ),
+  with_stdout(f, val_jac_hes_to_f90(unit_identity_energy, [X, D]))
+)$
+
+close(f)$
