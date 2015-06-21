@@ -26,7 +26,7 @@ int main(int argc, char *argv[])
   dt.save_reference_source_mesh("./dt/source_ref.obj");
   dt.save_reference_target_mesh("./dt/target_ref.obj");
 
-//  dt.solve_corres_precompute();
+  dt.solve_corres_precompute();
   dt.debug_energies();
 
   cout << "done\n";

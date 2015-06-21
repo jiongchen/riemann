@@ -74,13 +74,12 @@ public:
   int Val(const double *x, double *val) const {
     itr_matrix<const double *> X(3, Nx()/3, x);
     for (auto &e : e2c_->edges_) {
-      const size_t I = e.first;
-      const size_t J = e.second;
+      const size_t fa[2] = {e.first, e.second};
       matd_t vert(3, 8);
-      vert(colon(), colon(0, 3)) = X(colon(), tris_(colon(), I));
-      vert(colon(), colon(4, 7)) = X(colon(), tris_(colon(), J));
+      vert(colon(), colon(0, 3)) = X(colon(), tris_(colon(), fa[0]));
+      vert(colon(), colon(4, 7)) = X(colon(), tris_(colon(), fa[1]));
       double value = 0;
-      unit_smooth_energy_(&value, &vert[0], &Sinv_(0, 3*I), &Sinv_(0, 3*J));
+      unit_smooth_energy_(&value, &vert[0], &Sinv_(0, 3*fa[0]), &Sinv_(0, 3*fa[1]));
       *val += w_ * value;
     }
     return 0;
@@ -217,8 +216,13 @@ private:
 int deform_transfer::debug_energies() {
   cout << "[info] debug energy functional\n";
   shared_ptr<Functional<double>> e0 = std::make_shared<smooth_energy>(src_tris_, src_ref_nods_, Sinv_, 1.0);
-//  shared_ptr<Functional<double>> e1 = std::make_shared<identity_energy>(src_tris_, src_ref_nods_, Sinv_, 1.0);
-  cout << "here\n";
+  shared_ptr<Functional<double>> e1 = std::make_shared<identity_energy>(src_tris_, src_ref_nods_, Sinv_, 1.0);
+
+  double val = 0;
+  e1->Val(&src_ref_nods_[0], &val);
+  cout << "energy value: " << val << endl;
+  vector<Triplet<double>> trip;
+  e1->Hes(&src_ref_nods_[0], &trip);
   return 0;
 }
 
