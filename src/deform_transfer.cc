@@ -104,7 +104,10 @@ public:
   int Val(const double *x, double *val) const {
     itr_matrix<const double *> X(3, Nx()/3, x);
     for (auto &e : e2c_->edges_) {
-      const size_t fa[2] = {e.first, e.second};
+      pair<size_t, size_t> face = e2c_->query(e.first, e.second);
+      if ( e2c_->is_boundary_edge(face) )
+        continue;
+      const size_t fa[2] = {face.first, face.second};
       matd_t vert(3, 8);
       vert(colon(), colon(0, 3)) = X(colon(), tris_(colon(), fa[0]));
       vert(colon(), colon(4, 7)) = X(colon(), tris_(colon(), fa[1]));
@@ -118,7 +121,10 @@ public:
     itr_matrix<const double *> X(3, Nx()/3, x);
     itr_matrix<double *> grad(3, Nx()/3, gra);
     for (auto &e : e2c_->edges_) {
-      const size_t fa[2] = {e.first, e.second};
+      pair<size_t, size_t> face = e2c_->query(e.first, e.second);
+      if ( e2c_->is_boundary_edge(face) )
+        continue;
+      const size_t fa[2] = {face.first, face.second};
       matd_t vert(3, 8);
       vert(colon(), colon(0, 3)) = X(colon(), tris_(colon(), fa[0]));
       vert(colon(), colon(4, 7)) = X(colon(), tris_(colon(), fa[1]));
@@ -132,7 +138,10 @@ public:
   }
   int Hes(const double *x, vector<Triplet<double>> *hes) const {
     for (auto &e : e2c_->edges_) {
-      const size_t fa[2] = {e.first, e.second};
+      pair<size_t, size_t> face = e2c_->query(e.first, e.second);
+      if ( e2c_->is_boundary_edge(face) )
+        continue;
+      const size_t fa[2] = {face.first, face.second};
       matd_t H = zeros<double>(24, 24);
       unit_smooth_energy_hes_(&H[0], NULL, &Sinv_(0, 3*fa[0]), &Sinv_(0, 3*fa[1]));
       for (size_t p = 0; p < 24; ++p) {
@@ -238,6 +247,7 @@ public:
   void ResetWeight(const double w) {
     w_ = w;
   }
+  int UpdateClosetPoints();
 private:
   const mati_t &tris_;
   const matd_t &nods_;
@@ -367,6 +377,18 @@ int deform_transfer::load_vertex_markers(const char *filename) {
   return 0;
 }
 
+int deform_transfer::see_target_markers(const char *filename) const {
+  const size_t nbr_marker = vert_map_.size();
+  mati_t point = colon(0, nbr_marker-1);
+  matd_t nods(3, nbr_marker);
+#pragma omp parallel for
+  for (size_t i = 0; i < vert_map_.size(); ++i)
+    nods(colon(), i) = tar_ref_nods_(colon(), std::get<1>(vert_map_[i]));
+  ofstream os(filename);
+  point2vtk(os, nods.begin(), nods.size(2), point.begin(), point.size());
+  return 0;
+}
+
 int deform_transfer::save_reference_source_mesh(const char *filename) const {
   mati_t tris;
   matd_t nods;
@@ -473,10 +495,13 @@ int deform_transfer::solve_corres_first_phase() {
   }
 
   // solve
-  cout << "\t@solve\n";
   const size_t dim = corre_e_->Nx();
-  ASSERT(src_cor_nods_.size() == dim);
   Map<VectorXd> x(&src_cor_nods_[0], dim);
+
+  double energy_prev = 0;
+  corre_e_->Val(&x[0], &energy_prev);
+  cout << "[info] prev energy value: " << energy_prev << endl;
+
   vector<Triplet<double>> trips;
   corre_e_->Hes(&x[0], &trips);
   SparseMatrix<double> H(dim, dim);
@@ -505,6 +530,10 @@ int deform_transfer::solve_corres_first_phase() {
     Dx = dx;
   }
   x += Dx;
+
+  double energy_post = 0;
+  corre_e_->Val(&x[0], &energy_post);
+  cout << "[info] post energy value: " << energy_post << endl;
 
   cout << "[info] first phase completed\n";
   return 0;

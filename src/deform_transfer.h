@@ -36,6 +36,7 @@ public:
   // deformation solver
   int transfer_deformation();
   // debug
+  int see_target_markers(const char *filename) const;
   int see_ghost_tet_mesh(const char *filename, const std::string &which) const;
   int see_corres_mesh(const char *filename) const;
   int debug_unit_energy() const;

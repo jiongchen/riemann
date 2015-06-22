@@ -21,6 +21,7 @@ int main(int argc, char *argv[])
   dt.load_reference_target_mesh(argv[2]);
   dt.load_vertex_markers(argv[3]);
 
+  dt.see_target_markers("./dt/tar_markers.vtk");
   dt.see_ghost_tet_mesh("./dt/ghost_sr.vtk", "source_ref");
   dt.see_ghost_tet_mesh("./dt/ghost_tr.vtk", "target_ref");
   dt.save_reference_source_mesh("./dt/source_ref.obj");
