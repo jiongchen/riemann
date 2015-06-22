@@ -30,12 +30,12 @@ void unit_identity_energy_hes_(double *hes, const double *x, const double *d);
 
 }
 
-class deform_energy : public Functional<double>
+class dt_deform_energy : public Functional<double>
 {
 public:
   typedef zjucad::matrix::matrix<size_t> mati_t;
   typedef zjucad::matrix::matrix<double> matd_t;
-  deform_energy(const mati_t &src_cell, const matd_t &src_nods, const double w);
+  dt_deform_energy(const mati_t &src_cell, const matd_t &src_nods, const double w);
   size_t Nx() const {
 
   }
@@ -57,13 +57,13 @@ private:
   double w_;
 };
 
-class smooth_energy : public Functional<double>
+class dt_smooth_energy : public Functional<double>
 {
 public:
   typedef zjucad::matrix::matrix<size_t> mati_t;
   typedef zjucad::matrix::matrix<double> matd_t;
-  smooth_energy(const mati_t &src_cell, const matd_t &src_nods,
-                const MatrixXd &Sinv, const double w)
+  dt_smooth_energy(const mati_t &src_cell, const matd_t &src_nods,
+                   const MatrixXd &Sinv, const double w)
     : tris_(src_cell), nods_(src_nods), Sinv_(Sinv), w_(w) {
     mati_t tris = tris_(colon(0, 2), colon());
     e2c_.reset(edge2cell_adjacent::create(tris, false));
@@ -126,13 +126,13 @@ private:
   const MatrixXd &Sinv_;
 };
 
-class identity_energy : public Functional<double>
+class dt_identity_energy : public Functional<double>
 {
 public:
   typedef zjucad::matrix::matrix<size_t> mati_t;
   typedef zjucad::matrix::matrix<double> matd_t;
-  identity_energy(const mati_t &src_cell, const matd_t &src_nods,
-                  const MatrixXd &Sinv, const double w)
+  dt_identity_energy(const mati_t &src_cell, const matd_t &src_nods,
+                     const MatrixXd &Sinv, const double w)
     : tris_(src_cell), nods_(src_nods), Sinv_(Sinv), w_(w) {}
   size_t Nx() const {
     return nods_.size();
@@ -185,12 +185,12 @@ private:
   const MatrixXd &Sinv_;
 };
 
-class distance_energy : public Functional<double>
+class dt_distance_energy : public Functional<double>
 {
 public:
   typedef zjucad::matrix::matrix<size_t> mati_t;
   typedef zjucad::matrix::matrix<double> matd_t;
-  distance_energy(const mati_t &src_cell, const matd_t &src_nods, const double w)
+  dt_distance_energy(const mati_t &src_cell, const matd_t &src_nods, const double w)
     : tris_(src_cell), nods_(src_nods), w_(w) {}
   size_t Nx() const {
     return nods_.size();
@@ -215,8 +215,8 @@ private:
 
 int deform_transfer::debug_energies() {
   cout << "[info] debug energy functional\n";
-  shared_ptr<Functional<double>> e0 = std::make_shared<smooth_energy>(src_tris_, src_ref_nods_, Sinv_, 1.0);
-  shared_ptr<Functional<double>> e1 = std::make_shared<identity_energy>(src_tris_, src_ref_nods_, Sinv_, 1.0);
+  shared_ptr<Functional<double>> e1
+      = std::make_shared<dt_smooth_energy>(src_tris_, src_ref_nods_, Sinv_, 1.0);
 
   double val = 0;
   e1->Val(&src_ref_nods_[0], &val);
@@ -286,12 +286,12 @@ int deform_transfer::load_vertex_markers(const char *filename) {
     return __LINE__;
   }
   size_t nbr_markers;
-  fscanf(fp, "%zu", &nbr_markers);
+  int state = fscanf(fp, "%zu", &nbr_markers);
   cout << "[info] number of markers: " << nbr_markers << endl;
   vert_map_.resize(nbr_markers);
   for (size_t i = 0; i < nbr_markers; ++i) {
     size_t src_mark, tar_mark;
-    fscanf(fp, "%zu, %zu", &src_mark, &tar_mark);
+    state = fscanf(fp, "%zu, %zu", &src_mark, &tar_mark);
     vert_map_[i] = std::make_tuple(src_mark, tar_mark);
   }
   fclose(fp);
