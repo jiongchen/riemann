@@ -28,6 +28,8 @@ int main(int argc, char *argv[])
 
   dt.solve_corres_precompute();
   dt.debug_energies();
+  dt.solve_corres_first_phase();
+  dt.see_corres_mesh("./dt/out.obj");
 
   cout << "done\n";
   return 0;

@@ -2,6 +2,10 @@
 
 #include <jtflib/mesh/io.h>
 #include <jtflib/mesh/mesh.h>
+#include <hjlib/math/blas_lapack.h>
+#include <zjucad/matrix/lapack.h>
+#include <zjucad/matrix/io.h>
+#include <Eigen/Geometry>
 
 #include "util.h"
 #include "vtk.h"
@@ -28,6 +32,32 @@ void unit_identity_energy_(double *val, const double *x, const double *d);
 void unit_identity_energy_jac_(double *jac, const double *x, const double *d);
 void unit_identity_energy_hes_(double *hes, const double *x, const double *d);
 
+}
+
+int deform_transfer::debug_unit_energy() const {
+  srand(time(NULL));
+  matd_t nods = rand<double>(3, 4);
+  matd_t d = nods(colon(), colon(1, 3))-nods(colon(), 0)*ones<double>(1, 3);
+  matd_t temp = d;
+  if ( inv(d) ) {
+    cerr << "[info] not invertible\n";
+    return __LINE__;
+  }
+  cout << temp*d << endl;
+
+  double value = 0;
+  unit_identity_energy_(&value, &nods[0], &d[0]);
+  cout << "value: " << value << endl;
+
+  matd_t grad = zeros<double>(12, 1);
+  unit_identity_energy_jac_(&grad[0], &nods[0], &d[0]);
+  cout << "grad: " << grad << endl;
+
+  matd_t H(12, 12);
+  unit_identity_energy_hes_(&H[0], &nods[0], &d[0]);
+  cout << "hes: " << H << endl;
+
+  return 0;
 }
 
 class dt_deform_energy : public Functional<double>
@@ -80,7 +110,7 @@ public:
       vert(colon(), colon(4, 7)) = X(colon(), tris_(colon(), fa[1]));
       double value = 0;
       unit_smooth_energy_(&value, &vert[0], &Sinv_(0, 3*fa[0]), &Sinv_(0, 3*fa[1]));
-      *val += w_ * value;
+      *val += w_* value;
     }
     return 0;
   }
@@ -109,7 +139,8 @@ public:
         for (size_t q = 0; q < 24; ++q) {
           const size_t I = 3*tris_((p/3)%4, fa[p/12])+p%3;
           const size_t J = 3*tris_((q/3)%4, fa[q/12])+q%3;
-          hes->push_back(Triplet<double>(I, J, w_*H(p, q)));
+          if ( H(p, q) != 0.0 )
+            hes->push_back(Triplet<double>(I, J, w_*H(p, q)));
         }
       }
     }
@@ -213,16 +244,54 @@ private:
   double w_;
 };
 
-int deform_transfer::debug_energies() {
+int deform_transfer::debug_energies() const {
   cout << "[info] debug energy functional\n";
-  shared_ptr<Functional<double>> e1
+  shared_ptr<Functional<double>> e0
       = std::make_shared<dt_smooth_energy>(src_tris_, src_ref_nods_, Sinv_, 1.0);
+  shared_ptr<Functional<double>> e1
+      = std::make_shared<dt_identity_energy>(src_tris_, src_ref_nods_, Sinv_, 1.0);
+  {
+    matd_t x = src_ref_nods_;
+    double val = 0;
+    e0->Val(&x[0], &val);
+    cout << "energy value: " << val << endl;
+    matd_t grad = zeros<double>(e0->Nx(), 1);
+    e0->Gra(&x[0], &grad[0]);
+    cout << "grad max: " << max(grad) << endl << endl;
+  }
+  {
+    matd_t x = src_ref_nods_;
+    Matrix3d rot;
+    rot = AngleAxisd(M_PI/2, Vector3d::UnitX());
+    matd_t R(3, 3);
+    std::copy(rot.data(), rot.data()+9, R.begin());
+    x = temp(R*x);
+    double val = 0;
+    e0->Val(&x[0], &val);
+    cout << "energy value: " << val << endl;
+    matd_t grad = zeros<double>(e0->Nx(), 1);
+    e0->Gra(&x[0], &grad[0]);
+    cout << "grad max: " << max(grad) << endl << endl;
+  }
+  {
+    matd_t x = src_ref_nods_;
+    double val = 0;
+    e1->Val(&x[0], &val);
+    cout << "energy value: " << val << endl;
+    matd_t grad = zeros<double>(e1->Nx(), 1);
+    e1->Gra(&x[0], &grad[0]);
+    cout << "grad max: " << max(grad) << endl << endl;
+  }
+  {
+    matd_t x = 2*src_ref_nods_;
+    double val = 0;
+    e1->Val(&x[0], &val);
+    cout << "energy value: " << val << endl;
+    matd_t grad = zeros<double>(e1->Nx(), 1);
+    e1->Gra(&x[0], &grad[0]);
+    cout << "grad max: " << norm(grad) << endl << endl;
+  }
 
-  double val = 0;
-  e1->Val(&src_ref_nods_[0], &val);
-  cout << "energy value: " << val << endl;
-  vector<Triplet<double>> trip;
-  e1->Hes(&src_ref_nods_[0], &trip);
   return 0;
 }
 
@@ -380,14 +449,22 @@ int deform_transfer::solve_corres_precompute() {
 }
 
 int deform_transfer::solve_corres_first_phase() {
+  cout << "[info] first phase for resolving correspondence\n";
   // assemble energy
-//  vector<double> w{1.0, 0.001, 0.0};
-//  buff_.resize(3);
-//  buff_[SMOOTH] = std::make_shared<smooth_energy>();
-//  buff_[IDENTITY] = std::make_shared<identity_energy>();
-//  buff_[DISTANCE] = std::make_shared<distance_energy>();
+  vector<double> w{2.0, 0.001, 0.0};
+  buff_.resize(3);
+  buff_[SMOOTH] = std::make_shared<dt_smooth_energy>(src_tris_, src_ref_nods_, Sinv_, w[SMOOTH]);
+  buff_[IDENTITY] = std::make_shared<dt_identity_energy>(src_tris_, src_ref_nods_, Sinv_, w[IDENTITY]);
+  buff_[DISTANCE] = std::make_shared<dt_distance_energy>(src_tris_, src_ref_nods_, w[DISTANCE]);
+  try {
+    corre_e_ = std::make_shared<energy_t<double>>(buff_);
+  } catch ( exception &e ) {
+    cerr << "[exception] " << e.what() << endl;
+    exit(EXIT_FAILURE);
+  }
 
   // set initial value
+  cout << "\t@set initial values\n";
   src_cor_nods_ = src_ref_nods_;
 #pragma omp parallel for
   for (size_t i = 0; i < vert_map_.size(); ++i) {
@@ -396,13 +473,17 @@ int deform_transfer::solve_corres_first_phase() {
   }
 
   // solve
-  Map<VectorXd> x(&src_cor_nods_[0], src_cor_nods_.size());
+  cout << "\t@solve\n";
+  const size_t dim = corre_e_->Nx();
+  ASSERT(src_cor_nods_.size() == dim);
+  Map<VectorXd> x(&src_cor_nods_[0], dim);
   vector<Triplet<double>> trips;
   corre_e_->Hes(&x[0], &trips);
-  SparseMatrix<double> H(corre_e_->Nx(), corre_e_->Nx());
+  SparseMatrix<double> H(dim, dim);
+  H.reserve(trips.size());
   H.setFromTriplets(trips.begin(), trips.end());
 
-  VectorXd rhs = VectorXd::Zero(corre_e_->Nx());
+  VectorXd rhs = VectorXd::Zero(dim);
   corre_e_->Gra(&x[0], rhs.data());
   rhs = -rhs;
 
@@ -415,8 +496,9 @@ int deform_transfer::solve_corres_first_phase() {
   sol.compute(H);
   ASSERT(sol.info() == Success);
   VectorXd dx = sol.solve(rhs);
+  ASSERT(sol.info() == Success);
 
-  VectorXd Dx = VectorXd::Zero(corre_e_->Nx());
+  VectorXd Dx = VectorXd::Zero(dim);
   if ( !fix_dof_.empty() ) {
     rc_vector_row(dx, g2l_, Dx);
   } else {

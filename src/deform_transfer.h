@@ -38,7 +38,8 @@ public:
   // debug
   int see_ghost_tet_mesh(const char *filename, const std::string &which) const;
   int see_corres_mesh(const char *filename) const;
-  int debug_energies();
+  int debug_unit_energy() const;
+  int debug_energies() const;
 private:
   void append_fourth_vert(const mati_t &tri_cell, const matd_t &tri_nods, mati_t &tet_cell, matd_t &tet_nods) const;
   void remove_fourth_vert(const mati_t &tet_cell, const matd_t &tet_nods, mati_t &tri_cell, matd_t &tri_nods) const;
