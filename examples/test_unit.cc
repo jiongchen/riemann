@@ -131,6 +131,18 @@ void kdtree_demo(const size_t nSamples,const size_t dim)
   for (size_t i=0;i<num_results;i++)
     std::cout << "ret_index["<<i<<"]=" << ret_indexes[i] << " out_dist_sqr=" << out_dists_sqr[i] << endl;
 
+  // do a radius search
+  const num_t search_radius = static_cast<num_t>(250);
+  std::vector<std::pair<long,num_t>> ret_matches;
+
+  nanoflann::SearchParams params;
+  //params.sorted = false;
+  const size_t nMatches = mat_index.index->radiusSearch(&query_pt[0],search_radius, ret_matches, params);
+
+  cout << "radiusSearch(): radius=" << search_radius << " -> " << nMatches << " matches\n";
+  for (size_t i=0;i<nMatches;i++)
+    cout << "idx["<< i << "]=" << ret_matches[i].first << " dist["<< i << "]=" << ret_matches[i].second << endl;
+  cout << "\n";
 }
 
 int test_nanoflann(ptree &pt) {

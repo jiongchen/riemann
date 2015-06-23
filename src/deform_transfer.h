@@ -49,8 +49,9 @@ public:
 private:
   void append_fourth_vert(const mati_t &tri_cell, const matd_t &tri_nods, mati_t &tet_cell, matd_t &tet_nods) const;
   void remove_fourth_vert(const mati_t &tet_cell, const matd_t &tet_nods, mati_t &tri_cell, matd_t &tri_nods) const;
-  void build_corre_face(const mati_t &src_tris, const matd_t &nods, const mati_t &tar_tris, const matd_t &tar_nods,
-                        std::set<std::tuple<size_t, size_t>> &mappings);
+  void build_corre_face(const mati_t &src_tris, const matd_t &src_nods,
+                        const mati_t &tar_tris, const matd_t &tar_nods,
+                        std::set<std::tuple<size_t, size_t>> &mappings, bool need_swap);
   mati_t src_tris_, tar_tris_;
   matd_t src_ref_nods_, tar_ref_nods_;
   matd_t src_cor_nods_;

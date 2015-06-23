@@ -703,14 +703,35 @@ int deform_transfer::solve_corres_second_phase() {
   return 0;
 }
 
-void deform_transfer::build_corre_face(const mati_t &src_tris, const matd_t &nods,
+void deform_transfer::build_corre_face(const mati_t &src_tris, const matd_t &src_nods,
                                        const mati_t &tar_tris, const matd_t &tar_nods,
-                                       set<tuple<size_t, size_t>> &mappings) {
-}
+                                       set<tuple<size_t, size_t>> &mappings, bool need_swap) {}
 
 int deform_transfer::compute_triangle_corres() {
-  build_corre_face(src_tris_, src_cor_nods_, tar_tris_, tar_ref_nods_, tri_map_);
-  build_corre_face(tar_tris_, tar_ref_nods_, src_tris_, src_cor_nods_, tri_map_);
+  cout << "[info] computing triangle correspondence...";
+  typedef KDTreeEigenMatrixAdaptor<MatrixXd> kd_tree_t;
+  matd_t src_cent(3, src_tris_.size(2)), tar_cent(3, tar_tris_.size(2));
+#pragma omp parallel for
+  for (size_t i = 0; i < src_cent.size(2); ++i) {
+    src_cent(colon(), i) = src_cor_nods_(colon(), src_tris_(colon(0, 2), i))*ones<double>(3, 1)/3.0;
+  }
+#pragma omp parallel for
+  for (size_t i = 0; i < tar_cent.size(2); ++i) {
+    tar_cent(colon(), i) = tar_ref_nods_(colon(), tar_tris_(colon(0, 2), i))*ones<double>(3, 1)/3.0;
+  }
+  {
+    MatrixXd pts = Map<const MatrixXd>(&tar_cent[0], tar_cent.size(1), tar_cent.size(2)).transpose();
+    kd_tree_t kdt(3, pts, 10);
+    kdt.index->buildIndex();
+#pragma omp parallel for
+    for (size_t i = 0; i < src_cent.size(2); ++i) {
+      // do a radius search
+    }
+  }
+  {
+
+  }
+  cout << "...complete\n";
   return 0;
 }
 
