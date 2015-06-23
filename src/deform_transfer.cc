@@ -9,12 +9,14 @@
 
 #include "util.h"
 #include "vtk.h"
+#include "nanoflann.hpp"
 
 using namespace std;
 using namespace zjucad::matrix;
 using namespace Eigen;
 using namespace surfparam;
 using namespace jtf::mesh;
+using namespace nanoflann;
 
 namespace geom_deform {
 
@@ -65,9 +67,10 @@ class dt_deform_energy : public Functional<double>
 public:
   typedef zjucad::matrix::matrix<size_t> mati_t;
   typedef zjucad::matrix::matrix<double> matd_t;
-  dt_deform_energy(const mati_t &src_cell, const matd_t &src_nods, const double w);
+  dt_deform_energy(const mati_t &tar_cell, const matd_t &tar_nods,
+                   const double w);
   size_t Nx() const {
-
+    return nods_.size();
   }
   int Val(const double *x, double *val) const {
 
@@ -77,9 +80,6 @@ public:
   }
   int Hes(const double *x, vector<Triplet<double>> *hes) const {
 
-  }
-  void ResetWeight(const double w) {
-    w_ = w;
   }
 private:
   const mati_t &tris_;
@@ -230,27 +230,69 @@ class dt_distance_energy : public Functional<double>
 public:
   typedef zjucad::matrix::matrix<size_t> mati_t;
   typedef zjucad::matrix::matrix<double> matd_t;
-  dt_distance_energy(const mati_t &src_cell, const matd_t &src_nods, const double w)
-    : tris_(src_cell), nods_(src_nods), w_(w) {}
+  typedef KDTreeEigenMatrixAdaptor<Matrix<double, -1, -1>> kd_tree_t;
+  dt_distance_energy(const mati_t &src_cell, const matd_t &src_nods,
+                     const matd_t &tar_nods, const double w)
+    : tris_(src_cell), nods_(src_nods), w_(w) {
+    Map<const MatrixXd> temp(&tar_nods[0], tar_nods.size(1), tar_nods.size(2));
+    pts_ = temp.transpose();
+    kdt_ = std::make_shared<kd_tree_t>(3, pts_, 10);
+    kdt_->index->buildIndex();
+    c_ = zeros<double>(src_nods.size(1), src_nods.size(2));
+  }
   size_t Nx() const {
     return nods_.size();
   }
   int Val(const double *x, double *val) const {
+    itr_matrix<const double *> X(3, Nx()/3, x);
+    for (size_t i = 0; i < X.size(2); ++i) {
+      matd_t diff = X(colon(), i) - c_(colon(), i);
+      *val += w_*dot(diff, diff);
+    }
     return 0;
   }
   int Gra(const double *x, double *gra) const {
+    itr_matrix<const double *> X(3, Nx()/3, x);
+    itr_matrix<double *> G(3, Nx()/3, gra);
+#pragma omp parallel for
+    for (size_t i = 0; i < X.size(2); ++i) {
+      G(colon(), i) += 2*w_*(X(colon(), i)-c_(colon(), i));
+    }
     return 0;
   }
   int Hes(const double *x, vector<Triplet<double>> *hes) const {
+    for (size_t i = 0; i < Nx(); ++i)
+      hes->push_back(Triplet<double>(i, i, 2*w_));
     return 0;
   }
   void ResetWeight(const double w) {
     w_ = w;
   }
-  int UpdateClosetPoints();
+  int UpdateClosetPoints(const double *x) {
+    itr_matrix<const double *> X(3, Nx()/3, x);
+    const size_t num_results = 3;
+#pragma omp parallel for
+    for (size_t i = 0; i < X.size(2); ++i) {
+      vector<size_t> ret_idx(num_results);
+      vector<double> sqr_dist(num_results);
+      KNNResultSet<double> result_set(num_results);
+      result_set.init(&ret_idx[0], &sqr_dist[0]);
+      kdt_->index->findNeighbors(result_set, &X(0, i), SearchParams(10));
+      ASSERT(ret_idx[0] >= 0 && ret_idx[0] < pts_.rows());
+      c_(0, i) = pts_(ret_idx[0], 0);
+      c_(1, i) = pts_(ret_idx[0], 1);
+      c_(2, i) = pts_(ret_idx[0], 2);
+    }
+    return 0;
+  }
 private:
+  bool is_valid() const;
+
   const mati_t &tris_;
   const matd_t &nods_;
+  MatrixXd pts_;
+  shared_ptr<kd_tree_t> kdt_;
+  matd_t c_;
   double w_;
 };
 
@@ -477,7 +519,7 @@ int deform_transfer::solve_corres_first_phase() {
   buff_.resize(3);
   buff_[SMOOTH] = std::make_shared<dt_smooth_energy>(src_tris_, src_ref_nods_, Sinv_, w[SMOOTH]);
   buff_[IDENTITY] = std::make_shared<dt_identity_energy>(src_tris_, src_ref_nods_, Sinv_, w[IDENTITY]);
-  buff_[DISTANCE] = std::make_shared<dt_distance_energy>(src_tris_, src_ref_nods_, w[DISTANCE]);
+  buff_[DISTANCE] = std::make_shared<dt_distance_energy>(src_tris_, src_ref_nods_, tar_ref_nods_, w[DISTANCE]);
   try {
     corre_e_ = std::make_shared<energy_t<double>>(buff_);
   } catch ( exception &e ) {
@@ -485,7 +527,7 @@ int deform_transfer::solve_corres_first_phase() {
     exit(EXIT_FAILURE);
   }
 
-  // set initial value
+  /// set initial value
   cout << "\t@set initial values\n";
   src_cor_nods_ = src_ref_nods_;
 #pragma omp parallel for
@@ -494,7 +536,7 @@ int deform_transfer::solve_corres_first_phase() {
         = tar_ref_nods_(colon(), std::get<1>(vert_map_[i]));
   }
 
-  // solve
+  /// solve
   const size_t dim = corre_e_->Nx();
   Map<VectorXd> x(&src_cor_nods_[0], dim);
 
@@ -536,6 +578,57 @@ int deform_transfer::solve_corres_first_phase() {
   cout << "[info] post energy value: " << energy_post << endl;
 
   cout << "[info] first phase completed\n";
+  return 0;
+}
+
+int deform_transfer::solve_corres_second_phase() {
+  cout << "[info] second phase for resolving correspondence\n";
+
+  const size_t dim = corre_e_->Nx();
+  Map<VectorXd> x(&src_cor_nods_[0], dim);
+  SimplicialCholesky<SparseMatrix<double>> sol;
+
+  for (size_t iter = 0; iter < 4; ++iter) {
+    cout << "[info] iter " << iter << endl;
+    const double wc = 1.0 + iter*(5000.0-1.0)/3;
+    std::dynamic_pointer_cast<dt_distance_energy>(buff_[DISTANCE])
+        ->ResetWeight(wc);
+    std::dynamic_pointer_cast<dt_distance_energy>(buff_[DISTANCE])
+        ->UpdateClosetPoints(&x[0]);
+
+    vector<Triplet<double>> trips;
+    corre_e_->Hes(&x[0], &trips);
+    SparseMatrix<double> H(dim, dim);
+    H.reserve(trips.size());
+    H.setFromTriplets(trips.begin(), trips.end());
+
+    VectorXd rhs = VectorXd::Zero(dim);
+    corre_e_->Gra(&x[0], rhs.data());
+    rhs = -rhs;
+
+    if ( !fix_dof_.empty() ) {
+      rm_spmat_col_row(H, g2l_);
+      rm_vector_row(rhs, g2l_);
+    }
+
+    sol.compute(H);
+    ASSERT(sol.info() == Success);
+    VectorXd dx = sol.solve(rhs);
+    ASSERT(sol.info() == Success);
+
+    VectorXd Dx = VectorXd::Zero(dim);
+    if ( !fix_dof_.empty() ) {
+      rc_vector_row(dx, g2l_, Dx);
+    } else {
+      Dx = dx;
+    }
+    x += Dx;
+  }
+  cout << "[info] second phase completed\n";
+  return 0;
+}
+
+int deform_transfer::compute_triangle_corres() {
   return 0;
 }
 

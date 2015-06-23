@@ -33,7 +33,9 @@ public:
   int solve_corres_precompute();
   int solve_corres_first_phase();
   int solve_corres_second_phase();
+  int compute_triangle_corres();
   // deformation solver
+  int deform_transfer_precompute();
   int transfer_deformation();
   // debug
   int see_target_markers(const char *filename) const;
@@ -57,6 +59,8 @@ private:
   std::shared_ptr<surfparam::Functional<double>> corre_e_;
   std::unordered_set<size_t> fix_dof_;
   std::vector<size_t> g2l_;
+
+  std::vector<std::tuple<size_t, size_t>> tri_map_;
 };
 
 }

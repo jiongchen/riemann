@@ -1,4 +1,4 @@
-file(GLOB header *.h)
+file(GLOB header *.h *.hpp)
 file(GLOB source *.cc)
 
 enable_language(Fortran)
