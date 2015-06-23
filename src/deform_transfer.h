@@ -4,6 +4,7 @@
 #include <zjucad/matrix/matrix.h>
 #include <Eigen/Sparse>
 #include <unordered_set>
+#include <set>
 
 #include "def.h"
 
@@ -29,14 +30,16 @@ public:
   int save_reference_target_mesh(const char *filename) const;
   int save_deformed_source_mesh(const char *filename) const;
   int save_deformed_target_mesh(const char *filename) const;
+  // initialization
+  int init();
   // correspondence solver
   int solve_corres_precompute();
   int solve_corres_first_phase();
   int solve_corres_second_phase();
   int compute_triangle_corres();
   // deformation solver
-  int deform_transfer_precompute();
-  int transfer_deformation();
+  int deformation_transfer_precompute();
+  int deformation_transfer();
   // debug
   int see_target_markers(const char *filename) const;
   int see_ghost_tet_mesh(const char *filename, const std::string &which) const;
@@ -46,7 +49,8 @@ public:
 private:
   void append_fourth_vert(const mati_t &tri_cell, const matd_t &tri_nods, mati_t &tet_cell, matd_t &tet_nods) const;
   void remove_fourth_vert(const mati_t &tet_cell, const matd_t &tet_nods, mati_t &tri_cell, matd_t &tri_nods) const;
-
+  void build_corre_face(const mati_t &src_tris, const matd_t &nods, const mati_t &tar_tris, const matd_t &tar_nods,
+                        std::set<std::tuple<size_t, size_t>> &mappings);
   mati_t src_tris_, tar_tris_;
   matd_t src_ref_nods_, tar_ref_nods_;
   matd_t src_cor_nods_;
@@ -60,7 +64,8 @@ private:
   std::unordered_set<size_t> fix_dof_;
   std::vector<size_t> g2l_;
 
-  std::vector<std::tuple<size_t, size_t>> tri_map_;
+  std::set<std::tuple<size_t, size_t>> tri_map_;
+  std::shared_ptr<surfparam::Functional<double>> deform_e_;
 };
 
 }

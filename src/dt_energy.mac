@@ -19,7 +19,7 @@ block(
   with_stdout(f, val_jac_hes_to_f90(unit_smooth_energy, [X, D1, D2]))
 )$
 
-block (
+block(
   [X, D],
   X: genmatrix(X, 3, 4),
   D: genmatrix(D, 3, 3),
@@ -29,6 +29,19 @@ block (
     matrix([mat_norm(F.D-ident(3), frobenius)^2])
   ),
   with_stdout(f, val_jac_hes_to_f90(unit_identity_energy, [X, D]))
+)$
+
+block(
+  [X, T, S],
+  X: genmatrix(X, 3, 4),
+  T: genmatrix(T, 3, 3),
+  S: genmatrix(S, 3, 3),
+  unit_deform_energy(X, T, S) := block(
+    [F],
+    F: addcol(col(X, 2)-col(X, 1), col(X, 3)-col(X, 1), col(X, 4)-col(X, 1)),
+    matrix([mat_norm(F.T-S, frobenius)^2])
+  ),
+  with_stdout(f, val_jac_hes_to_f90(unit_deform_energy, [X, T, S]))
 )$
 
 close(f)$

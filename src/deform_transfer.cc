@@ -22,9 +22,9 @@ namespace geom_deform {
 
 extern "C" {
 
-void unit_deform_energy_();
-void unit_deform_energy_jac_();
-void unit_deform_energy_hes_();
+void unit_deform_energy_(double *val, const double *x, const double *Tinv, const double *S);
+void unit_deform_energy_jac_(double *jac, const double *x, const double *Tinv, const double *S);
+void unit_deform_energy_hes_(double *hes, const double *x, const double *Tinv, const double *S);
 
 void unit_smooth_energy_(double *val, const double *x, const double *di, const double *dj);
 void unit_smooth_energy_jac_(double *jac, const double *x, const double *di, const double *dj);
@@ -68,23 +68,77 @@ public:
   typedef zjucad::matrix::matrix<size_t> mati_t;
   typedef zjucad::matrix::matrix<double> matd_t;
   dt_deform_energy(const mati_t &tar_cell, const matd_t &tar_nods,
-                   const double w);
+                   const MatrixXd &Sinv, const MatrixXd &Tinv,
+                   const set<tuple<size_t, size_t>> mapping, double w)
+    : tris_(tar_cell),
+      nods_(tar_nods),
+      Sinv_(Sinv),
+      Tinv_(Tinv),
+      mapping_(mapping),
+      w_(w) {}
   size_t Nx() const {
     return nods_.size();
   }
   int Val(const double *x, double *val) const {
-
+    itr_matrix<const double *> X(3, Nx()/3, x);
+    for (auto &e : mapping_) {
+      const size_t src_fa = std::get<0>(e);
+      const size_t tar_fa = std::get<1>(e);
+      matd_t vert = X(colon(), tris_(colon(), tar_fa));
+      double value = 0;
+      unit_deform_energy_(&value, &vert[0], &Tinv_(0, 3*tar_fa), &src_grad_(0, 3*src_fa));
+      *val += w_*value;
+    }
+    return 0;
   }
   int Gra(const double *x, double *gra) const {
-
+    itr_matrix<const double *> X(3, Nx()/3, x);
+    itr_matrix<double *> G(3, Nx()/3, gra);
+    for (auto &e : mapping_) {
+      const size_t src_fa = std::get<0>(e);
+      const size_t tar_fa = std::get<1>(e);
+      matd_t vert = X(colon(), tris_(colon(), tar_fa));
+      matd_t g = zeros<double>(3, 4);
+      unit_deform_energy_jac_(&g[0], &vert[0], &Tinv_(0, 3*tar_fa), &src_grad_(0, 3*src_fa));
+      for (size_t j = 0; j < 4; ++j)
+        G(colon(), tris_(j, tar_fa)) += w_*g(colon(), j);
+    }
+    return 0;
   }
   int Hes(const double *x, vector<Triplet<double>> *hes) const {
-
+    for (auto &e : mapping_) {
+      const size_t src_fa = std::get<0>(e);
+      const size_t tar_fa = std::get<1>(e);
+      matd_t H = zeros<double>(12, 12);
+      unit_deform_energy_hes_(&H[0], NULL, &Tinv_(0, 3*tar_fa), &src_grad_(0, 3*src_fa));
+      for (size_t p = 0; p < 12; ++p) {
+        for (size_t q = 0; q < 12; ++q) {
+          const size_t I = 3*tris_(p/3, tar_fa)+p%3;
+          const size_t J = 3*tris_(q/3, tar_fa)+q%3;
+          if ( H(p, q) != 0.0 )
+            hes->push_back(Triplet<double>(I, J, w_*H(p, q)));
+        }
+      }
+    }
+    return 0;
+  }
+  void UpdateSourceGrad(const mati_t &src_tris, const matd_t &src_def) {
+    src_grad_.resize(3, 3*src_tris.size(2));
+#pragma omp parallel for
+    for (size_t i = 0; i < src_tris.size(2); ++i) {
+      matd_t base = src_def(colon(), src_tris(colon(1, 3), i))
+          - src_def(colon(), src_tris(0, i))*ones<double>(1, 3);
+      src_grad_.block<3, 3>(0, 3*i) = Map<const Matrix3d>(&base[0])*Sinv_.block<3, 3>(0, 3*i);
+    }
   }
 private:
   const mati_t &tris_;
   const matd_t &nods_;
+  const MatrixXd &Sinv_;
+  const MatrixXd &Tinv_;
+  const set<tuple<size_t, size_t>> &mapping_;
   double w_;
+  MatrixXd src_grad_;
 };
 
 class dt_smooth_energy : public Functional<double>
@@ -477,8 +531,8 @@ int deform_transfer::see_corres_mesh(const char *filename) const {
   return jtf::mesh::save_obj(filename, tris, nods);
 }
 
-int deform_transfer::solve_corres_precompute() {
-  cout << "[info] precomputation for correspondence\n";
+int deform_transfer::init() {
+  cout << "[info] initialization\n";
   // calculate Sinv
   Sinv_.resize(3, 3*src_tris_.size(2));
 #pragma omp parallel for
@@ -490,10 +544,30 @@ int deform_transfer::solve_corres_precompute() {
     if ( lu.isInvertible() ) {
       Sinv_.block<3, 3>(0, 3*i) = lu.inverse();
     } else {
-      cerr << "[error] degenerated triagnle\n";
+      cerr << "[error] degenerated triagnle in source mesh\n";
       exit(EXIT_FAILURE);
     }
   }
+  // calculate Tinv
+  Tinv_.resize(3, 3*tar_tris_.size(2));
+#pragma omp parallel for
+  for (size_t i = 0; i < tar_tris_.size(2); ++i) {
+    matd_t base = tar_ref_nods_(colon(), tar_tris_(colon(1, 3), i))
+        - tar_ref_nods_(colon(), tar_tris_(0, i))*ones<double>(1, 3);
+    Matrix3d LB(&base[0]);
+    FullPivLU<Matrix3d> lu(LB);
+    if ( lu.isInvertible() ) {
+      Tinv_.block<3, 3>(0, 3*i) = lu.inverse();
+    } else {
+      cerr << "[error] degenerated triangle in target mesh\n";
+      exit(EXIT_FAILURE);
+    }
+  }
+  return 0;
+}
+
+int deform_transfer::solve_corres_precompute() {
+  cout << "[info] precomputation for correspondence\n";
   // handle constraints
   for (auto &e : vert_map_) {
     const size_t id = std::get<0>(e);
@@ -591,6 +665,7 @@ int deform_transfer::solve_corres_second_phase() {
   for (size_t iter = 0; iter < 4; ++iter) {
     cout << "[info] iter " << iter << endl;
     const double wc = 1.0 + iter*(5000.0-1.0)/3;
+    cout << "[info] current weight: " << wc << endl;
     std::dynamic_pointer_cast<dt_distance_energy>(buff_[DISTANCE])
         ->ResetWeight(wc);
     std::dynamic_pointer_cast<dt_distance_energy>(buff_[DISTANCE])
@@ -628,7 +703,52 @@ int deform_transfer::solve_corres_second_phase() {
   return 0;
 }
 
+void deform_transfer::build_corre_face(const mati_t &src_tris, const matd_t &nods,
+                                       const mati_t &tar_tris, const matd_t &tar_nods,
+                                       set<tuple<size_t, size_t>> &mappings) {
+}
+
 int deform_transfer::compute_triangle_corres() {
+  build_corre_face(src_tris_, src_cor_nods_, tar_tris_, tar_ref_nods_, tri_map_);
+  build_corre_face(tar_tris_, tar_ref_nods_, src_tris_, src_cor_nods_, tri_map_);
+  return 0;
+}
+
+int deform_transfer::deformation_transfer_precompute() {
+  cout << "[info] precomputation for deformation transfer...";
+  tar_def_nods_ = tar_ref_nods_;
+  deform_e_ = std::make_shared<dt_deform_energy>(tar_tris_, tar_ref_nods_, Sinv_, Tinv_, tri_map_, 1.0);
+  cout << "complete\n";
+  return 0;
+}
+
+int deform_transfer::deformation_transfer() {
+  cout << "[info] deformation transfer begin...";
+  std::dynamic_pointer_cast<dt_deform_energy>(deform_e_)
+      ->UpdateSourceGrad(src_tris_, src_def_nods_);
+
+  const size_t dim = deform_e_->Nx();
+  Map<VectorXd> x(&tar_def_nods_[0], dim);
+
+  vector<Triplet<double>> trips;
+  deform_e_->Hes(&x[0], &trips);
+  SparseMatrix<double> H(dim, dim);
+  H.reserve(trips.size());
+  H.setFromTriplets(trips.begin(), trips.end());
+
+  VectorXd rhs = VectorXd::Zero(dim);
+  deform_e_->Gra(&x[0], rhs.data());
+  rhs = -rhs;
+
+  SimplicialCholesky<SparseMatrix<double>> sol;
+  sol.compute(H);
+  ASSERT(sol.info() == Success);
+  VectorXd dx = sol.solve(rhs);
+  ASSERT(sol.info() == Success);
+
+  x += dx;
+
+  cout << "complete\n";
   return 0;
 }
 
