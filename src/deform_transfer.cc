@@ -871,6 +871,16 @@ int deform_transfer::deformation_transfer() {
   VectorXd dx = sol.solve(rhs);
   ASSERT(sol.info() == Success);
 
+//  SparseMatrix<double> diag_eps(dim, dim);
+//  diag_eps.setIdentity();
+//  diag_eps *= 1e1;
+//  H += diag_eps;
+//  SimplicialCholesky<SparseMatrix<double>> sol;
+//  sol.compute(H);
+//  ASSERT(sol.info() == Success);
+//  VectorXd dx = sol.solve(rhs);
+//  ASSERT(sol.info() == Success);
+
   VectorXd Dx = VectorXd::Zero(deform_e_->Nx());
   if ( !dt_fix_dof_.empty() )
     rc_vector_row(dx, dt_g2l_, Dx);

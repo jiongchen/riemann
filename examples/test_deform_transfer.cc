@@ -48,6 +48,6 @@ int main(int argc, char *argv[])
   dt.save_deformed_source_mesh("./dt/source_def.obj");
   dt.save_deformed_target_mesh("./dt/target_def.obj");
 
-  cout << "done\n";
+  cout << "[info] all done\n";
   return 0;
 }
