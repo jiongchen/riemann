@@ -35,11 +35,17 @@ int main(int argc, char *argv[])
   dt.solve_corres_second_phase();
   dt.see_corres_mesh("./dt/out_second.obj");
 
+//  // automatically
+//  dt.compute_triangle_corres();
+
+  // manually
+  dt.load_triangle_corres("/home/jerry/usr/workspace/deformation-transfer/bin/out.tricorrs");
+
   dt.deformation_transfer_precompute();
 
   dt.load_deformed_source_mesh(argv[4]);
+  dt.deformation_transfer();
   dt.save_deformed_source_mesh("./dt/source_def.obj");
-//  dt.deformation_transfer();
   dt.save_deformed_target_mesh("./dt/target_def.obj");
 
   cout << "done\n";

@@ -6,6 +6,8 @@
 #include <zjucad/matrix/lapack.h>
 #include <zjucad/matrix/io.h>
 #include <Eigen/Geometry>
+#include <Eigen/UmfPackSupport>
+#include <Eigen/SPQRSupport>
 
 #include "util.h"
 #include "vtk.h"
@@ -62,6 +64,56 @@ int deform_transfer::debug_unit_energy() const {
   return 0;
 }
 
+class face_shared_edge
+{
+public:
+  typedef zjucad::matrix::matrix<size_t> mati_t;
+  face_shared_edge(const mati_t &tris) {
+    size_t cnt = 0;
+    for (size_t i = 0; i < tris.size(2); ++i) {
+      for (size_t j = 0; j < 3; ++j) {
+        size_t I = tris(j, i);
+        size_t J = tris((j+1)%3, i);
+        if ( I > J )
+          std::swap(I, J);
+        pair<size_t, size_t> curr = std::make_pair(I, J);
+        if ( vis_.find(curr) == vis_.end() ) {
+          vis_.insert(std::make_pair(curr, cnt++));
+        }
+      }
+    }
+    cout << "# edge number: " << cnt << endl;
+    edges_.resize(cnt);
+    faces_.resize(cnt);
+    for (auto &e : vis_) {
+      edges_[e.second] = e.first;
+    }
+    for (size_t i = 0; i < tris.size(2); ++i) {
+      for (size_t j = 0; j < 3; ++j) {
+        size_t I = tris(j, i);
+        size_t J = tris((j+1)%3, i);
+        if ( I > J )
+          std::swap(I, J);
+        pair<size_t, size_t> curr = std::make_pair(I, J);
+        faces_[vis_[curr]].push_back(i);
+      }
+    }
+  }
+  const vector<size_t>& query(const size_t vi, const size_t vj) {
+    pair<size_t, size_t> temp;
+    if ( vi > vj )
+      temp = std::make_pair(vj, vi);
+    else
+      temp = std::make_pair(vi, vj);
+    return faces_[vis_[temp]];
+  }
+public:
+  vector<pair<size_t, size_t>> edges_;
+  vector<vector<size_t>> faces_;
+private:
+  map<pair<size_t, size_t>, size_t> vis_;
+};
+
 class dt_deform_energy : public Functional<double>
 {
 public:
@@ -69,7 +121,7 @@ public:
   typedef zjucad::matrix::matrix<double> matd_t;
   dt_deform_energy(const mati_t &tar_cell, const matd_t &tar_nods,
                    const MatrixXd &Sinv, const MatrixXd &Tinv,
-                   const set<tuple<size_t, size_t>> mapping, double w)
+                   const set<tuple<size_t, size_t>> &mapping, double w)
     : tris_(tar_cell),
       nods_(tar_nods),
       Sinv_(Sinv),
@@ -703,10 +755,6 @@ int deform_transfer::solve_corres_second_phase() {
   return 0;
 }
 
-void deform_transfer::build_corre_face(const mati_t &src_tris, const matd_t &src_nods,
-                                       const mati_t &tar_tris, const matd_t &tar_nods,
-                                       set<tuple<size_t, size_t>> &mappings, bool need_swap) {}
-
 int deform_transfer::compute_triangle_corres() {
   cout << "[info] computing triangle correspondence...";
   typedef KDTreeEigenMatrixAdaptor<MatrixXd> kd_tree_t;
@@ -735,10 +783,62 @@ int deform_transfer::compute_triangle_corres() {
   return 0;
 }
 
+int deform_transfer::load_triangle_corres(const char *filename) {
+  FILE *fp = fopen(filename, "r");
+  if ( fp == NULL ) {
+    cerr << "[error] can't open " << filename << endl;
+    return __LINE__;
+  }
+  size_t nbr;
+  int state = fscanf(fp, "%zu", &nbr);
+  cout << "[info] number of triangle corrs: " << nbr << endl;
+  size_t src, tar;
+  double dist;
+  for (size_t i = 0; i < nbr; ++i) {
+    state = fscanf(fp, "%zu, %zu, %lf", &src, &tar, &dist);
+    tri_map_.insert(std::make_tuple(src, tar));
+  }
+  return 0;
+}
+
 int deform_transfer::deformation_transfer_precompute() {
   cout << "[info] precomputation for deformation transfer...";
   tar_def_nods_ = tar_ref_nods_;
   deform_e_ = std::make_shared<dt_deform_energy>(tar_tris_, tar_ref_nods_, Sinv_, Tinv_, tri_map_, 1.0);
+
+//  // for removing the nullspace of deformation energy
+//  std::unordered_set<size_t> cons_tris;
+//  for (auto &e :tri_map_) {
+//    cons_tris.insert(std::get<1>(e));
+//  }
+//  mati_t tar_cell = tar_tris_(colon(0, 2), colon());
+//  shared_ptr<face_shared_edge> e2c = std::make_shared<face_shared_edge>(tar_cell);
+
+//  for (auto &e : e2c->edges_) {
+//    size_t vi = e.first;
+//    size_t vj = e.second;
+//    const vector<size_t>& fa = e2c->query(vi, vj);
+//    if ( fa.size() == 1 )
+//      continue;
+//    if ( (cons_tris.find(fa[0]) != cons_tris.end() && cons_tris.find(fa[1]) == cons_tris.end())
+//         || (cons_tris.find(fa[1]) != cons_tris.end() && cons_tris.find(fa[0]) == cons_tris.end()) ) {
+//      dt_fix_dof_.insert(3*vi+0);
+//      dt_fix_dof_.insert(3*vi+1);
+//      dt_fix_dof_.insert(3*vi+2);
+//      dt_fix_dof_.insert(3*vj+0);
+//      dt_fix_dof_.insert(3*vj+1);
+//      dt_fix_dof_.insert(3*vj+2);
+//    }
+//  }
+//  dt_g2l_.resize(deform_e_->Nx());
+//  size_t ptr = 0;
+//  for (size_t i = 0; i < dt_g2l_.size(); ++i) {
+//    if ( dt_fix_dof_.find(i) != dt_fix_dof_.end() )
+//      dt_g2l_[i] = -1;
+//    else
+//      dt_g2l_[i] = ptr++;
+//  }
+
   cout << "complete\n";
   return 0;
 }
@@ -761,13 +861,23 @@ int deform_transfer::deformation_transfer() {
   deform_e_->Gra(&x[0], rhs.data());
   rhs = -rhs;
 
-  SimplicialCholesky<SparseMatrix<double>> sol;
-  sol.compute(H);
+  if ( !dt_fix_dof_.empty() ) {
+    rm_spmat_col_row(H, dt_g2l_);
+    rm_vector_row(rhs, dt_g2l_);
+  }
+
+  SPQR<SparseMatrix<double>> sol(H);
   ASSERT(sol.info() == Success);
   VectorXd dx = sol.solve(rhs);
   ASSERT(sol.info() == Success);
 
-  x += dx;
+  VectorXd Dx = VectorXd::Zero(deform_e_->Nx());
+  if ( !dt_fix_dof_.empty() )
+    rc_vector_row(dx, dt_g2l_, Dx);
+  else
+    Dx = dx;
+
+  x += Dx;
 
   cout << "complete\n";
   return 0;

@@ -26,5 +26,8 @@ if(UMFPACK_FOUND)
     include_directories(${UMFPACK_INCLUDES})
 endif(UMFPACK_FOUND)
 
+# SUITESPARSE
+find_package(SuiteSparse REQUIRED)
+
 add_subdirectory(src)
 add_subdirectory(examples)
