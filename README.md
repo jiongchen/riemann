@@ -15,3 +15,5 @@ trying to get familiar with libigl, and may implement some classical algorithms 
 [2015-5-27] Implement twisting and bending effects based on vector field.
 
 [2015-6-13] Implement frame-driven deformation proposed by [[Panozzo14]](http://igl.ethz.ch/projects/frame-fields/frame-fields.pdf). The other part about frame-field aligned quadrangulation may included later, which consistis of processes to paramterize and remesh the deformed surface for obtaining a uniform quadrilateral mesh. 
+
+[2015-6-25] Implement deformation transfer for triangle meshes [[Sumner04]](http://people.csail.mit.edu/sumner/research/deftransfer/Sumner2004DTF.pdf), which uses gradient based deformation method.
