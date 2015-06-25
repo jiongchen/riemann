@@ -44,6 +44,7 @@ int main(int argc, char *argv[])
   dt.deformation_transfer_precompute();
 
   dt.load_deformed_source_mesh(argv[4]);
+  cout << "done\n";
   dt.deformation_transfer();
   dt.save_deformed_source_mesh("./dt/source_def.obj");
   dt.save_deformed_target_mesh("./dt/target_def.obj");

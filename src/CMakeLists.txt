@@ -17,6 +17,5 @@ add_custom_command(OUTPUT dt_energy.f90
 add_library(surfparam SHARED ${header} ${source} quad_scalar_field.f90 dt_energy.f90)
 target_link_libraries(surfparam
     jtf-mesh
-    ${SuiteSparse_LIBRARIES}
     ${UMFPACK_LIBRARIES}
 )

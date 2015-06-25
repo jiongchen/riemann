@@ -7,7 +7,7 @@
 #include <zjucad/matrix/io.h>
 #include <Eigen/Geometry>
 #include <Eigen/UmfPackSupport>
-#include <Eigen/SPQRSupport>
+#include <jtflib/mesh/util.h>
 
 #include "util.h"
 #include "vtk.h"
@@ -127,7 +127,15 @@ public:
       Sinv_(Sinv),
       Tinv_(Tinv),
       mapping_(mapping),
-      w_(w) {}
+      w_(w) {
+    unordered_set<size_t> cons_;
+    for (auto &e : mapping_)
+      cons_.insert(std::get<1>(e));
+    for (size_t i = 0; i < tris_.size(2); ++i) {
+      if ( cons_.find(i) == cons_.end() )
+        uncons_face_.push_back(i);
+    }
+  }
   size_t Nx() const {
     return nods_.size();
   }
@@ -141,6 +149,12 @@ public:
       unit_deform_energy_(&value, &vert[0], &Tinv_(0, 3*tar_fa), &src_grad_(0, 3*src_fa));
       *val += w_*value;
     }
+    for (auto &free_fa : uncons_face_) {
+      matd_t vert = X(colon(), tris_(colon(), free_fa));
+      double value = 0;
+      unit_identity_energy_(&value, &vert[0], &Tinv_(0, 3*free_fa));
+      *val += w_*value;
+    }
     return 0;
   }
   int Gra(const double *x, double *gra) const {
@@ -152,8 +166,13 @@ public:
       matd_t vert = X(colon(), tris_(colon(), tar_fa));
       matd_t g = zeros<double>(3, 4);
       unit_deform_energy_jac_(&g[0], &vert[0], &Tinv_(0, 3*tar_fa), &src_grad_(0, 3*src_fa));
-      for (size_t j = 0; j < 4; ++j)
-        G(colon(), tris_(j, tar_fa)) += w_*g(colon(), j);
+      G(colon(), tris_(colon(), tar_fa)) += w_*g;
+    }
+    for (auto &free_fa : uncons_face_) {
+      matd_t vert = X(colon(), tris_(colon(), free_fa));
+      matd_t g = zeros<double>(3, 4);
+      unit_identity_energy_jac_(&g[0], &vert[0], &Tinv_(0, 3*free_fa));
+      G(colon(), tris_(colon(), free_fa)) += w_*g;
     }
     return 0;
   }
@@ -172,6 +191,18 @@ public:
         }
       }
     }
+    for (auto &free_fa : uncons_face_) {
+      matd_t H = zeros<double>(12, 12);
+      unit_identity_energy_hes_(&H[0], NULL, &Tinv_(0, 3*free_fa));
+      for (size_t p = 0; p < 12; ++p) {
+        for (size_t q = 0; q < 12; ++q) {
+          const size_t I = 3*tris_(p/3, free_fa)+p%3;
+          const size_t J = 3*tris_(q/3, free_fa)+q%3;
+          if ( H(p, q) != 0.0 )
+            hes->push_back(Triplet<double>(I, J, w_*H(p, q)));
+        }
+      }
+    }
     return 0;
   }
   void UpdateSourceGrad(const mati_t &src_tris, const matd_t &src_def) {
@@ -183,12 +214,16 @@ public:
       src_grad_.block<3, 3>(0, 3*i) = Map<const Matrix3d>(&base[0])*Sinv_.block<3, 3>(0, 3*i);
     }
   }
+  void ResetWeight(const double w) {
+    w_ = w;
+  }
 private:
   const mati_t &tris_;
   const matd_t &nods_;
   const MatrixXd &Sinv_;
   const MatrixXd &Tinv_;
   const set<tuple<size_t, size_t>> &mapping_;
+  vector<size_t> uncons_face_;
   double w_;
   MatrixXd src_grad_;
 };
@@ -300,9 +335,7 @@ public:
       matd_t vert = X(colon(), tris_(colon(), i));
       matd_t g = zeros<double>(3, 4);
       unit_identity_energy_jac_(&g[0], &vert[0], &Sinv_(0, 3*i));
-      for (size_t j = 0; j < 4; ++j) {
-        grad(colon(), tris_(j, i)) += w_*g(colon(), j);
-      }
+      grad(colon(), tris_(colon(), i)) += w_*g;
     }
     return 0;
   }
@@ -767,6 +800,9 @@ int deform_transfer::compute_triangle_corres() {
   for (size_t i = 0; i < tar_cent.size(2); ++i) {
     tar_cent(colon(), i) = tar_ref_nods_(colon(), tar_tris_(colon(0, 2), i))*ones<double>(3, 1)/3.0;
   }
+  matd_t src_normal, tar_normal;
+  jtf::mesh::cal_face_normal(src_tris_, src_cor_nods_, src_normal, true);
+  jtf::mesh::cal_face_normal(tar_tris_, tar_ref_nods_, tar_normal, true);
   {
     MatrixXd pts = Map<const MatrixXd>(&tar_cent[0], tar_cent.size(1), tar_cent.size(2)).transpose();
     kd_tree_t kdt(3, pts, 10);
@@ -774,10 +810,18 @@ int deform_transfer::compute_triangle_corres() {
 #pragma omp parallel for
     for (size_t i = 0; i < src_cent.size(2); ++i) {
       // do a radius search
+
+//      tri_map_.insert(std::make_tuple(i, ));
     }
   }
   {
+    MatrixXd pts = Map<const MatrixXd>(&src_cent[0], src_cent.size(1), tar_cent.size(2)).transpose();
+    kd_tree_t kdt(3, pts, 10);
+    kdt.index->buildIndex();
+#pragma omp parallel for
+    for (size_t i = 0; i < tar_cent.size(2); ++i) {
 
+    }
   }
   cout << "...complete\n";
   return 0;
@@ -805,40 +849,6 @@ int deform_transfer::deformation_transfer_precompute() {
   cout << "[info] precomputation for deformation transfer...";
   tar_def_nods_ = tar_ref_nods_;
   deform_e_ = std::make_shared<dt_deform_energy>(tar_tris_, tar_ref_nods_, Sinv_, Tinv_, tri_map_, 1.0);
-
-//  // for removing the nullspace of deformation energy
-//  std::unordered_set<size_t> cons_tris;
-//  for (auto &e :tri_map_) {
-//    cons_tris.insert(std::get<1>(e));
-//  }
-//  mati_t tar_cell = tar_tris_(colon(0, 2), colon());
-//  shared_ptr<face_shared_edge> e2c = std::make_shared<face_shared_edge>(tar_cell);
-
-//  for (auto &e : e2c->edges_) {
-//    size_t vi = e.first;
-//    size_t vj = e.second;
-//    const vector<size_t>& fa = e2c->query(vi, vj);
-//    if ( fa.size() == 1 )
-//      continue;
-//    if ( (cons_tris.find(fa[0]) != cons_tris.end() && cons_tris.find(fa[1]) == cons_tris.end())
-//         || (cons_tris.find(fa[1]) != cons_tris.end() && cons_tris.find(fa[0]) == cons_tris.end()) ) {
-//      dt_fix_dof_.insert(3*vi+0);
-//      dt_fix_dof_.insert(3*vi+1);
-//      dt_fix_dof_.insert(3*vi+2);
-//      dt_fix_dof_.insert(3*vj+0);
-//      dt_fix_dof_.insert(3*vj+1);
-//      dt_fix_dof_.insert(3*vj+2);
-//    }
-//  }
-//  dt_g2l_.resize(deform_e_->Nx());
-//  size_t ptr = 0;
-//  for (size_t i = 0; i < dt_g2l_.size(); ++i) {
-//    if ( dt_fix_dof_.find(i) != dt_fix_dof_.end() )
-//      dt_g2l_[i] = -1;
-//    else
-//      dt_g2l_[i] = ptr++;
-//  }
-
   cout << "complete\n";
   return 0;
 }
@@ -866,20 +876,11 @@ int deform_transfer::deformation_transfer() {
     rm_vector_row(rhs, dt_g2l_);
   }
 
-  SPQR<SparseMatrix<double>> sol(H);
+  SimplicialCholesky<SparseMatrix<double>> sol;
+  sol.compute(H);
   ASSERT(sol.info() == Success);
   VectorXd dx = sol.solve(rhs);
   ASSERT(sol.info() == Success);
-
-//  SparseMatrix<double> diag_eps(dim, dim);
-//  diag_eps.setIdentity();
-//  diag_eps *= 1e1;
-//  H += diag_eps;
-//  SimplicialCholesky<SparseMatrix<double>> sol;
-//  sol.compute(H);
-//  ASSERT(sol.info() == Success);
-//  VectorXd dx = sol.solve(rhs);
-//  ASSERT(sol.info() == Success);
 
   VectorXd Dx = VectorXd::Zero(deform_e_->Nx());
   if ( !dt_fix_dof_.empty() )

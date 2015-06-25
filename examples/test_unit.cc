@@ -150,6 +150,24 @@ int test_nanoflann(ptree &pt) {
   return 0;
 }
 
+int test_matrix_extract(ptree &pt) {
+  srand(time(NULL));
+
+  matrix<double> A = rand(3, 4);
+  cout << A << endl;
+
+  matrix<size_t> p(2);
+  p[0] = 1; p[1] = 3;
+
+  matrix<double> B = rand(3, 2);
+  cout << B << endl;
+
+  A(colon(), p) = B;
+  cout << A << endl;
+
+  return 0;
+}
+
 int main(int argc, char *argv[])
 {
     ptree pt;
@@ -160,6 +178,7 @@ int main(int argc, char *argv[])
         CALL_SUB_PROG(test_quad_scalar_field);
         CALL_SUB_PROG(test_vector_field);
         CALL_SUB_PROG(test_nanoflann);
+        CALL_SUB_PROG(test_matrix_extract);
     } catch (const boost::property_tree::ptree_error &e) {
         cerr << "Usage: " << endl;
         zjucad::show_usage_info(std::cerr, pt);
