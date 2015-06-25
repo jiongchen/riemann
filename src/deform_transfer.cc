@@ -788,8 +788,23 @@ int deform_transfer::solve_corres_second_phase() {
   return 0;
 }
 
+double deform_transfer::calc_threshold(const mati_t &tris, const matd_t &nods) const {
+  const size_t nbr = max(tris(colon(0, 2), colon()));
+  double xmin, xmax, ymin, ymax, zmin, zmax, dx, dy, dz;
+  xmin = min(nods(0, colon(0, nbr)));
+  xmax = max(nods(0, colon(0, nbr)));
+  ymin = min(nods(1, colon(0, nbr)));
+  ymax = max(nods(1, colon(0, nbr)));
+  zmin = min(nods(2, colon(0, nbr)));
+  zmax = max(nods(2, colon(0, nbr)));
+  dx = xmax - xmin;
+  dy = ymax - ymin;
+  dz = zmax - zmin;
+  return std::sqrt(4*(dx*dy+dy*dz+dz*dx)/tris.size(2));
+}
+
 int deform_transfer::compute_triangle_corres() {
-  cout << "[info] computing triangle correspondence...";
+  cout << "[info] computing triangle correspondence...\n";
   typedef KDTreeEigenMatrixAdaptor<MatrixXd> kd_tree_t;
   matd_t src_cent(3, src_tris_.size(2)), tar_cent(3, tar_tris_.size(2));
 #pragma omp parallel for
@@ -803,26 +818,56 @@ int deform_transfer::compute_triangle_corres() {
   matd_t src_normal, tar_normal;
   jtf::mesh::cal_face_normal(src_tris_, src_cor_nods_, src_normal, true);
   jtf::mesh::cal_face_normal(tar_tris_, tar_ref_nods_, tar_normal, true);
-  {
-    MatrixXd pts = Map<const MatrixXd>(&tar_cent[0], tar_cent.size(1), tar_cent.size(2)).transpose();
-    kd_tree_t kdt(3, pts, 10);
-    kdt.index->buildIndex();
-#pragma omp parallel for
-    for (size_t i = 0; i < src_cent.size(2); ++i) {
-      // do a radius search
-
-//      tri_map_.insert(std::make_tuple(i, ));
-    }
-  }
+  const double src_threshold = calc_threshold(src_tris_, src_cor_nods_);
+  const double tar_threshold = calc_threshold(tar_tris_, tar_ref_nods_);
+  const double search_radius = std::pow(std::max(src_threshold, tar_threshold), 2);
+  cout << "\t@search radius: " << search_radius << endl;
+//  {
+//    MatrixXd pts = Map<const MatrixXd>(&tar_cent[0], tar_cent.size(1), tar_cent.size(2)).transpose();
+//    kd_tree_t kdt(3, pts, 10);
+//    kdt.index->buildIndex();
+//#pragma omp parallel for
+//    for (size_t i = 0; i < src_cent.size(2); ++i) {
+//      vector<pair<long, double>> matches;
+//      SearchParams params;
+//      kdt.index->radiusSearch(&src_cent(0, i), search_radius, matches, params);
+//      for (auto &fa : matches) {
+//        if ( dot(src_normal(colon(), i), tar_normal(colon(), fa.first)) > 0.0 )
+//#pragma omp critical
+//          tri_map_.insert(std::make_tuple(i, fa.first));
+//      }
+//    }
+//  }
   {
     MatrixXd pts = Map<const MatrixXd>(&src_cent[0], src_cent.size(1), tar_cent.size(2)).transpose();
     kd_tree_t kdt(3, pts, 10);
     kdt.index->buildIndex();
 #pragma omp parallel for
     for (size_t i = 0; i < tar_cent.size(2); ++i) {
-
+      vector<pair<long, double>> matches;
+      SearchParams params;
+      kdt.index->radiusSearch(&tar_cent(0, i), search_radius, matches, params);
+      for (auto &fa : matches) {
+        if ( dot(src_normal(colon(), fa.first), tar_normal(colon(), i)) > 0.0 )
+#pragma omp critical
+          tri_map_.insert(std::make_tuple(fa.first, i));
+      }
     }
   }
+  cout << "\t@number of face corres: " << tri_map_.size() << endl;
+
+  ofstream os("./face_corres.txt");
+  set<tuple<size_t, size_t>> temp;
+  for (auto &e : tri_map_) {
+    temp.insert(make_tuple(get<1>(e), get<0>(e)));
+  }
+  os << temp.size() << endl;
+  for (auto &e : temp) {
+    os << get<1>(e) << " " << get<0>(e) << endl;
+  }
+
+//  tri_map_.clear();
+
   cout << "...complete\n";
   return 0;
 }

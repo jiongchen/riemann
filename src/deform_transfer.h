@@ -46,10 +46,11 @@ public:
   int see_corres_mesh(const char *filename) const;
   int debug_unit_energy() const;
   int debug_energies() const;
+public:
   int load_triangle_corres(const char *filename);
-private:
   void append_fourth_vert(const mati_t &tri_cell, const matd_t &tri_nods, mati_t &tet_cell, matd_t &tet_nods) const;
   void remove_fourth_vert(const mati_t &tet_cell, const matd_t &tet_nods, mati_t &tri_cell, matd_t &tri_nods) const;
+  double calc_threshold(const mati_t &tris, const matd_t &nods) const;
 
   mati_t src_tris_, tar_tris_;
   matd_t src_ref_nods_, tar_ref_nods_;
