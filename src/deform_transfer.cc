@@ -64,55 +64,8 @@ int deform_transfer::debug_unit_energy() const {
   return 0;
 }
 
-class face_shared_edge
-{
-public:
-  typedef zjucad::matrix::matrix<size_t> mati_t;
-  face_shared_edge(const mati_t &tris) {
-    size_t cnt = 0;
-    for (size_t i = 0; i < tris.size(2); ++i) {
-      for (size_t j = 0; j < 3; ++j) {
-        size_t I = tris(j, i);
-        size_t J = tris((j+1)%3, i);
-        if ( I > J )
-          std::swap(I, J);
-        pair<size_t, size_t> curr = std::make_pair(I, J);
-        if ( vis_.find(curr) == vis_.end() ) {
-          vis_.insert(std::make_pair(curr, cnt++));
-        }
-      }
-    }
-    cout << "# edge number: " << cnt << endl;
-    edges_.resize(cnt);
-    faces_.resize(cnt);
-    for (auto &e : vis_) {
-      edges_[e.second] = e.first;
-    }
-    for (size_t i = 0; i < tris.size(2); ++i) {
-      for (size_t j = 0; j < 3; ++j) {
-        size_t I = tris(j, i);
-        size_t J = tris((j+1)%3, i);
-        if ( I > J )
-          std::swap(I, J);
-        pair<size_t, size_t> curr = std::make_pair(I, J);
-        faces_[vis_[curr]].push_back(i);
-      }
-    }
-  }
-  const vector<size_t>& query(const size_t vi, const size_t vj) {
-    pair<size_t, size_t> temp;
-    if ( vi > vj )
-      temp = std::make_pair(vj, vi);
-    else
-      temp = std::make_pair(vi, vj);
-    return faces_[vis_[temp]];
-  }
-public:
-  vector<pair<size_t, size_t>> edges_;
-  vector<vector<size_t>> faces_;
-private:
-  map<pair<size_t, size_t>, size_t> vis_;
-};
+#define RETURN_WITH_COND_TRUE(expr) \
+  if ( expr ) return 1;
 
 class dt_deform_energy : public Functional<double>
 {
@@ -140,6 +93,7 @@ public:
     return nods_.size();
   }
   int Val(const double *x, double *val) const {
+    RETURN_WITH_COND_TRUE(w_ == 0.0);
     itr_matrix<const double *> X(3, Nx()/3, x);
     for (auto &e : mapping_) {
       const size_t src_fa = std::get<0>(e);
@@ -158,6 +112,7 @@ public:
     return 0;
   }
   int Gra(const double *x, double *gra) const {
+    RETURN_WITH_COND_TRUE(w_ == 0.0);
     itr_matrix<const double *> X(3, Nx()/3, x);
     itr_matrix<double *> G(3, Nx()/3, gra);
     for (auto &e : mapping_) {
@@ -177,6 +132,7 @@ public:
     return 0;
   }
   int Hes(const double *x, vector<Triplet<double>> *hes) const {
+    RETURN_WITH_COND_TRUE(w_ == 0.0);
     for (auto &e : mapping_) {
       const size_t src_fa = std::get<0>(e);
       const size_t tar_fa = std::get<1>(e);
@@ -243,6 +199,7 @@ public:
     return nods_.size();
   }
   int Val(const double *x, double *val) const {
+    RETURN_WITH_COND_TRUE(w_ == 0.0);
     itr_matrix<const double *> X(3, Nx()/3, x);
     for (auto &e : e2c_->edges_) {
       pair<size_t, size_t> face = e2c_->query(e.first, e.second);
@@ -259,6 +216,7 @@ public:
     return 0;
   }
   int Gra(const double *x, double *gra) const {
+    RETURN_WITH_COND_TRUE(w_ == 0.0);
     itr_matrix<const double *> X(3, Nx()/3, x);
     itr_matrix<double *> grad(3, Nx()/3, gra);
     for (auto &e : e2c_->edges_) {
@@ -278,6 +236,7 @@ public:
     return 0;
   }
   int Hes(const double *x, vector<Triplet<double>> *hes) const {
+    RETURN_WITH_COND_TRUE(w_ == 0.0);
     for (auto &e : e2c_->edges_) {
       pair<size_t, size_t> face = e2c_->query(e.first, e.second);
       if ( e2c_->is_boundary_edge(face) )
@@ -319,6 +278,7 @@ public:
     return nods_.size();
   }
   int Val(const double *x, double *val) const {
+    RETURN_WITH_COND_TRUE(w_ == 0.0);
     itr_matrix<const double *> X(3, Nx()/3, x);
     for (size_t i = 0; i < tris_.size(2); ++i) {
       matd_t vert = X(colon(), tris_(colon(), i));
@@ -329,6 +289,7 @@ public:
     return 0;
   }
   int Gra(const double *x, double *gra) const {
+    RETURN_WITH_COND_TRUE(w_ == 0.0);
     itr_matrix<const double *> X(3, Nx()/3, x);
     itr_matrix<double *> grad(3, Nx()/3, gra);
     for (size_t i = 0; i < tris_.size(2); ++i) {
@@ -340,6 +301,7 @@ public:
     return 0;
   }
   int Hes(const double *x, vector<Triplet<double>> *hes) const {
+    RETURN_WITH_COND_TRUE(w_ == 0.0);
     for (size_t i = 0; i < tris_.size(2); ++i) {
       matd_t H = zeros<double>(12, 12);
       unit_identity_energy_hes_(&H[0], NULL, &Sinv_(0, 3*i));
@@ -371,36 +333,41 @@ public:
   typedef zjucad::matrix::matrix<double> matd_t;
   typedef KDTreeEigenMatrixAdaptor<Matrix<double, -1, -1>> kd_tree_t;
   dt_distance_energy(const mati_t &src_cell, const matd_t &src_nods,
-                     const matd_t &tar_nods, const double w)
+                     const mati_t &tar_cell, const matd_t &tar_nods, const double w)
     : tris_(src_cell), nods_(src_nods), w_(w) {
-    Map<const MatrixXd> temp(&tar_nods[0], tar_nods.size(1), tar_nods.size(2));
-    pts_ = temp.transpose();
+    nbr_src_vert_ = max(src_cell(colon(0, 2), colon()));
+    nbr_tar_vert_ = max(tar_cell(colon(0, 2), colon()));
+    pts_ = Map<const MatrixXd>(&tar_nods[0], tar_nods.size(1), nbr_tar_vert_+1).transpose();
     kdt_ = std::make_shared<kd_tree_t>(3, pts_, 10);
     kdt_->index->buildIndex();
-    c_ = zeros<double>(src_nods.size(1), src_nods.size(2));
+    c_ = zeros<double>(src_nods.size(1), nbr_src_vert_+1);
+    jtf::mesh::cal_point_normal(tar_cell(colon(0, 2), colon()), tar_nods(colon(), colon(0, nbr_tar_vert_)), tar_normal);
   }
   size_t Nx() const {
     return nods_.size();
   }
   int Val(const double *x, double *val) const {
+    RETURN_WITH_COND_TRUE(w_ == 0.0);
     itr_matrix<const double *> X(3, Nx()/3, x);
-    for (size_t i = 0; i < X.size(2); ++i) {
+    for (size_t i = 0; i <= nbr_src_vert_; ++i) {
       matd_t diff = X(colon(), i) - c_(colon(), i);
       *val += w_*dot(diff, diff);
     }
     return 0;
   }
   int Gra(const double *x, double *gra) const {
+    RETURN_WITH_COND_TRUE(w_ == 0.0);
     itr_matrix<const double *> X(3, Nx()/3, x);
     itr_matrix<double *> G(3, Nx()/3, gra);
 #pragma omp parallel for
-    for (size_t i = 0; i < X.size(2); ++i) {
+    for (size_t i = 0; i <= nbr_src_vert_; ++i) {
       G(colon(), i) += 2*w_*(X(colon(), i)-c_(colon(), i));
     }
     return 0;
   }
   int Hes(const double *x, vector<Triplet<double>> *hes) const {
-    for (size_t i = 0; i < Nx(); ++i)
+    RETURN_WITH_COND_TRUE(w_ == 0.0);
+    for (size_t i = 0; i <= 3*nbr_src_vert_; ++i)
       hes->push_back(Triplet<double>(i, i, 2*w_));
     return 0;
   }
@@ -409,26 +376,39 @@ public:
   }
   int UpdateClosetPoints(const double *x) {
     itr_matrix<const double *> X(3, Nx()/3, x);
+    jtf::mesh::cal_point_normal(tris_(colon(0, 2), colon()), X(colon(), colon(0, nbr_src_vert_)), src_normal);
     const size_t num_results = 3;
 #pragma omp parallel for
-    for (size_t i = 0; i < X.size(2); ++i) {
+    for (size_t i = 0; i <= nbr_src_vert_; ++i) {
       vector<size_t> ret_idx(num_results);
       vector<double> sqr_dist(num_results);
       KNNResultSet<double> result_set(num_results);
       result_set.init(&ret_idx[0], &sqr_dist[0]);
       kdt_->index->findNeighbors(result_set, &X(0, i), SearchParams(10));
       ASSERT(ret_idx[0] >= 0 && ret_idx[0] < pts_.rows());
-      c_(0, i) = pts_(ret_idx[0], 0);
-      c_(1, i) = pts_(ret_idx[0], 1);
-      c_(2, i) = pts_(ret_idx[0], 2);
+      bool flag = true;
+      for (auto &idx : ret_idx) {
+        if ( dot(src_normal(colon(), i), tar_normal(colon(), idx)) > 0.0 ) {
+          c_(0, i) = pts_(idx, 0);
+          c_(1, i) = pts_(idx, 1);
+          c_(2, i) = pts_(idx, 2);
+          flag = false;
+          break;
+        }
+      }
+      if ( flag ) {
+        c_(0, i) = pts_(ret_idx[0], 0);
+        c_(1, i) = pts_(ret_idx[0], 1);
+        c_(2, i) = pts_(ret_idx[0], 2);
+      }
     }
     return 0;
   }
 private:
-  bool is_valid() const;
-
   const mati_t &tris_;
   const matd_t &nods_;
+  matd_t src_normal, tar_normal;
+  size_t nbr_src_vert_, nbr_tar_vert_;
   MatrixXd pts_;
   shared_ptr<kd_tree_t> kdt_;
   matd_t c_;
@@ -678,7 +658,7 @@ int deform_transfer::solve_corres_first_phase() {
   buff_.resize(3);
   buff_[SMOOTH] = std::make_shared<dt_smooth_energy>(src_tris_, src_ref_nods_, Sinv_, w[SMOOTH]);
   buff_[IDENTITY] = std::make_shared<dt_identity_energy>(src_tris_, src_ref_nods_, Sinv_, w[IDENTITY]);
-  buff_[DISTANCE] = std::make_shared<dt_distance_energy>(src_tris_, src_ref_nods_, tar_ref_nods_, w[DISTANCE]);
+  buff_[DISTANCE] = std::make_shared<dt_distance_energy>(src_tris_, src_ref_nods_, tar_tris_, tar_ref_nods_, w[DISTANCE]);
   try {
     corre_e_ = std::make_shared<energy_t<double>>(buff_);
   } catch ( exception &e ) {

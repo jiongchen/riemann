@@ -35,6 +35,7 @@ int main(int argc, char *argv[])
   dt.solve_corres_second_phase();
   dt.see_corres_mesh("./dt/out_second.obj");
 
+  return __LINE__;
   // automatically
   dt.compute_triangle_corres();
 
