@@ -34,13 +34,7 @@ int main(int argc, char *argv[])
   dt.see_corres_mesh("./dt/out_first.obj");
   dt.solve_corres_second_phase();
   dt.see_corres_mesh("./dt/out_second.obj");
-
-  return __LINE__;
-  // automatically
   dt.compute_triangle_corres();
-
-//  // manually
-//  dt.load_triangle_corres("/home/jerry/usr/workspace/deformation-transfer/bin/out.tricorrs");
 
   dt.deformation_transfer_precompute();
 

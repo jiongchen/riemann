@@ -802,22 +802,22 @@ int deform_transfer::compute_triangle_corres() {
   const double tar_threshold = calc_threshold(tar_tris_, tar_ref_nods_);
   const double search_radius = std::pow(std::max(src_threshold, tar_threshold), 2);
   cout << "\t@search radius: " << search_radius << endl;
-//  {
-//    MatrixXd pts = Map<const MatrixXd>(&tar_cent[0], tar_cent.size(1), tar_cent.size(2)).transpose();
-//    kd_tree_t kdt(3, pts, 10);
-//    kdt.index->buildIndex();
-//#pragma omp parallel for
-//    for (size_t i = 0; i < src_cent.size(2); ++i) {
-//      vector<pair<long, double>> matches;
-//      SearchParams params;
-//      kdt.index->radiusSearch(&src_cent(0, i), search_radius, matches, params);
-//      for (auto &fa : matches) {
-//        if ( dot(src_normal(colon(), i), tar_normal(colon(), fa.first)) > 0.0 )
-//#pragma omp critical
-//          tri_map_.insert(std::make_tuple(i, fa.first));
-//      }
-//    }
-//  }
+  {
+    MatrixXd pts = Map<const MatrixXd>(&tar_cent[0], tar_cent.size(1), tar_cent.size(2)).transpose();
+    kd_tree_t kdt(3, pts, 10);
+    kdt.index->buildIndex();
+#pragma omp parallel for
+    for (size_t i = 0; i < src_cent.size(2); ++i) {
+      vector<pair<long, double>> matches;
+      SearchParams params;
+      kdt.index->radiusSearch(&src_cent(0, i), search_radius, matches, params);
+      for (auto &fa : matches) {
+        if ( dot(src_normal(colon(), i), tar_normal(colon(), fa.first)) > 0.0 )
+#pragma omp critical
+          tri_map_.insert(std::make_tuple(i, fa.first));
+      }
+    }
+  }
   {
     MatrixXd pts = Map<const MatrixXd>(&src_cent[0], src_cent.size(1), tar_cent.size(2)).transpose();
     kd_tree_t kdt(3, pts, 10);
@@ -835,20 +835,7 @@ int deform_transfer::compute_triangle_corres() {
     }
   }
   cout << "\t@number of face corres: " << tri_map_.size() << endl;
-
-  ofstream os("./face_corres.txt");
-  set<tuple<size_t, size_t>> temp;
-  for (auto &e : tri_map_) {
-    temp.insert(make_tuple(get<1>(e), get<0>(e)));
-  }
-  os << temp.size() << endl;
-  for (auto &e : temp) {
-    os << get<1>(e) << " " << get<0>(e) << endl;
-  }
-
-//  tri_map_.clear();
-
-  cout << "...complete\n";
+  cout << "[info] ...complete\n";
   return 0;
 }
 
