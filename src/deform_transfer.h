@@ -37,6 +37,8 @@ public:
   int solve_corres_first_phase();
   int solve_corres_second_phase();
   int compute_triangle_corres();
+  // solve correspondence using harmonic field
+  int solve_corres_harmonic();
   // deformation solver
   int deformation_transfer_precompute();
   int deformation_transfer();

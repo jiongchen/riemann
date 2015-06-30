@@ -906,4 +906,8 @@ int deform_transfer::deformation_transfer() {
   return 0;
 }
 
+int deform_transfer::solve_corres_harmonic() {
+  return 0;
+}
+
 }
