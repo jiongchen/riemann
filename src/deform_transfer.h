@@ -37,12 +37,13 @@ public:
   int solve_corres_first_phase();
   int solve_corres_second_phase();
   int compute_triangle_corres();
-  // solve correspondence using harmonic field
+  // solve correspondence by harmonic fields
   int solve_corres_harmonic();
   // deformation solver
   int deformation_transfer_precompute();
   int deformation_transfer();
   // debug
+  int see_source_markers(const char *filename) const;
   int see_target_markers(const char *filename) const;
   int see_ghost_tet_mesh(const char *filename, const std::string &which) const;
   int see_corres_mesh(const char *filename) const;
@@ -53,6 +54,8 @@ public:
   void append_fourth_vert(const mati_t &tri_cell, const matd_t &tri_nods, mati_t &tet_cell, matd_t &tet_nods) const;
   void remove_fourth_vert(const mati_t &tet_cell, const matd_t &tet_nods, mati_t &tri_cell, matd_t &tri_nods) const;
   double calc_threshold(const mati_t &tris, const matd_t &nods) const;
+  int calc_harmonic_fields(const mati_t &tris, const matd_t &nods, Eigen::MatrixXd &hf, bool source);
+  int see_scalar_fields(const char *filename, const mati_t &tris, const matd_t &nods, const Eigen::MatrixXd &scalar_fields) const;
 
   mati_t src_tris_, tar_tris_;
   matd_t src_ref_nods_, tar_ref_nods_;

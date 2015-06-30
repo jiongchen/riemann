@@ -12,6 +12,7 @@
 #include "util.h"
 #include "vtk.h"
 #include "nanoflann.hpp"
+#include "cotmatrix.h"
 
 using namespace std;
 using namespace zjucad::matrix;
@@ -538,6 +539,18 @@ int deform_transfer::load_vertex_markers(const char *filename) {
   return 0;
 }
 
+int deform_transfer::see_source_markers(const char *filename) const {
+  const size_t nbr_marker = vert_map_.size();
+  mati_t point = colon(0, nbr_marker-1);
+  matd_t nods(3, nbr_marker);
+#pragma omp parallel for
+  for (size_t i = 0; i < vert_map_.size(); ++i)
+    nods(colon(), i) = src_ref_nods_(colon(), std::get<0>(vert_map_[i]));
+  ofstream os(filename);
+  point2vtk(os, nods.begin(), nods.size(2), point.begin(), point.size());
+  return 0;
+}
+
 int deform_transfer::see_target_markers(const char *filename) const {
   const size_t nbr_marker = vert_map_.size();
   mati_t point = colon(0, nbr_marker-1);
@@ -906,7 +919,69 @@ int deform_transfer::deformation_transfer() {
   return 0;
 }
 
+int deform_transfer::calc_harmonic_fields(const mati_t &tris, const matd_t &nods, MatrixXd &hf, bool source) {
+  mati_t _tris = tris(colon(0, 2), colon());
+  matd_t _nods = nods(colon(), colon(0, max(_tris)));
+  hf = MatrixXd::Zero(_nods.size(2), vert_map_.size());
+  unordered_set<size_t> fix_dof;
+  for (size_t i = 0; i < vert_map_.size(); ++i) {
+    const size_t vid = (source ? std::get<0>(vert_map_[i]) : std::get<1>(vert_map_[i]));
+    hf(vid, i) = 1.0;
+    fix_dof.insert(vid);
+  }
+  vector<size_t> g2l(_nods.size(2));
+  size_t ptr = 0;
+  for (size_t i = 0; i < g2l.size(); ++i) {
+    if ( fix_dof.find(i) != fix_dof.end() )
+      g2l[i] = -1;
+    else
+      g2l[i] = ptr++;
+  }
+  SparseMatrix<double> L;
+  surfparam::cotmatrix(_tris, _nods, 1, &L);
+  MatrixXd RHS = -L*hf;
+  if ( !fix_dof.empty() )
+    rm_spmat_col_row(L, g2l);
+
+  SimplicialCholesky<SparseMatrix<double>> sol;
+  sol.compute(L);
+  ASSERT(sol.info() == Success);
+#pragma omp parallel for
+  for (size_t j = 0; j < hf.cols(); ++j) {
+    VectorXd rhs = RHS.col(j);
+    if ( !fix_dof.empty() )
+      rm_vector_row(rhs, g2l);
+    VectorXd dh = sol.solve(rhs);
+    ASSERT(sol.info() == Success);
+    VectorXd DH = VectorXd::Zero(hf.rows());
+    if ( !fix_dof.empty() )
+      rc_vector_row(dh, g2l, DH);
+    else
+      DH = dh;
+    hf.col(j) += DH;
+  }
+  see_scalar_fields("./dt/harmonic_fields.vtk", _tris, _nods, hf);
+  return 0;
+}
+
+int deform_transfer::see_scalar_fields(const char *filename, const mati_t &tris, const matd_t &nods, const MatrixXd &scalar_fields) const {
+  ofstream os(filename);
+  if ( os.fail() ) {
+    cerr << "[error] can't open " << filename << endl;
+    return __LINE__;
+  }
+  os.precision(15);
+  tri2vtk(os, &nods[0], nods.size(2), &tris[0], tris.size(2));
+  point_data(os, &scalar_fields(0, 65), scalar_fields.rows(), "hf", "hf");
+  os.close();
+  return 0;
+}
+
 int deform_transfer::solve_corres_harmonic() {
+  MatrixXd hf;
+  calc_harmonic_fields(src_tris_, src_ref_nods_, hf, true);
+//  for (size_t i = 0; i < hf.rows(); ++i)
+//    cout << hf.row(i).sum() << endl;
   return 0;
 }
 
