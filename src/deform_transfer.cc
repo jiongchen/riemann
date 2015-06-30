@@ -972,7 +972,12 @@ int deform_transfer::see_scalar_fields(const char *filename, const mati_t &tris,
   }
   os.precision(15);
   tri2vtk(os, &nods[0], nods.size(2), &tris[0], tris.size(2));
-  point_data(os, &scalar_fields(0, 65), scalar_fields.rows(), "hf", "hf");
+  random_device rd;
+  mt19937 mt(rd());
+  uniform_int_distribution<int> dist(0, scalar_fields.cols()-1);
+  const size_t idx = dist(mt);
+  cout << idx << endl;
+  point_data(os, &scalar_fields(0, idx), scalar_fields.rows(), "hf", "hf");
   os.close();
   return 0;
 }
@@ -980,8 +985,6 @@ int deform_transfer::see_scalar_fields(const char *filename, const mati_t &tris,
 int deform_transfer::solve_corres_harmonic() {
   MatrixXd hf;
   calc_harmonic_fields(src_tris_, src_ref_nods_, hf, true);
-//  for (size_t i = 0; i < hf.rows(); ++i)
-//    cout << hf.row(i).sum() << endl;
   return 0;
 }
 
