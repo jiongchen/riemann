@@ -39,12 +39,12 @@ int main(int argc, char *argv[])
 //  dt.see_corres_mesh("./dt/out_second.obj");
 //  dt.compute_triangle_corres();
 
-//  dt.deformation_transfer_precompute();
+  dt.deformation_transfer_precompute();
 
-//  dt.load_deformed_source_mesh(argv[4]);
-//  dt.deformation_transfer();
-//  dt.save_deformed_source_mesh("./dt/source_def.obj");
-//  dt.save_deformed_target_mesh("./dt/target_def.obj");
+  dt.load_deformed_source_mesh(argv[4]);
+  dt.deformation_transfer();
+  dt.save_deformed_source_mesh("./dt/source_def.obj");
+  dt.save_deformed_target_mesh("./dt/target_def.obj");
 
   cout << "[info] all done\n";
   return 0;

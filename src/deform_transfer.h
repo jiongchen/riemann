@@ -54,7 +54,7 @@ public:
   void append_fourth_vert(const mati_t &tri_cell, const matd_t &tri_nods, mati_t &tet_cell, matd_t &tet_nods) const;
   void remove_fourth_vert(const mati_t &tet_cell, const matd_t &tet_nods, mati_t &tri_cell, matd_t &tri_nods) const;
   double calc_threshold(const mati_t &tris, const matd_t &nods) const;
-  int calc_harmonic_fields(const mati_t &tris, const matd_t &nods, Eigen::MatrixXd &hf, bool source);
+  int calc_harmonic_fields(const mati_t &tris, const matd_t &nods, Eigen::MatrixXd &cell_hf, bool source);
   int see_scalar_fields(const char *filename, const mati_t &tris, const matd_t &nods, const Eigen::MatrixXd &scalar_fields) const;
 
   mati_t src_tris_, tar_tris_;
