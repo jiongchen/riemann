@@ -56,6 +56,7 @@ public:
   double calc_threshold(const mati_t &tris, const matd_t &nods) const;
   int calc_harmonic_fields(const mati_t &tris, const matd_t &nods, Eigen::MatrixXd &cell_hf, bool source);
   int see_scalar_fields(const char *filename, const mati_t &tris, const matd_t &nods, const Eigen::MatrixXd &scalar_fields) const;
+  int see_face_scalar_fields(const char *filename, const mati_t &tris, const matd_t &nods, const Eigen::MatrixXd &cell_dat) const;
 
   mati_t src_tris_, tar_tris_;
   matd_t src_ref_nods_, tar_ref_nods_;

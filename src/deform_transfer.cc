@@ -962,11 +962,15 @@ int deform_transfer::calc_harmonic_fields(const mati_t &tris, const matd_t &nods
   }
   if ( 0 )
     see_scalar_fields("./dt/harmonic_fields.vtk", _tris, _nods, hf);
+
   cell_hf.resize(_tris.size(2), hf.cols());
 #pragma omp parallel for
-  for (size_t i = 0; i < _tris.size(2); ++i) {
-      cell_hf.row(i) = (hf.row(_tris(0, i))+hf.row(_tris(1, i))+hf.row(_tris(2, i)))/3.0;
-    }
+  for (size_t i = 0; i < _tris.size(2); ++i)
+    cell_hf.row(i) = (hf.row(_tris(0, i))+hf.row(_tris(1, i))+hf.row(_tris(2, i)))/3.0;
+
+  string filename = (source ? "./dt/src_face_hf.vtk" : "./dt/tar_face_hf.vtk");
+  see_face_scalar_fields(filename.c_str(), _tris, _nods, cell_hf);
+
   return 0;
 }
 
@@ -982,14 +986,32 @@ int deform_transfer::see_scalar_fields(const char *filename, const mati_t &tris,
   mt19937 mt(rd());
   uniform_int_distribution<int> dist(0, scalar_fields.cols()-1);
   const size_t idx = dist(mt);
-  cout << idx << endl;
   point_data(os, &scalar_fields(0, idx), scalar_fields.rows(), "hf", "hf");
   os.close();
   return 0;
 }
 
+int deform_transfer::see_face_scalar_fields(const char *filename, const mati_t &tris, const matd_t &nods, const MatrixXd &cell_dat) const {
+  ofstream os(filename);
+  if ( os.fail() ) {
+    cerr << "[error] can't open write " << filename << endl;
+    return __LINE__;
+  }
+
+  vector<string> dat_name{"hf0", "hf1", "hf2", "hf3", "hf4"};
+  os.precision(15);
+  tri2vtk(os, &nods[0], nods.size(2), &tris[0], tris.size(2));
+  if ( cell_dat.cols() == 0 )
+    return 0;
+  cell_data(os, &cell_dat(0, 0), cell_dat.rows(), dat_name[0].c_str(),dat_name[0].c_str());
+  for (size_t j = 1; j < 5; ++j)
+    vtk_data(os, &cell_dat(0, j), cell_dat.rows(), dat_name[j].c_str(), dat_name[j].c_str());
+  os.close();
+  return 0;
+}
+
 int deform_transfer::solve_corres_harmonic() {
-  cout << "[info] solving correspondence guided by harmonic fields...";
+  cout << "[info] solving correspondence guided by harmonic fields...\n";
   typedef KDTreeEigenMatrixAdaptor<MatrixXd> kd_tree_t;
   MatrixXd src_cell_hf, tar_cell_hf;
   calc_harmonic_fields(src_tris_, src_ref_nods_, src_cell_hf, true);
@@ -1001,17 +1023,17 @@ int deform_transfer::solve_corres_harmonic() {
   const size_t num_results = 3;
 #pragma omp parallel for
   for (size_t i = 0; i < tar_cell_hf.rows(); ++i) {
-      vector<size_t> ret_idx(num_results);
-      vector<double> sqr_dist(num_results);
-      KNNResultSet<double> result(num_results);
-      result.init(&ret_idx[0], &sqr_dist[0]);
-      VectorXd x = tar_cell_hf.row(i);
-      kdt.index->findNeighbors(result, x.data(), SearchParams(10));
+    vector<size_t> ret_idx(num_results);
+    vector<double> sqr_dist(num_results);
+    KNNResultSet<double> result(num_results);
+    result.init(&ret_idx[0], &sqr_dist[0]);
+    VectorXd x = tar_cell_hf.row(i);
+    kdt.index->findNeighbors(result, x.data(), SearchParams(10));
 #pragma omp critical
-      tri_map_.insert(std::make_tuple(ret_idx[0], i));
-    }
-
-  cout << "complete\n";
+    tri_map_.insert(std::make_tuple(ret_idx[0], i));
+  }
+  cout << "[info] number of correospondence: " << tri_map_.size() << endl;
+  cout << "[info] ...complete\n";
   return 0;
 }
 
