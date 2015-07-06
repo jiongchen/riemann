@@ -12,6 +12,8 @@
 #include "src/vec_field_deform.h"
 #include "src/nanoflann.hpp"
 #include "src/cotmatrix.h"
+#include "src/vtk.h"
+#include "src/grad_operator.h"
 
 using namespace std;
 using namespace Eigen;
@@ -187,6 +189,37 @@ int test_uniform_laplacian(ptree &pt) {
   return 0;
 }
 
+int test_height_vector(ptree &pt) {
+  srand(time(NULL));
+  matrix<size_t> cell = colon(0, 2);
+  matrix<double> nods = rand(3, 3);
+  {
+    ofstream os("./unitest/triangle.vtk");
+    tri2vtk(os, nods.begin(), nods.size(2), cell.begin(), cell.size(2));
+  }
+  matrix<double> H(3, 3);
+  geom_deform::calc_tri_height_vector(&nods[0], &H[0]);
+  matrix<size_t> line(2, 3);
+  matrix<double> vert(3, 6);
+  vert(colon(), colon(0, 2)) = nods;
+  vert(colon(), colon(3, 5)) = nods-H;
+  line(0, colon()) = colon(0, 2);
+  line(1, colon()) = colon(3, 5);
+  cout << line << endl;
+  cout << vert << endl;
+  {
+    ofstream os("./unitest/height.vtk");
+    line2vtk(os, &vert[0], vert.size(2), &line[0], line.size(2));
+  }
+  for (size_t j = 0; j < 3; ++j) {
+    double len = dot(H(colon(), j), H(colon(), j));
+    H(colon(), j) /= len;
+  }
+  cout << H*ones<double>(3, 1) << endl;
+  cout << "done\n";
+  return 0;
+}
+
 int main(int argc, char *argv[])
 {
   ptree pt;
@@ -199,6 +232,7 @@ int main(int argc, char *argv[])
     CALL_SUB_PROG(test_nanoflann);
     CALL_SUB_PROG(test_matrix_extract);
     CALL_SUB_PROG(test_uniform_laplacian);
+    CALL_SUB_PROG(test_height_vector);
   } catch (const boost::property_tree::ptree_error &e) {
     cerr << "Usage: " << endl;
     zjucad::show_usage_info(std::cerr, pt);
