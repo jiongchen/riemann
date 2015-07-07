@@ -6,6 +6,9 @@
 #include <Eigen/Sparse>
 #include <boost/filesystem.hpp>
 #include <zjucad/matrix/io.h>
+#include <igl/readOFF.h>
+#include <igl/readDMAT.h>
+#include <igl/grad.h>
 
 #include "src/config.h"
 #include "src/energy.h"
@@ -220,6 +223,57 @@ int test_height_vector(ptree &pt) {
   return 0;
 }
 
+int test_grad_operator(ptree &pt) {
+  matrix<size_t> tris;
+  matrix<double> nods;
+  jtf::mesh::load_obj("../../dat/half_sphere.obj", tris, nods);
+  SparseMatrix<double> G;
+  geom_deform::calc_grad_operator(tris, nods, &G);
+  matd_t x = nods(0, colon());
+  matd_t y = nods(1, colon());
+  matd_t z = nods(2, colon());
+  VectorXd grad_x = G*Map<VectorXd>(&y[0], y.size());
+  itr_matrix<const double *> Gx(3, tris.size(2), grad_x.data());
+  mati_t line(2, tris.size(2));
+  matd_t vert(3, 2*tris.size(2));
+  line(0, colon()) = colon(0, tris.size(2)-1);
+  line(1, colon()) = colon(tris.size(2), 2*tris.size(2)-1);
+#pragma omp parallel for
+  for (size_t i = 0; i < tris.size(2); ++i) {
+    vert(colon(), i) = nods(colon(), tris(colon(), i))*ones<double>(3, 1)/3.0;
+    vert(colon(), i+tris.size(2)) = vert(colon(), i)+Gx(colon(), i);
+  }
+  jtf::mesh::save_obj("./unitest/test_model.obj", tris, nods);
+  ofstream os("./unitest/grad.vtk");
+  line2vtk(os, &vert[0], vert.size(2), &line[0], line.size(2));
+  cout << "done\n";
+  return 0;
+}
+
+int test_grad_operator2(ptree &pt) {
+  Matrix<size_t, -1, -1> F;
+  Matrix<double, -1, -1> V;
+  igl::readOFF("../../dat/bunny.off", V, F);
+  SparseMatrix<double> G0;
+  igl::grad(V, F, G0);
+  cout << G0.norm() << endl;
+  cout << G0.blueNorm() << endl;
+  cout << G0.nonZeros() << endl << endl;
+
+  Matrix<size_t, -1, -1> FT = F.transpose();
+  Matrix<double, -1, -1> VT = V.transpose();
+  matrix<size_t> cell = itr_matrix<const size_t*>(FT.rows(), FT.cols(), FT.data());
+  matrix<double> nods = itr_matrix<const double*>(VT.rows(), VT.cols(), VT.data());
+  SparseMatrix<double> G1;
+  geom_deform::calc_grad_operator(cell, nods, &G1);
+  cout << G1.norm() << endl;
+  cout << G1.blueNorm() << endl;
+  cout << G1.nonZeros() << endl << endl;
+
+  cout << "done\n";
+  return 0;
+}
+
 int main(int argc, char *argv[])
 {
   ptree pt;
@@ -233,6 +287,8 @@ int main(int argc, char *argv[])
     CALL_SUB_PROG(test_matrix_extract);
     CALL_SUB_PROG(test_uniform_laplacian);
     CALL_SUB_PROG(test_height_vector);
+    CALL_SUB_PROG(test_grad_operator);
+    CALL_SUB_PROG(test_grad_operator2);
   } catch (const boost::property_tree::ptree_error &e) {
     cerr << "Usage: " << endl;
     zjucad::show_usage_info(std::cerr, pt);
