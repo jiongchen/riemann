@@ -75,3 +75,11 @@ target_link_libraries(test_deform_transfer
     surfparam
     ${Boost_LIBRARIES}
 )
+
+find_package(Arpack REQUIRED)
+add_executable(test_lap_eigen test_lap_eigen.cc)
+target_link_libraries(test_lap_eigen
+    surfparam
+    ${Boost_LIBRARIES}
+    ${ARPACK_LIBRARIES}
+)
