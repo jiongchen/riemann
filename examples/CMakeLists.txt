@@ -83,3 +83,9 @@ target_link_libraries(test_lap_eigen
     ${Boost_LIBRARIES}
     ${ARPACK_LIBRARIES}
 )
+
+add_executable(test_grad_edit test_grad_edit.cc)
+target_link_libraries(test_grad_edit
+    surfparam
+    ${Boost_LIBRARIES}
+)

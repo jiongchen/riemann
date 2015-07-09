@@ -25,7 +25,7 @@ int main(int argc, char *argv[])
   SparseMatrix<double> L;
   surfparam::cotmatrix(tris, nods, 1, &L);
   L = -L;
-  SymmetricEigenSolver<double> sol = Solve(L, 50, ALGEBRAIC_SMALLEST);
+  SymmetricEigenSolver<double> sol = arpaca::Solve(L, 50, ALGEBRAIC_SMALLEST);
   cout << sol.eigenvalues() << endl;
 
   for (size_t i = 0; i < 50; ++i) {
