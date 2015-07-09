@@ -3,6 +3,7 @@
 
 #include <Eigen/Sparse>
 #include <zjucad/matrix/matrix.h>
+#include <unordered_set>
 
 namespace geom_deform {
 
@@ -22,7 +23,10 @@ public:
   // init
   int init();
   // manipulate
+  int scale_grad_fields(const double scale);
+  int set_fixed_verts(const std::vector<size_t> &idx);
   // precompute
+  int precompute();
   // deform
   int deform();
   // debug
@@ -41,6 +45,10 @@ private:
   Eigen::MatrixXd grad_xyz_;
   Eigen::MatrixXd gradB_;           // 3 by 3*#face
   Eigen::VectorXd area_;
+
+  std::unordered_set<size_t> fix_dofs_;
+  std::vector<size_t> g2l_;
+  Eigen::SimplicialCholesky<Eigen::SparseMatrix<double>> sol_;
 };
 
 }

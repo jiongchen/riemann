@@ -6,6 +6,7 @@
 #include "cotmatrix.h"
 #include "grad_operator.h"
 #include "vtk.h"
+#include "util.h"
 
 using namespace std;
 using namespace zjucad::matrix;
@@ -97,10 +98,69 @@ int gradient_field_deform::see_coord_grad_fields(const char *filename, const int
 int gradient_field_deform::calc_divergence(const VectorXd &vf, VectorXd &div) const {
   div = VectorXd::Zero(nods_.size(2));
   for (size_t i = 0; i < tris_.size(2); ++i) {
-    for (size_t j = 0; j < 3; ++i) {
+    for (size_t j = 0; j < 3; ++j) {
       div[tris_(j, i)] += gradB_.col(3*i+j).dot(vf.segment<3>(3*i))*area_[i];
     }
   }
+  return 0;
+}
+
+int gradient_field_deform::scale_grad_fields(const double scale) {
+  grad_xyz_ *= scale;
+  return 0;
+}
+
+int gradient_field_deform::set_fixed_verts(const vector<size_t> &idx) {
+  for (auto &id : idx) {
+      fix_dofs_.insert(id);
+  }
+  return 0;
+}
+
+int gradient_field_deform::precompute() {
+  cout << "[info] precompute for deformation...";
+  SparseMatrix<double> Ltemp = L_;
+  if ( !fix_dofs_.empty() ) {
+    surfparam::build_global_local_mapping<size_t>(nods_.size(2), fix_dofs_, g2l_);
+    surfparam::rm_spmat_col_row(Ltemp, g2l_);
+  }
+  sol_.compute(Ltemp);
+  ASSERT(sol_.info() == Success);
+  cout << "...complete!\n";
+  return 0;
+}
+
+int gradient_field_deform::solve_for_xyz(const int xyz) {
+  matd_t x= _nods_(xyz, colon());
+  Map<VectorXd> X(&x[0], x.size());
+  VectorXd rhs;
+  calc_divergence(grad_xyz_.col(xyz), rhs);
+  rhs -= L_*X;
+
+  if ( !fix_dofs_.empty() ) {
+    surfparam::rm_vector_row(rhs, g2l_);
+  }
+  VectorXd dx = sol_.solve(rhs);
+  ASSERT(sol_.info() == Success);
+  VectorXd Dx = VectorXd::Zero(nods_.size(2));
+  if ( !fix_dofs_.empty() ) {
+    surfparam::rc_vector_row(dx, g2l_, Dx);
+  } else {
+      Dx = dx;
+  }
+  X += Dx;
+  _nods_(xyz, colon()) = x;
+
+  return 0;
+}
+
+int gradient_field_deform::deform() {
+  cout << "[info] deform..." << endl;
+  _nods_ = nods_;
+  solve_for_xyz(0);
+  solve_for_xyz(1);
+  solve_for_xyz(2);
+  cout << "...complete!\n";
   return 0;
 }
 

@@ -23,6 +23,19 @@ int main(int argc, char *argv[])
   handle.see_coord_grad_fields("./grad_edit/grad_y.vtk", Y);
   handle.see_coord_grad_fields("./grad_edit/grad_z.vtk", Z);
 
+  handle.scale_grad_fields(1.5);
+  handle.see_coord_grad_fields("./grad_edit/scale_grad_x.vtk", X);
+  handle.see_coord_grad_fields("./grad_edit/scale_grad_y.vtk", Y);
+  handle.see_coord_grad_fields("./grad_edit/scale_grad_z.vtk", Z);
+
+  vector<size_t> idx{15};
+  handle.set_fixed_verts(idx);
+
+  handle.precompute();
+  handle.deform();
+
+  handle.save_deformed_model("./grad_edit/deform.obj");
+
   cout << "[info] done\n";
   return 0;
 }
