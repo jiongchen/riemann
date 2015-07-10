@@ -126,15 +126,15 @@ inline T safe_acos(const T cosval) {
   return std::acos(std::min(1.0, std::max(-1.0, cosval)));
 }
 
-template <typename INT>
+template <typename INT=size_t>
 INT build_global_local_mapping(const INT dim, const std::unordered_set<INT> &fix_dofs, std::vector<INT> &g2l) {
   g2l.resize(dim);
   INT ptr = static_cast<INT>(0);
   for (INT i = 0; i < dim; ++i) {
-      if ( fix_dofs.find(i) != fix_dofs.end() )
-        g2l[i] = static_cast<INT>(-1);
-      else
-        g2l[i] = ptr++;
+    if ( fix_dofs.find(i) != fix_dofs.end() )
+      g2l[i] = static_cast<INT>(-1);
+    else
+      g2l[i] = ptr++;
   }
   return ptr;
 }

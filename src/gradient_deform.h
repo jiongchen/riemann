@@ -25,12 +25,14 @@ public:
   // manipulate
   int scale_grad_fields(const double scale);
   int set_fixed_verts(const std::vector<size_t> &idx);
+  int manipualte(const size_t idx, const double *u);
   // precompute
   int precompute();
   // deform
   int deform();
   // debug
   int see_coord_grad_fields(const char *filename, const int xyz) const;
+  int see_harmonic_field(const char *filename) const;
 private:
   int calc_init_coord_grad();
   int calc_bary_basis_grad();
@@ -49,6 +51,7 @@ private:
   std::unordered_set<size_t> fix_dofs_;
   std::vector<size_t> g2l_;
   Eigen::SimplicialCholesky<Eigen::SparseMatrix<double>> sol_;
+  Eigen::VectorXd hf_;
 };
 
 }

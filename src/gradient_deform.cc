@@ -68,6 +68,7 @@ int gradient_field_deform::calc_element_area() {
 int gradient_field_deform::init() {
   // compute Laplacian operator
   surfparam::cotmatrix(tris_, nods_, 1, &L_);
+  L_ *= -1.0;
   // compute gradient operator
   calc_grad_operator(tris_, nods_, &G_);
   // compute initial coordinate gradient
@@ -76,6 +77,10 @@ int gradient_field_deform::init() {
   calc_bary_basis_grad();
   // comupte triangle areas
   calc_element_area();
+  // assign deform vertices
+  _nods_ = nods_;
+  // initialize harmonic scalar field
+  hf_ = VectorXd::Zero(nods_.size(2));
   return 0;
 }
 
@@ -84,7 +89,7 @@ int gradient_field_deform::see_coord_grad_fields(const char *filename, const int
   matd_t vert(3, 2*tris_.size(2));
   line(0, colon()) = colon(0, tris_.size(2)-1);
   line(1, colon()) = colon(tris_.size(2), 2*tris_.size(2)-1);
-  itr_matrix<const double *> g(3, tris_.size(2), &grad_xyz_(0, xyz));
+  itr_matrix<const double *> g(3, grad_xyz_.rows()/3, &grad_xyz_(0, xyz));
 #pragma omp parallel for
   for (size_t i = 0; i < tris_.size(2); ++i) {
     vert(colon(), i) = nods_(colon(), tris_(colon(), i))*ones<double>(3, 1)/3.0;
@@ -112,8 +117,15 @@ int gradient_field_deform::scale_grad_fields(const double scale) {
 
 int gradient_field_deform::set_fixed_verts(const vector<size_t> &idx) {
   for (auto &id : idx) {
-      fix_dofs_.insert(id);
+    fix_dofs_.insert(id);
   }
+  return 0;
+}
+
+int gradient_field_deform::manipualte(const size_t idx, const double *u) {
+  fix_dofs_.insert(idx);
+  hf_[idx] = 1.0;
+  _nods_(colon(), idx) += itr_matrix<const double*>(3, 1, u);
   return 0;
 }
 
@@ -121,17 +133,44 @@ int gradient_field_deform::precompute() {
   cout << "[info] precompute for deformation...";
   SparseMatrix<double> Ltemp = L_;
   if ( !fix_dofs_.empty() ) {
-    surfparam::build_global_local_mapping<size_t>(nods_.size(2), fix_dofs_, g2l_);
+    surfparam::build_global_local_mapping((size_t)nods_.size(2), fix_dofs_, g2l_);
     surfparam::rm_spmat_col_row(Ltemp, g2l_);
   }
   sol_.compute(Ltemp);
   ASSERT(sol_.info() == Success);
+
+  // solve for harmonic fields: L(f0+df)=0
+  VectorXd RHS = -L_*hf_;
+  if ( !fix_dofs_.empty() )
+    surfparam::rm_vector_row(RHS, g2l_);
+  VectorXd df = sol_.solve(RHS);
+  ASSERT(sol_.info() == Success);
+  VectorXd Df = VectorXd::Zero(nods_.size(2));
+  if ( !fix_dofs_.empty() )
+    surfparam::rc_vector_row(df, g2l_, Df);
+  else
+    df = Df;
+  hf_ += Df;
+
+  // apply blended local deformation
+  // .....
+
   cout << "...complete!\n";
   return 0;
 }
 
+int gradient_field_deform::see_harmonic_field(const char *filename) const {
+  ofstream os(filename);
+  if ( os.fail() )
+    return __LINE__;
+  tri2vtk(os, &nods_[0], nods_.size(2), &tris_[0], tris_.size(2));
+  point_data(os, hf_.data(), hf_.rows(), "hf", "hf");
+  os.close();
+  return 0;
+}
+
 int gradient_field_deform::solve_for_xyz(const int xyz) {
-  matd_t x= _nods_(xyz, colon());
+  matd_t x = _nods_(xyz, colon());
   Map<VectorXd> X(&x[0], x.size());
   VectorXd rhs;
   calc_divergence(grad_xyz_.col(xyz), rhs);
@@ -146,7 +185,7 @@ int gradient_field_deform::solve_for_xyz(const int xyz) {
   if ( !fix_dofs_.empty() ) {
     surfparam::rc_vector_row(dx, g2l_, Dx);
   } else {
-      Dx = dx;
+    Dx = dx;
   }
   X += Dx;
   _nods_(xyz, colon()) = x;
@@ -155,8 +194,7 @@ int gradient_field_deform::solve_for_xyz(const int xyz) {
 }
 
 int gradient_field_deform::deform() {
-  cout << "[info] deform..." << endl;
-  _nods_ = nods_;
+  cout << "[info] deform...";
   solve_for_xyz(0);
   solve_for_xyz(1);
   solve_for_xyz(2);

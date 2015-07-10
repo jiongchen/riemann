@@ -28,12 +28,17 @@ int main(int argc, char *argv[])
   handle.see_coord_grad_fields("./grad_edit/scale_grad_y.vtk", Y);
   handle.see_coord_grad_fields("./grad_edit/scale_grad_z.vtk", Z);
 
-  vector<size_t> idx{15};
+  vector<size_t> idx{6976};
   handle.set_fixed_verts(idx);
+  {
+    const size_t idx = 0;
+    const double u[3] = {1.0, -1.0, 1.0};
+    handle.manipualte(idx, u);
+  }
 
   handle.precompute();
+  handle.see_harmonic_field("./grad_edit/hf.vtk");
   handle.deform();
-
   handle.save_deformed_model("./grad_edit/deform.obj");
 
   cout << "[info] done\n";
