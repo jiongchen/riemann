@@ -89,3 +89,9 @@ target_link_libraries(test_grad_edit
     surfparam
     ${Boost_LIBRARIES}
 )
+
+add_executable(test_cross_param test_cross_param.cc)
+target_link_libraries(test_cross_param
+    surfparam
+    ${Boost_LIBRARIES}
+)

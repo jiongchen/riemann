@@ -201,7 +201,7 @@ int test_height_vector(ptree &pt) {
     tri2vtk(os, nods.begin(), nods.size(2), cell.begin(), cell.size(2));
   }
   matrix<double> H(3, 3);
-  geom_deform::calc_tri_height_vector(&nods[0], &H[0]);
+  geom_deform::calc_tri_height_vector<3>(&nods[0], &H[0]);
   matrix<size_t> line(2, 3);
   matrix<double> vert(3, 6);
   vert(colon(), colon(0, 2)) = nods;

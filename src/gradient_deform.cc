@@ -47,7 +47,7 @@ int gradient_field_deform::calc_bary_basis_grad() {
 #pragma omp parallel for
   for (size_t i = 0; i < tris_.size(2); ++i) {
     matd_t vert = nods_(colon(), tris_(colon(), i));
-    calc_tri_height_vector(&vert[0], &gradB_(0, 3*i));
+    calc_tri_height_vector<3>(&vert[0], &gradB_(0, 3*i));
     gradB_.col(3*i+0) /= gradB_.col(3*i+0).squaredNorm();
     gradB_.col(3*i+1) /= gradB_.col(3*i+1).squaredNorm();
     gradB_.col(3*i+2) /= gradB_.col(3*i+2).squaredNorm();
