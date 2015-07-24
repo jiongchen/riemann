@@ -48,7 +48,7 @@ private:
   Eigen::MatrixXd gradB_;           // 3 by 3*#face
   Eigen::VectorXd area_;
 
-  std::unordered_set<size_t> fix_dofs_;
+  std::unordered_set<size_t> fixDOF_;
   std::vector<size_t> g2l_;
   Eigen::SimplicialCholesky<Eigen::SparseMatrix<double>> sol_;
   Eigen::VectorXd hf_;

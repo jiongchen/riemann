@@ -28,6 +28,16 @@ endif(UMFPACK_FOUND)
 
 # SUITESPARSE
 find_package(SuiteSparse REQUIRED)
+if(SuiteSparse_FOUND)
+    include_directories(${SuiteSparse_INCLUDE_DIRS})
+endif(SuiteSparse_FOUND)
+
+# IPOPT
+find_package(IPOPT REQUIRED)
+if(IPOPT_FOUND)
+    message("IPOPT found")
+    include_directories(${IPOPT_INCLUDE_DIRS})
+endif(IPOPT_FOUND)
 
 add_subdirectory(src)
 add_subdirectory(examples)

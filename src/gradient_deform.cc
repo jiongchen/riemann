@@ -117,13 +117,13 @@ int gradient_field_deform::scale_grad_fields(const double scale) {
 
 int gradient_field_deform::set_fixed_verts(const vector<size_t> &idx) {
   for (auto &id : idx) {
-    fix_dofs_.insert(id);
+    fixDOF_.insert(id);
   }
   return 0;
 }
 
 int gradient_field_deform::manipualte(const size_t idx, const double *u) {
-  fix_dofs_.insert(idx);
+  fixDOF_.insert(idx);
   hf_[idx] = 1.0;
   _nods_(colon(), idx) += itr_matrix<const double*>(3, 1, u);
   return 0;
@@ -132,8 +132,8 @@ int gradient_field_deform::manipualte(const size_t idx, const double *u) {
 int gradient_field_deform::precompute() {
   cout << "[info] precompute for deformation...";
   SparseMatrix<double> Ltemp = L_;
-  if ( !fix_dofs_.empty() ) {
-    surfparam::build_global_local_mapping((size_t)nods_.size(2), fix_dofs_, g2l_);
+  if ( !fixDOF_.empty() ) {
+    surfparam::build_global_local_mapping((size_t)nods_.size(2), fixDOF_, g2l_);
     surfparam::rm_spmat_col_row(Ltemp, g2l_);
   }
   sol_.compute(Ltemp);
@@ -141,12 +141,12 @@ int gradient_field_deform::precompute() {
 
   // solve for harmonic fields: L(f0+df)=0
   VectorXd RHS = -L_*hf_;
-  if ( !fix_dofs_.empty() )
+  if ( !fixDOF_.empty() )
     surfparam::rm_vector_row(RHS, g2l_);
   VectorXd df = sol_.solve(RHS);
   ASSERT(sol_.info() == Success);
   VectorXd Df = VectorXd::Zero(nods_.size(2));
-  if ( !fix_dofs_.empty() )
+  if ( !fixDOF_.empty() )
     surfparam::rc_vector_row(df, g2l_, Df);
   else
     df = Df;
@@ -176,13 +176,13 @@ int gradient_field_deform::solve_for_xyz(const int xyz) {
   calc_divergence(grad_xyz_.col(xyz), rhs);
   rhs -= L_*X;
 
-  if ( !fix_dofs_.empty() ) {
+  if ( !fixDOF_.empty() ) {
     surfparam::rm_vector_row(rhs, g2l_);
   }
   VectorXd dx = sol_.solve(rhs);
   ASSERT(sol_.info() == Success);
   VectorXd Dx = VectorXd::Zero(nods_.size(2));
-  if ( !fix_dofs_.empty() ) {
+  if ( !fixDOF_.empty() ) {
     surfparam::rc_vector_row(dx, g2l_, Dx);
   } else {
     Dx = dx;

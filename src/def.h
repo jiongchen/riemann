@@ -32,8 +32,7 @@ public :
   virtual size_t Nx() const = 0;
   virtual size_t Nf() const = 0;
   virtual int Val(const T *x, T *val) const = 0;
-  virtual int Jac(const T *x, const size_t off,
-                  std::vector<Eigen::Triplet<T>> *jac) const = 0;
+  virtual int Jac(const T *x, const size_t off, std::vector<Eigen::Triplet<T>> *jac) const = 0;
 };
 
 template <typename T>
