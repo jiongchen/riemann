@@ -4,7 +4,7 @@ using namespace std;
 using namespace zjucad::matrix;
 using namespace Eigen;
 
-namespace geom_deform {
+namespace riemann {
 
 void calc_grad_operator(const mati_t &tris, const matd_t &nods, spmat_t *G) {
   vector<Triplet<double>> trips;

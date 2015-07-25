@@ -12,7 +12,7 @@ using namespace std;
 using namespace zjucad::matrix;
 using namespace Eigen;
 
-namespace geom_deform {
+namespace riemann {
 
 gradient_field_deform::gradient_field_deform() {
 
@@ -67,7 +67,7 @@ int gradient_field_deform::calc_element_area() {
 
 int gradient_field_deform::init() {
   // compute Laplacian operator
-  surfparam::cotmatrix(tris_, nods_, 1, &L_);
+  riemann::cotmatrix(tris_, nods_, 1, &L_);
   L_ *= -1.0;
   // compute gradient operator
   calc_grad_operator(tris_, nods_, &G_);
@@ -133,8 +133,8 @@ int gradient_field_deform::precompute() {
   cout << "[info] precompute for deformation...";
   SparseMatrix<double> Ltemp = L_;
   if ( !fixDOF_.empty() ) {
-    surfparam::build_global_local_mapping((size_t)nods_.size(2), fixDOF_, g2l_);
-    surfparam::rm_spmat_col_row(Ltemp, g2l_);
+    riemann::build_global_local_mapping((size_t)nods_.size(2), fixDOF_, g2l_);
+    riemann::rm_spmat_col_row(Ltemp, g2l_);
   }
   sol_.compute(Ltemp);
   ASSERT(sol_.info() == Success);
@@ -142,12 +142,12 @@ int gradient_field_deform::precompute() {
   // solve for harmonic fields: L(f0+df)=0
   VectorXd RHS = -L_*hf_;
   if ( !fixDOF_.empty() )
-    surfparam::rm_vector_row(RHS, g2l_);
+    riemann::rm_vector_row(RHS, g2l_);
   VectorXd df = sol_.solve(RHS);
   ASSERT(sol_.info() == Success);
   VectorXd Df = VectorXd::Zero(nods_.size(2));
   if ( !fixDOF_.empty() )
-    surfparam::rc_vector_row(df, g2l_, Df);
+    riemann::rc_vector_row(df, g2l_, Df);
   else
     df = Df;
   hf_ += Df;
@@ -177,13 +177,13 @@ int gradient_field_deform::solve_for_xyz(const int xyz) {
   rhs -= L_*X;
 
   if ( !fixDOF_.empty() ) {
-    surfparam::rm_vector_row(rhs, g2l_);
+    riemann::rm_vector_row(rhs, g2l_);
   }
   VectorXd dx = sol_.solve(rhs);
   ASSERT(sol_.info() == Success);
   VectorXd Dx = VectorXd::Zero(nods_.size(2));
   if ( !fixDOF_.empty() ) {
-    surfparam::rc_vector_row(dx, g2l_, Dx);
+    riemann::rc_vector_row(dx, g2l_, Dx);
   } else {
     Dx = dx;
   }

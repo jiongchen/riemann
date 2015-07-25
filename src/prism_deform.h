@@ -1,7 +1,7 @@
 #ifndef PRISM_DEFORM_H
 #define PRISM_DEFORM_H
 
-namespace geom_deform {
+namespace riemann {
 
 class prism_deformer
 {

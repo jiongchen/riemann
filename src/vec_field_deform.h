@@ -6,7 +6,7 @@
 #include <Eigen/Sparse>
 #include <zjucad/matrix/matrix.h>
 
-namespace geom_deform {
+namespace riemann {
 
 double eval_blend_val(const double r, const double ri, const double ro);
 double eval_blend_jac(const double r, const double ri, const double ro);

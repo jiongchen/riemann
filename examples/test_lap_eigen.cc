@@ -23,7 +23,7 @@ int main(int argc, char *argv[])
   matrix<double> nods;
   jtf::mesh::load_obj(argv[1], tris, nods);
   SparseMatrix<double> L;
-  surfparam::cotmatrix(tris, nods, 1, &L);
+  riemann::cotmatrix(tris, nods, 1, &L);
   L = -L;
   SymmetricEigenSolver<double> sol = arpaca::Solve(L, 50, ALGEBRAIC_SMALLEST);
   cout << sol.eigenvalues() << endl;

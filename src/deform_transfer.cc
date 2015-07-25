@@ -17,11 +17,11 @@
 using namespace std;
 using namespace zjucad::matrix;
 using namespace Eigen;
-using namespace surfparam;
+using namespace riemann;
 using namespace jtf::mesh;
 using namespace nanoflann;
 
-namespace geom_deform {
+namespace riemann {
 
 extern "C" {
 
@@ -938,7 +938,7 @@ int deform_transfer::calc_harmonic_fields(const mati_t &tris, const matd_t &nods
       g2l[i] = ptr++;
   }
   SparseMatrix<double> L;
-  surfparam::cotmatrix(_tris, _nods, 1, &L);
+  riemann::cotmatrix(_tris, _nods, 1, &L);
   MatrixXd RHS = -L*hf;
   if ( !fix_dof.empty() )
     rm_spmat_col_row(L, g2l);

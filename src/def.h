@@ -4,7 +4,7 @@
 #include <Eigen/Sparse>
 #include <memory>
 
-namespace surfparam {
+namespace riemann {
 
 template <typename T>
 class Functional

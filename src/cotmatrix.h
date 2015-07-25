@@ -4,7 +4,7 @@
 #include <zjucad/matrix/matrix.h>
 #include <Eigen/Sparse>
 
-namespace surfparam {
+namespace riemann {
 
 void cotmatrix(const zjucad::matrix::matrix<size_t> &cell,
                const zjucad::matrix::matrix<double> &nods,

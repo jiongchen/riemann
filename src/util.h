@@ -9,7 +9,7 @@
 
 #include "config.h"
 
-namespace surfparam {
+namespace riemann {
 
 template <typename T, size_t dim = 3>
 void add_diag_block(const size_t row, const size_t col, const T val, std::vector<Eigen::Triplet<T>> *mat) {
@@ -127,11 +127,11 @@ inline T safe_acos(const T cosval) {
 }
 
 template <typename INT=size_t>
-INT build_global_local_mapping(const INT dim, const std::unordered_set<INT> &fix_dofs, std::vector<INT> &g2l) {
+INT build_global_local_mapping(const INT dim, const std::unordered_set<INT> &fixDOF, std::vector<INT> &g2l) {
   g2l.resize(dim);
   INT ptr = static_cast<INT>(0);
   for (INT i = 0; i < dim; ++i) {
-    if ( fix_dofs.find(i) != fix_dofs.end() )
+    if ( fixDOF.find(i) != fixDOF.end() )
       g2l[i] = static_cast<INT>(-1);
     else
       g2l[i] = ptr++;

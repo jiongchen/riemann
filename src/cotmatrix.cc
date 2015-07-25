@@ -8,7 +8,7 @@ using namespace std;
 using namespace zjucad::matrix;
 using namespace Eigen;
 
-namespace surfparam {
+namespace riemann {
 
 /**
  * Discrete Laplace-Beltrami Operator for Triangle Mesh

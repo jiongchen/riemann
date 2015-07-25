@@ -7,7 +7,7 @@
 
 using namespace std;
 using namespace zjucad::matrix;
-using namespace surfparam;
+using namespace riemann;
 
 int main(int argc, char *argv[])
 {

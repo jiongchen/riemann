@@ -16,7 +16,7 @@ using namespace zjucad::matrix;
 using namespace Eigen;
 
 void calc_barycentric_grad(const double *vert, double *height) {
-  geom_deform::calc_tri_height_vector<2>(vert, height);
+  riemann::calc_tri_height_vector<2>(vert, height);
   Map<Matrix<double, 2, 3>> H(height);
   for (size_t j = 0; j < 3; ++j)
     H.col(j) /= H.col(j).squaredNorm();
@@ -134,15 +134,15 @@ public:
     SparseMatrix<double> Hs = H.sparseView();
 
     vector<size_t> g2l{static_cast<size_t>(-1), static_cast<size_t>(-1), 0, 1, 2, 3};
-    surfparam::rm_spmat_col_row(Hs, g2l);
-    surfparam::rm_vector_row(rhs, g2l);
+    riemann::rm_spmat_col_row(Hs, g2l);
+    riemann::rm_vector_row(rhs, g2l);
     SimplicialCholesky<SparseMatrix<double>> sol;
     sol.compute(Hs);
     ASSERT(sol.info() == Success);
     VectorXd dx = sol.solve(rhs);
     ASSERT(sol.info() == Success);
     VectorXd Dx = VectorXd::Zero(6);
-    surfparam::rc_vector_row(dx, g2l, Dx);
+    riemann::rc_vector_row(dx, g2l, Dx);
     X += Dx;
     QUERY_ENERGY_VALUE(e, X);
 

@@ -14,8 +14,8 @@ add_custom_command(OUTPUT dt_energy.f90
     DEPENDS dt_energy.mac
 )
 
-add_library(surfparam SHARED ${header} ${source} quad_scalar_field.f90 dt_energy.f90)
-target_link_libraries(surfparam
+add_library(riemann SHARED ${header} ${source} quad_scalar_field.f90 dt_energy.f90)
+target_link_libraries(riemann
     jtf-mesh
     ${UMFPACK_LIBRARIES}
 )

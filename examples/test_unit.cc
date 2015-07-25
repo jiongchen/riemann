@@ -21,8 +21,8 @@
 using namespace std;
 using namespace Eigen;
 using namespace zjucad::matrix;
-using namespace surfparam;
-using namespace geom_deform;
+using namespace riemann;
+using namespace riemann;
 using namespace nanoflann;
 using boost::property_tree::ptree;
 
@@ -52,7 +52,7 @@ int test_quad_scalar_field(ptree &pt) {
   double a[3] = {3, 3, 0};
   double x[3] = {1, 1, 0};
   double c[3] = {2, 2, 0};
-  geom_deform::quad_scalar_field_(&val, x, a, c);
+  riemann::quad_scalar_field_(&val, x, a, c);
   cout << "value: ";
   cout << val << endl;
   return 0;
@@ -201,7 +201,7 @@ int test_height_vector(ptree &pt) {
     tri2vtk(os, nods.begin(), nods.size(2), cell.begin(), cell.size(2));
   }
   matrix<double> H(3, 3);
-  geom_deform::calc_tri_height_vector<3>(&nods[0], &H[0]);
+  riemann::calc_tri_height_vector<3>(&nods[0], &H[0]);
   matrix<size_t> line(2, 3);
   matrix<double> vert(3, 6);
   vert(colon(), colon(0, 2)) = nods;
@@ -228,7 +228,7 @@ int test_grad_operator(ptree &pt) {
   matrix<double> nods;
   jtf::mesh::load_obj("../../dat/half_sphere.obj", tris, nods);
   SparseMatrix<double> G;
-  geom_deform::calc_grad_operator(tris, nods, &G);
+  riemann::calc_grad_operator(tris, nods, &G);
   matd_t x = nods(0, colon());
   matd_t y = nods(1, colon());
   matd_t z = nods(2, colon());
@@ -265,7 +265,7 @@ int test_grad_operator2(ptree &pt) {
   matrix<size_t> cell = itr_matrix<const size_t*>(FT.rows(), FT.cols(), FT.data());
   matrix<double> nods = itr_matrix<const double*>(VT.rows(), VT.cols(), VT.data());
   SparseMatrix<double> G1;
-  geom_deform::calc_grad_operator(cell, nods, &G1);
+  riemann::calc_grad_operator(cell, nods, &G1);
   cout << G1.norm() << endl;
   cout << G1.blueNorm() << endl;
   cout << G1.nonZeros() << endl << endl;

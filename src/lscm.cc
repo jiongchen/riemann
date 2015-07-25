@@ -9,7 +9,7 @@ using namespace std;
 using namespace Eigen;
 using namespace zjucad::matrix;
 
-namespace surfparam {
+namespace riemann {
 
 lscm_param::lscm_param(const mati_t &tris, const matd_t &nods)
   : tris_(tris) {

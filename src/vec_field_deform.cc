@@ -8,7 +8,7 @@ using namespace std;
 using namespace zjucad::matrix;
 using namespace Eigen;
 
-namespace geom_deform {
+namespace riemann {
 
 double eval_blend_val(const double r, const double ri, const double ro) {
   return 4*std::pow(r-ri, 3)*(1-(r-ri)/(ro-ri))/std::pow(ro-ri, 3) + std::pow(r-ri, 4)/std::pow(ro-ri, 4);

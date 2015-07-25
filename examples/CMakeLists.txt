@@ -22,26 +22,26 @@ add_executable(test_cotmatrix test_cotmatrix.cc)
 
 add_executable(test_unit test_unit.cc)
 target_link_libraries(test_unit
-    surfparam
+    riemann
     zjucad-ptree
     ${Boost_LIBRARIES}
 )
 
 add_executable(test_dcp test_dcp.cc)
 target_link_libraries(test_dcp
-    surfparam
+    riemann
     ${Boost_LIBRARIES}
 )
 
 add_executable(test_green_2d test_green_2d.cc)
 target_link_libraries(test_green_2d
-    surfparam
+    riemann
     ${Boost_LIBRARIES}
 )
 
 add_executable(test_green_3d test_green_3d.cc)
 target_link_libraries(test_green_3d
-    surfparam
+    riemann
     ${Boost_LIBRARIES}
 )
 
@@ -54,44 +54,50 @@ target_link_libraries(test_tri_def_grad
 
 add_executable(test_vec_field_deform test_vec_field_deform.cc)
 target_link_libraries(test_vec_field_deform
-    surfparam
+    riemann
     ${Boost_LIBRARIES}
 )
 
 add_executable(test_arap test_arap.cc)
 target_link_libraries(test_arap
-    surfparam
+    riemann
     ${Boost_LIBRARIES}
 )
 
 add_executable(test_ff_deform test_ff_deform.cc)
 target_link_libraries(test_ff_deform
-    surfparam
+    riemann
     ${Boost_LIBRARIES}
 )
 
 add_executable(test_deform_transfer test_deform_transfer.cc)
 target_link_libraries(test_deform_transfer
-    surfparam
+    riemann
     ${Boost_LIBRARIES}
 )
 
 find_package(Arpack REQUIRED)
 add_executable(test_lap_eigen test_lap_eigen.cc)
 target_link_libraries(test_lap_eigen
-    surfparam
+    riemann
     ${Boost_LIBRARIES}
     ${ARPACK_LIBRARIES}
 )
 
 add_executable(test_grad_edit test_grad_edit.cc)
 target_link_libraries(test_grad_edit
-    surfparam
+    riemann
     ${Boost_LIBRARIES}
 )
 
 add_executable(test_cross_param test_cross_param.cc)
 target_link_libraries(test_cross_param
-    surfparam
+    riemann
+    ${Boost_LIBRARIES}
+)
+
+add_executable(test_vtk_io test_vtk_io.cc)
+target_link_libraries(test_vtk_io
+    riemann
     ${Boost_LIBRARIES}
 )

@@ -8,7 +8,7 @@
 
 #include "def.h"
 
-namespace geom_deform {
+namespace riemann {
 
 class frame_field_deform
 {
@@ -56,8 +56,8 @@ private:
   Eigen::MatrixXd X_;
   Eigen::MatrixXd F_;
 
-  std::vector<std::shared_ptr<surfparam::Functional<double>>> buff_;
-  std::shared_ptr<surfparam::Functional<double>> e_;
+  std::vector<std::shared_ptr<riemann::Functional<double>>> buff_;
+  std::shared_ptr<riemann::Functional<double>> e_;
   Eigen::SimplicialCholesky<Eigen::SparseMatrix<double>> sol_;
   Eigen::SparseMatrix<double> LHS_;
   size_t max_iter_;

@@ -14,7 +14,7 @@ using namespace zjucad::matrix;
 using namespace Eigen;
 using boost::math::sign;
 
-namespace geom_deform {
+namespace riemann {
 
 green_deform_2d::green_deform_2d() {}
 

@@ -9,7 +9,7 @@ using namespace std;
 using namespace Eigen;
 using namespace jtf::mesh;
 
-namespace surfparam {
+namespace riemann {
 //==============================================================================
 dirichlet_energy::dirichlet_energy(const mati_t &tris, const matd_t &nods, const double w)
   : dim_(2*nods.size(2)), w_(w) {

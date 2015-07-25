@@ -18,13 +18,13 @@ using namespace Eigen;
 using namespace zjucad::matrix;
 using namespace jtf::mesh;
 
-namespace geom_deform {
+namespace riemann {
 
 //--------------------------
 //- energy definition part -
 //--------------------------
 
-class deform_energy : public surfparam::Functional<double>
+class deform_energy : public riemann::Functional<double>
 {
 public:
   typedef zjucad::matrix::matrix<size_t> mati_t;
@@ -41,9 +41,9 @@ public:
 #pragma omp parallel for
     for (size_t i = 0; i < face_cot_.size(2); ++i) {
       matd_t vert = nods_(colon(), tris_(colon(), i));
-      face_cot_(0, i) = surfparam::cal_cot_val(&vert(0, 0), &vert(0, 2), &vert(0, 1));
-      face_cot_(1, i) = surfparam::cal_cot_val(&vert(0, 1), &vert(0, 0), &vert(0, 2));
-      face_cot_(2, i) = surfparam::cal_cot_val(&vert(0, 2), &vert(0, 1), &vert(0, 0));
+      face_cot_(0, i) = riemann::cal_cot_val(&vert(0, 0), &vert(0, 2), &vert(0, 1));
+      face_cot_(1, i) = riemann::cal_cot_val(&vert(0, 1), &vert(0, 0), &vert(0, 2));
+      face_cot_(2, i) = riemann::cal_cot_val(&vert(0, 2), &vert(0, 1), &vert(0, 0));
     }
 
     e2c_.reset(edge2cell_adjacent::create(tris_, false));
@@ -60,7 +60,7 @@ public:
           continue;
         }
         const size_t eo = sum(tris_(colon(), face[k]))-ei-ej;
-        cotval_(k, i) = surfparam::cal_cot_val(&nods_(0, ei), &nods_(0, eo), &nods_(0, ej));
+        cotval_(k, i) = riemann::cal_cot_val(&nods_(0, ei), &nods_(0, eo), &nods_(0, ej));
       }
     }
   }
@@ -114,10 +114,10 @@ public:
         if ( face[k] == -1 )
           continue;
         const double wgt = 2.0*w_*cotval_(k, i);
-        surfparam::add_diag_block(ei, ei, +wgt, hes);
-        surfparam::add_diag_block(ei, ej, -wgt, hes);
-        surfparam::add_diag_block(ej, ej, +wgt, hes);
-        surfparam::add_diag_block(ej, ei, -wgt, hes);
+        riemann::add_diag_block(ei, ei, +wgt, hes);
+        riemann::add_diag_block(ei, ej, -wgt, hes);
+        riemann::add_diag_block(ej, ej, +wgt, hes);
+        riemann::add_diag_block(ej, ei, -wgt, hes);
       }
     }
     return 0;
@@ -194,14 +194,14 @@ private:
   shared_ptr<edge2cell_adjacent> e2c_;
 };
 
-class smooth_energy : public surfparam::Functional<double>
+class smooth_energy : public riemann::Functional<double>
 {
 public:
   typedef zjucad::matrix::matrix<size_t> mati_t;
   typedef zjucad::matrix::matrix<double> matd_t;
   smooth_energy(const mati_t &tris, const matd_t &nods, const double w)
     : tris_(tris), nods_(nods), w_(w) {
-    surfparam::cotmatrix(tris_, nods_, 3, &L_);
+    riemann::cotmatrix(tris_, nods_, 3, &L_);
     LtL_ = L_.transpose()*L_;
   }
   size_t Nx() const {
@@ -407,7 +407,7 @@ int frame_field_deform::interp_frame_fields() {
       const size_t I = IJ[k];
       const size_t J = IJ[1-k];
       Matrix3d rot;
-      double angle = surfparam::safe_acos(B_.col(3*J+2).dot(B_.col(3*I+2)));
+      double angle = riemann::safe_acos(B_.col(3*J+2).dot(B_.col(3*I+2)));
       if ( std::fabs(angle) < 1e-16 ) {
         rot = Matrix3d::Identity();
       } else if ( std::fabs(angle - 3.141592653589793238462643383279502884) < 1e-16 ) {
@@ -439,8 +439,8 @@ int frame_field_deform::interp_frame_fields() {
   Lb.setFromTriplets(trips.begin(), trips.end());
   VectorXd b = -Lb * W_;
 
-  surfparam::rm_spmat_col_row(Lb, g2l_);
-  surfparam::rm_vector_row(b, g2l_);
+  riemann::rm_spmat_col_row(Lb, g2l_);
+  riemann::rm_vector_row(b, g2l_);
 
   UmfPackLU<SparseMatrix<double>> sol;
   sol.compute(Lb);
@@ -449,7 +449,7 @@ int frame_field_deform::interp_frame_fields() {
   ASSERT(sol.info() == Success);
 
   VectorXd DX = VectorXd::Zero(dim);
-  surfparam::rc_vector_row(dx, g2l_, DX);
+  riemann::rc_vector_row(dx, g2l_, DX);
   W_ += DX;
 
   return 0;
@@ -520,7 +520,7 @@ int frame_field_deform::precompute() {
   buff_[DEFORM] = std::make_shared<deform_energy>(tris_, nods_, Winv, 1.0-lambda_);
   buff_[SMOOTH] = std::make_shared<smooth_energy>(tris_, nods_, lambda_);
   try {
-    e_ = std::make_shared<surfparam::energy_t<double>>(buff_);
+    e_ = std::make_shared<riemann::energy_t<double>>(buff_);
   } catch ( exception &e ) {
     cerr << "[error] " << e.what() << endl;
     exit(EXIT_FAILURE);

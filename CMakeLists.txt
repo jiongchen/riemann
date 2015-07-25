@@ -1,4 +1,4 @@
-project(surf-param)
+project(riemann)
 cmake_minimum_required(VERSION 2.8)
 
 list(APPEND CMAKE_CXX_FLAGS "-std=c++0x -fpermissive -fopenmp")

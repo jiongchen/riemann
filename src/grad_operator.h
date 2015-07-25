@@ -4,7 +4,7 @@
 #include <zjucad/matrix/matrix.h>
 #include <Eigen/Sparse>
 
-namespace geom_deform {
+namespace riemann {
 
 using mati_t = zjucad::matrix::matrix<size_t>;
 using matd_t = zjucad::matrix::matrix<double>;
@@ -33,8 +33,17 @@ void calc_tri_height_vector(const double *vert, double *height) {
   }
 }
 
+template <size_t dim>
+void calc_tri_barycentric_basis_grad(const double *vert, double *gradB) {
+  calc_tri_height_vector<dim>(vert, gradB);
+  Eigen::Map<Eigen::Matrix<double, dim, 3>> G(gradB);
+  G.col(0) /= G.col(0).squaredNorm();
+  G.col(1) /= G.col(1).squaredNorm();
+  G.col(2) /= G.col(2).suqaredNorm();
+}
+
 /**
- * @brief calc_grad_operator
+ * @brief calc_grad_operator for 3D triangle mesh
  * @param tris
  * @param nods
  * @param G: #face*3 by #vert, G*u, u is a scalar field

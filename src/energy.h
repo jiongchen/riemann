@@ -4,7 +4,7 @@
 #include <zjucad/matrix/matrix.h>
 #include "def.h"
 
-namespace surfparam {
+namespace riemann {
 
 class dirichlet_energy : public Functional<double>
 {
@@ -37,6 +37,11 @@ public:
   const size_t dim_;
   const double w_;
   Eigen::SparseMatrix<double> A_;
+};
+
+class direc_align_energy : public Functional<double>
+{
+
 };
 
 }

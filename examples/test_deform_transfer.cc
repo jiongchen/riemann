@@ -6,7 +6,7 @@
 #include "../src/deform_transfer.h"
 
 using namespace std;
-using namespace geom_deform;
+using namespace riemann;
 
 int main(int argc, char *argv[])
 {

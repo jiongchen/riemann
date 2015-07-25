@@ -5,7 +5,7 @@
 #include <zjucad/matrix/matrix.h>
 #include <unordered_set>
 
-namespace geom_deform {
+namespace riemann {
 
 /// Lp = div w;
 /// distinguish the gradient to coordinates

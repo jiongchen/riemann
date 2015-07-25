@@ -14,7 +14,7 @@ int main(int argc, char *argv[])
     }
     boost::filesystem::create_directory("./vel_field_deform");
 
-    geom_deform::vel_field_deform def;
+    riemann::vel_field_deform def;
     def.load_model(argv[1]);
 
 //    // for sphere

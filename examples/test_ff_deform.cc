@@ -5,7 +5,7 @@
 #include "src/frame_field_deform.h"
 
 using namespace std;
-using namespace geom_deform;
+using namespace riemann;
 
 int main(int argc, char *argv[])
 {

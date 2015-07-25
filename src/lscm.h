@@ -6,7 +6,7 @@
 
 #include "def.h"
 
-namespace surfparam {
+namespace riemann {
 
 class lscm_param
 {

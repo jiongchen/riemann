@@ -8,7 +8,7 @@
 
 #include "def.h"
 
-namespace geom_deform {
+namespace riemann {
 
 class deform_transfer
 {
@@ -66,13 +66,13 @@ public:
   std::vector<std::tuple<size_t, size_t>> vert_map_;
   Eigen::MatrixXd Sinv_, Tinv_;
 
-  std::vector<std::shared_ptr<surfparam::Functional<double>>> buff_;
-  std::shared_ptr<surfparam::Functional<double>> corre_e_;
+  std::vector<std::shared_ptr<riemann::Functional<double>>> buff_;
+  std::shared_ptr<riemann::Functional<double>> corre_e_;
   std::unordered_set<size_t> fix_dof_;
   std::vector<size_t> g2l_;
 
   std::set<std::tuple<size_t, size_t>> tri_map_;
-  std::shared_ptr<surfparam::Functional<double>> deform_e_;
+  std::shared_ptr<riemann::Functional<double>> deform_e_;
   std::unordered_set<size_t> dt_fix_dof_;
   std::vector<size_t> dt_g2l_;
 };

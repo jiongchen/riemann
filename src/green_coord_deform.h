@@ -4,7 +4,7 @@
 #include <Eigen/Sparse>
 #include <zjucad/matrix/matrix.h>
 
-namespace geom_deform {
+namespace riemann {
 
 class green_deform
 {
