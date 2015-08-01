@@ -34,7 +34,7 @@ void calc_tri_height_vector(const double *vert, double *height) {
 }
 
 template <size_t dim>
-void calc_tri_barycentric_basis_grad(const double *vert, double *gradB) {
+void calc_tri_linear_basis_grad(const double *vert, double *gradB) {
   calc_tri_height_vector<dim>(vert, gradB);
   Eigen::Map<Eigen::Matrix<double, dim, 3>> G(gradB);
   G.col(0) /= G.col(0).squaredNorm();

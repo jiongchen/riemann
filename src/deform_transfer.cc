@@ -819,14 +819,14 @@ int deform_transfer::compute_triangle_corres() {
     MatrixXd pts = Map<const MatrixXd>(&tar_cent[0], tar_cent.size(1), tar_cent.size(2)).transpose();
     kd_tree_t kdt(3, pts, 10);
     kdt.index->buildIndex();
-#pragma omp parallel for
+//#pragma omp parallel for
     for (size_t i = 0; i < src_cent.size(2); ++i) {
       vector<pair<long, double>> matches;
       SearchParams params;
       kdt.index->radiusSearch(&src_cent(0, i), search_radius, matches, params);
       for (auto &fa : matches) {
         if ( dot(src_normal(colon(), i), tar_normal(colon(), fa.first)) > 0.0 )
-#pragma omp critical
+//#pragma omp critical
           tri_map_.insert(std::make_tuple(i, fa.first));
       }
     }
@@ -835,14 +835,14 @@ int deform_transfer::compute_triangle_corres() {
     MatrixXd pts = Map<const MatrixXd>(&src_cent[0], src_cent.size(1), tar_cent.size(2)).transpose();
     kd_tree_t kdt(3, pts, 10);
     kdt.index->buildIndex();
-#pragma omp parallel for
+//#pragma omp parallel for
     for (size_t i = 0; i < tar_cent.size(2); ++i) {
       vector<pair<long, double>> matches;
       SearchParams params;
       kdt.index->radiusSearch(&tar_cent(0, i), search_radius, matches, params);
       for (auto &fa : matches) {
         if ( dot(src_normal(colon(), fa.first), tar_normal(colon(), i)) > 0.0 )
-#pragma omp critical
+//#pragma omp critical
           tri_map_.insert(std::make_tuple(fa.first, i));
       }
     }
@@ -1021,7 +1021,7 @@ int deform_transfer::solve_corres_harmonic() {
   kd_tree_t kdt(src_cell_hf.cols(), src_cell_hf, 10);
   kdt.index->buildIndex();
   const size_t num_results = 3;
-#pragma omp parallel for
+//#pragma omp parallel for
   for (size_t i = 0; i < tar_cell_hf.rows(); ++i) {
     vector<size_t> ret_idx(num_results);
     vector<double> sqr_dist(num_results);
@@ -1029,7 +1029,7 @@ int deform_transfer::solve_corres_harmonic() {
     result.init(&ret_idx[0], &sqr_dist[0]);
     VectorXd x = tar_cell_hf.row(i);
     kdt.index->findNeighbors(result, x.data(), SearchParams(10));
-#pragma omp critical
+//#pragma omp single
     tri_map_.insert(std::make_tuple(ret_idx[0], i));
   }
   cout << "[info] number of correospondence: " << tri_map_.size() << endl;

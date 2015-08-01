@@ -21,6 +21,7 @@ int main(int argc, char *argv[])
   }
   boost::filesystem::create_directory("./vtk_io");
 
+  // load triangle mesh
   matrix<size_t> tris;
   matrix<double> nods;
   jtf::mesh::load_obj(argv[1], tris, nods);
@@ -30,7 +31,7 @@ int main(int argc, char *argv[])
   cotmatrix(tris, nods, 1, &L);
   cout << "[info] laplacian size: " << L.rows() << endl;
 
-  // init a scalar field with some vertices evaluated 1.0
+  // init a scalar field with some vertices prescibled
   VectorXd sf = VectorXd::Zero(nods.size(2));
   srand(time(NULL));
   vector<size_t> idx(2);
