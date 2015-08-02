@@ -6,9 +6,10 @@
 #include <unordered_set>
 #include <boost/property_tree/ptree.hpp>
 
-#include "def.h"
-
 namespace riemann {
+
+template <typename T>
+class Functional;
 
 class frame_field_deform
 {

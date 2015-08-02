@@ -3,10 +3,12 @@
 
 #include <zjucad/matrix/matrix.h>
 #include <unordered_set>
-
-#include "def.h"
+#include <Eigen/Sparse>
 
 namespace riemann {
+
+template <typename T>
+class Functional;
 
 class lscm_param
 {

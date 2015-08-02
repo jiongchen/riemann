@@ -6,9 +6,10 @@
 #include <unordered_set>
 #include <set>
 
-#include "def.h"
-
 namespace riemann {
+
+template <typename T>
+class Functional;
 
 class deform_transfer
 {

@@ -2,6 +2,7 @@
 
 #include <jtflib/mesh/mesh.h>
 
+#include "def.h"
 #include "energy.h"
 #include "util.h"
 

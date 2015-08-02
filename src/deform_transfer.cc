@@ -9,6 +9,7 @@
 #include <Eigen/UmfPackSupport>
 #include <jtflib/mesh/util.h>
 
+#include "def.h"
 #include "util.h"
 #include "vtk.h"
 #include "nanoflann.hpp"

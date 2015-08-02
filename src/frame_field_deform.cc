@@ -9,6 +9,7 @@
 #include <Eigen/Geometry>
 #include <zjucad/matrix/itr_matrix.h>
 
+#include "def.h"
 #include "util.h"
 #include "vtk.h"
 #include "cotmatrix.h"
