@@ -14,7 +14,12 @@ add_custom_command(OUTPUT dt_energy.f90
     DEPENDS dt_energy.mac
 )
 
-add_library(riemann SHARED ${header} ${source} quad_scalar_field.f90 dt_energy.f90)
+add_custom_command(OUTPUT wave_condition.f90
+    COMMAND "maxima" ARGS --userdir=${SRC_DIR} -b wave_condition.mac
+    DEPENDS wave_condition.mac
+)
+
+add_library(riemann SHARED ${header} ${source} quad_scalar_field.f90 dt_energy.f90 wave_condition.f90)
 target_link_libraries(riemann
     jtf-mesh
     ${UMFPACK_LIBRARIES}

@@ -101,3 +101,9 @@ target_link_libraries(test_vtk_io
     riemann
     ${Boost_LIBRARIES}
 )
+
+add_executable(test_wave_construction test_wave_construction.cc)
+target_link_libraries(test_wave_construction
+    riemann
+    ${Boost_LIBRARIES}
+)
