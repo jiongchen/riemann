@@ -17,8 +17,8 @@ int main(int argc, char *argv[])
   wave_constructor wc;
   wc.load_model_from_obj(argv[1]);
   wc.init();
-  wc.solve_phase_transition();
-  wc.prepare();
+//  wc.solve_phase_transition();
+//  wc.prepare();
 //  wc.solve_wave_value();
 
   wc.save_wave_to_vtk("./standing_wave/wave.vtk");

@@ -36,9 +36,9 @@ private:
   mati_t edges_;               // 2 x #edge
 
   matd_t f_; // 4 x #vert
-  matd_t alpha_ij_; // 1 x #edge
-  matd_t beta_ij_; // 1 x #edge
-  matd_t c_ij_; // 4 x #edge
+  matd_t alphaIJ_; // 1 x #edge
+  matd_t betaIJ_; // 1 x #edge
+  matd_t cIJ_; // 4 x #edge
 
   std::vector<std::shared_ptr<Constraint<double>>> buff_;
   std::shared_ptr<Constraint<double>> constraint_;
