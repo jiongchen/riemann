@@ -4,11 +4,13 @@
 #include <zjucad/matrix/itr_matrix.h>
 #include <zjucad/matrix/io.h>
 #include <jtflib/mesh/io.h>
+#include <Eigen/Geometry>
 
 #include "def.h"
 #include "write_vtk.h"
 #include "config.h"
 #include "util.h"
+#include "vtk.h"
 
 using namespace std;
 using namespace zjucad::matrix;
@@ -205,7 +207,6 @@ public:
     return 0;
   }
   int Jac(const double *x, const size_t off, vector<Triplet<double>> *jac) const {
-    itr_matrix<const double *> X(4, nx_/4, x);
     for (size_t i = 0; i < edge_.size(2); ++i) {
       // I->J
       jac->push_back(Triplet<double>(off+2*i+0, 4*edge_(1, i)+0, w_*1.0));
@@ -301,21 +302,141 @@ private:
 class feature_cons : public Constraint<double>
 {
 public:
-  feature_cons(const matd_t &f);
-  size_t Nx() const;
-  size_t Nf() const;
-  int Val(const double *x, double *val) const;
-  int Jac(const double *x, const size_t off, vector<Triplet<double>> *jac) const;
+  feature_cons(const matd_t &f, const map<size_t, size_t> &vert_on_fl)
+    : nx_(f.size()), nf_(0), vert_on_fl_(vert_on_fl) {
+    for (auto &it : vert_on_fl_) {
+      if ( it.second == 1 )
+        nf_ += 1;
+      else if ( it.second == 2 )
+        nf_ += 3;
+    }
+  }
+  size_t Nx() const {
+    return nx_;
+  }
+  size_t Nf() const {
+    return nf_;
+  }
+  int Val(const double *x, double *val) const {
+    itr_matrix<const double *> X(4, nx_/4, x);
+    size_t cnt = 0;
+    for (auto &it : vert_on_fl_) {
+      switch ( it.second ) {
+        case 1:
+          val[cnt++] += X(3, it.first);
+          break;
+        case 2:
+          val[cnt++] += X(1, it.first);
+          val[cnt++] += X(2, it.first);
+          val[cnt++] += X(3, it.first);
+          break;
+        default:
+          break;
+      }
+    }
+    return 0;
+  }
+  int Jac(const double *x, const size_t off, vector<Triplet<double>> *jac) const {
+    size_t cnt = 0;
+    for (auto &it : vert_on_fl_) {
+      switch ( it.second ) {
+        case 1:
+          jac->push_back(Triplet<double>(cnt++, 4*it.first+3, 1.0));
+          break;
+        case 2:
+          jac->push_back(Triplet<double>(cnt++, 4*it.first+1, 1.0));
+          jac->push_back(Triplet<double>(cnt++, 4*it.first+2, 1.0));
+          jac->push_back(Triplet<double>(cnt++, 4*it.first+3, 1.0));
+          break;
+        default:
+          break;
+      }
+    }
+    return 0;
+  }
 private:
+  const size_t nx_;
+  size_t nf_;
+  const map<size_t, size_t> &vert_on_fl_;
 };
 
 //==============================================================================
+int align_vector_field(const double *oriX, const double *oriY,
+                       const double *refX, const double *refY,
+                       double *alignX, double *alignY) {
+  Map<const Vector3d> ori_x(oriX), ori_y(oriY), ref_x(refX), ref_y(refY);
+  Map<Vector3d> align_x(alignX), align_y(alignY);
+  VectorXd nor = ori_x.cross(ori_y);
+  nor /= nor.norm();
+  AngleAxisd rot(M_PI/2, nor);
+  Matrix3d R;
+  R = rot.toRotationMatrix();
+  vector<double> buff(4);
+  buff[0] = ref_x.dot(ori_x);
+  buff[1] = ref_x.dot(R*ori_x);
+  buff[2] = ref_x.dot(R*R*ori_x);
+  buff[3] = ref_x.dot(R*R*R*ori_x);
+
+  size_t kappa = std::max_element(buff.begin(), buff.end())-buff.begin();
+  switch ( kappa ) {
+    case 0:
+      align_x = ori_x;
+      align_y = ori_y;
+      break;
+    case 1:
+      align_x = ori_y;
+      align_y = -ori_x;
+      break;
+    case 2:
+      align_x = -ori_x;
+      align_y = -ori_y;
+      break;
+    case 3:
+      align_x = -ori_y;
+      align_y = ori_x;
+      break;
+    default: break;
+  }
+  return 0;
+}
+
+void rotate_frame(const double *oriX, const double *oriY,
+                  const double *refX, const double *refY,
+                  double *rotX, double *rotY) {
+  Map<const Vector3d> ori_x(oriX), ori_y(oriY), ref_x(refX), ref_y(refY);
+  Map<Vector3d> rot_x(rotX), rot_y(rotY);
+  Vector3d ori_nor = ori_x.cross(ori_y), ref_nor = ref_x.cross(ref_y);
+  Vector3d axis = ori_nor.cross(ref_nor);
+  axis /= axis.norm();
+  double angle = safe_acos(ori_nor.dot(ref_nor)/(ori_nor.norm()*ref_nor.norm()));
+  AngleAxisd rot(angle, axis);
+  Matrix3d R;
+  R = rot.toRotationMatrix();
+  rot_x = R*ori_x;
+  rot_y = R*ori_y;
+}
+
+//==============================================================================
 int wave_constructor::load_model_from_obj(const char *filename) {
-  return jtf::mesh::load_obj(filename, tris_, nods_);
+  jtf::mesh::load_obj(filename, tris_, nods_);
+  extract_edges();
+  return 0;
+}
+
+int wave_constructor::extract_edges() {
+  e2c_.reset(edge2cell_adjacent::create(tris_, false));
+  if ( !e2c_.get() )
+    return __LINE__;
+  edges_.resize(2, e2c_->edges_.size());
+#pragma omp parallel for
+  for (size_t i = 0; i < e2c_->edges_.size(); ++i) {
+    edges_(0, i) = e2c_->edges_[i].first;
+    edges_(1, i) = e2c_->edges_[i].second;
+  }
+  return 0;
 }
 
 int wave_constructor::load_frame_field(const char *filename) {
-  e2c_.reset(edge2cell_adjacent::create(tris_, false));
   if ( !e2c_.get() )
     return __LINE__;
   ifstream ifs(filename);
@@ -327,18 +448,15 @@ int wave_constructor::load_frame_field(const char *filename) {
   ifs >> edge_num;
   ASSERT(edge_num == e2c_->edges_.size());
   frame_field_.resize(6, edge_num);
-  size_field_.resize(2, edge_num);
-  size_t p, q, ide;
+  size_t p, q, eid;
   for (size_t i = 0; i < edge_num; ++i) {
     ifs >> p >> q;
-    ide = e2c_->get_edge_idx(p, q);
-    ifs >> frame_field_(0, i) >> frame_field_(1, i) >> frame_field_(2, i)
-        >> frame_field_(3, i) >> frame_field_(4, i) >> frame_field_(5, i);
-    size_field_(0, i) = norm(frame_field_(colon(0, 2), i));
-    size_field_(1, i) = norm(frame_field_(colon(3, 5), i));
-    frame_field_(colon(0, 2), i) /= size_field_(0, i);
-    frame_field_(colon(3, 5), i) /= size_field_(1, i);
+    eid = e2c_->get_edge_idx(p, q);
+    ifs >> frame_field_(0, eid) >> frame_field_(1, eid) >> frame_field_(2, eid)
+        >> frame_field_(3, eid) >> frame_field_(4, eid) >> frame_field_(5, eid);
   }
+  e2c_.release();
+  ifs.close();
   return 0;
 }
 
@@ -355,6 +473,46 @@ int wave_constructor::vis_edge_frame_field(const char *file_x, const char *file_
 }
 
 int wave_constructor::load_feature_line(const char *filename) {
+  ifstream inf(filename);
+  if ( inf.fail() ) {
+    cerr << "[error] can not open file: " << filename << endl;
+    return __LINE__;
+  }
+
+  size_t feature_num;
+  inf >> feature_num;
+  cout << "[info] feature chains num: " << feature_num << endl;
+  if ( feature_num == 0 )
+    return 0;
+
+  std::vector<size_t> feature_edges;
+  for (size_t fi = 0; fi < feature_num; ++fi) {
+    size_t vnum, prev;
+    inf >> vnum;
+    if (vnum > 0) inf >> prev;
+    for (size_t vi=1; vi < vnum; ++vi) {
+      size_t curv;
+      inf >> curv;
+      feature_edges.push_back(prev);
+      feature_edges.push_back(curv);
+      prev = curv;
+    }
+  }
+  lines_.resize(2, feature_edges.size()/2);
+  std::copy(feature_edges.begin(), feature_edges.end(), lines_.begin());
+
+  inf.close();
+  return 0;
+}
+
+int wave_constructor::save_feature_to_vtk(const char *filename) const {
+  ofstream os(filename);
+  if ( os.fail() ) {
+    cerr << "[error] can not open " << filename << endl;
+    return __LINE__;
+  }
+  line2vtk(os, &nods_[0], nods_.size(2), &lines_[0], lines_.size(2));
+  os.close();
   return 0;
 }
 
@@ -369,52 +527,68 @@ int wave_constructor::save_wave_to_vtk(const char *filename) const {
   return draw_vert_value_to_vtk(filename, &nods_[0], nods_.size(2), &tris_[0], tris_.size(2), &data[0]);
 }
 
-int wave_constructor::extract_edges() {
-  if ( !e2c_.get() )
-    return __LINE__;
-  edges_.resize(2, e2c_->edges_.size());
-#pragma omp parallel for
-  for (size_t i = 0; i < e2c_->edges_.size(); ++i) {
-    edges_(0, i) = e2c_->edges_[i].first;
-    edges_(1, i) = e2c_->edges_[i].second;
-  }
-  e2c_.release();
+int wave_constructor::scale_frame_field(const double scale) {
+  frame_field_ *= scale;
   return 0;
 }
 
 int wave_constructor::build_frame_on_vert() {
+  local_frame_.resize(6, nods_.size(2));
+
   return 0;
 }
 
-int wave_constructor::init() {
-  if ( extract_edges() )
-    return __LINE__;
-  f_ = zeros<double>(4, nods_.size(2));
-  alphaIJ_ = zeros<double>(1, edges_.size(2));
-  betaIJ_ = zeros<double>(1, edges_.size(2));
-  cIJ_ = zeros<double>(4, edges_.size(2));
-  cJI_ = zeros<double>(4, edges_.size(2));
-  return 0;
-}
-
-/// @todo CHECK!
 int wave_constructor::solve_phase_transition() {
-  alpha_ij_.resize(1,  edge_.size(2));
-  beta_ij_.resize(1, edge_.size(2));
-  for (size_t i = 0; i < edge_.size(2); ++i) {
-    const size_t I = edge_(0, i);
-    const size_t J = edge_(1, i);
-    alpha_ij_[i] = w*dot(nods_(colon(), I)-nods_(colon(), J), frameX);
-    beta_ij_[i] = w*dot(nods_(colon(), I)-nods_(colon(), J), frameY);
+//  matd_t alpha(2, edge_.size(2));
+//  matd_t beta(2, edge_.size(2));
+//  for (size_t i = 0; i < edge_.size(2); ++i) {
+//    const size_t I = edge_(0, i);
+//    const size_t J = edge_(1, i);
+//    alpha_ij_[i] = w*dot(nods_(colon(), I)-nods_(colon(), J), frameX);
+//    beta_ij_[i] = w*dot(nods_(colon(), I)-nods_(colon(), J), frameY);
+//  }
+//  c_ij_.resize(4, edge_.size(2));
+//  for (size_t i = 0; i < c_ij_.size(2); ++i) {
+//    c_ij_(0, i) = cos(alpha_ij_[i])*cos(beta_ij_[i]);
+//    c_ij_(1, i) = -cos(alpha_ij_[i])*sin(beta_ij_[i]);
+//    c_ij_(2, i) = -sin(alpha_ij_[i])*cos(beta_ij_[i]);
+//    c_ij_(3, i) = sin(alpha_ij_[i])*sin(beta_ij_[i]);
+//  }
+//  return 0;
+}
+
+inline bool is_inflexion(const matd_t &p, const matd_t &front, const matd_t &back) {
+  return dot(front-p, back-p)/(norm(front-p)*norm(back-p)) > -0.1;
+}
+
+void wave_constructor::count_vert_show_on_feature() {
+  vert_count_.clear();
+  std::map<size_t, std::set<size_t>> tmp_vert_count;
+  for(size_t i = 0; i < lines_.size(2); ++i) {
+    tmp_vert_count[lines_(0, i)].insert(lines_(1, i));
+    tmp_vert_count[lines_(1, i)].insert(lines_(0, i));
   }
-  c_ij_.resize(4, edge_.size(2));
-  for (size_t i = 0; i < c_ij_.size(2); ++i) {
-    c_ij_(0, i) = cos(alpha_ij_[i])*cos(beta_ij_[i]);
-    c_ij_(1, i) = -cos(alpha_ij_[i])*sin(beta_ij_[i]);
-    c_ij_(2, i) = -sin(alpha_ij_[i])*cos(beta_ij_[i]);
-    c_ij_(3, i) = sin(alpha_ij_[i])*sin(beta_ij_[i]);
+  for(auto i=tmp_vert_count.begin(); i != tmp_vert_count.end(); ++i) {
+    const std::set<size_t> &adj_vids = i->second;
+    switch (adj_vids.size()) {
+      case 0:
+        break;
+      case 1:
+        vert_count_[i->first] = 1;
+        break;
+      case 2:
+        if ( is_inflexion(nods_(colon(), i->first),
+                          nods_(colon(), *adj_vids.begin()),
+                          nods_(colon(), *adj_vids.rbegin())) )
+          vert_count_[i->first] = 2;
+        else
+          vert_count_[i->first] = 1;
+        break;
+      default:
+        vert_count_[i->first] = 2;
+        break;
+    }
   }
-  return 0;
 }
 
 int wave_constructor::prepare() {
@@ -428,11 +602,21 @@ int wave_constructor::prepare() {
     cerr << "[exception] " << e.what() << endl;
     exit(EXIT_FAILURE);
   }
+  count_vert_show_on_feature();
+  if ( !vert_count_.empty() ) {
+    feature_cons_ = std::make_shared<feature_cons>(f_, vert_count_);
+  }
   cout << "[info] number of constraints: " << constraint_->Nf() << endl;
   return 0;
 }
 
-int wave_constructor::solve_wave_value() {
+int wave_constructor::solve_wave() {
+  if ( feature_cons_.get() )
+    return solve_wave_with_feature();
+  return solve_wave_without_feature();
+}
+
+int wave_constructor::solve_wave_without_feature() {
   // Gauss Newton
   const size_t xdim = constraint_->Nx();
   const size_t fdim = constraint_->Nf();
@@ -457,10 +641,10 @@ int wave_constructor::solve_wave_value() {
     }
     SparseMatrix<double> LHS = J.transpose()*J;
     VectorXd rhs = -J.transpose()*cv;
-    solver_.compute(LHS);
-    ASSERT(solver_.info() == Success);
-    VectorXd dx = solver_.solve(rhs);
-    ASSERT(solver_.info() == Success);
+    ltl_solver_.compute(LHS);
+    ASSERT(ltl_solver_.info() == Success);
+    VectorXd dx = ltl_solver_.solve(rhs);
+    ASSERT(ltl_solver_.info() == Success);
 
     X += dx;
   }
@@ -507,40 +691,40 @@ int wave_constructor::solve_wave_with_feature() {
     }
     // solve
 
-    unkown += dx;
+//    unkown += dx;
   }
   X = unkown.head(xdim);
   return 0;
 }
 
 //==============================================================================
-void wave_constructor::test_wave_conditions() const {
-  const double f1[4] = {1, 2, 3, 4};
-  const double f2[4] = {1, -1, 1, -1};
-  const double c[4] = {1, 1, 1, 1};
- {
-    cout << "#TEST 1:\n";
-    double val = 0;
-    modulus_condition_(&val, f1);
-    cout << "modulus: " << val << endl;
-    phase_condition_(&val, f1);
-    cout << "phase: " << val << endl << endl;
-  }
-  {
-    cout << "#TEST 2:\n";
-    double val = 0;
-    modulus_condition_(&val, f2);
-    cout << "modulus: " << val << endl;
-    phase_condition_(&val, f2);
-    cout << "phase: " << val << endl << endl;
-  }
-  {
-    cout << "#TEST 3:\n";
-    const double f[8] = {1, 2, 3, 4, 5, 6, 7, 9};
-    double val = 0;
-    wave_value_condition_(&val, f, c);
-    cout << "transition: " << val << endl << endl;
-  }
-}
+//void wave_constructor::test_wave_conditions() const {
+//  const double f1[4] = {1, 2, 3, 4};
+//  const double f2[4] = {1, -1, 1, -1};
+//  const double c[4] = {1, 1, 1, 1};
+// {
+//    cout << "#TEST 1:\n";
+//    double val = 0;
+//    modulus_condition_(&val, f1);
+//    cout << "modulus: " << val << endl;
+//    phase_condition_(&val, f1);
+//    cout << "phase: " << val << endl << endl;
+//  }
+//  {
+//    cout << "#TEST 2:\n";
+//    double val = 0;
+//    modulus_condition_(&val, f2);
+//    cout << "modulus: " << val << endl;
+//    phase_condition_(&val, f2);
+//    cout << "phase: " << val << endl << endl;
+//  }
+//  {
+//    cout << "#TEST 3:\n";
+//    const double f[8] = {1, 2, 3, 4, 5, 6, 7, 9};
+//    double val = 0;
+//    wave_value_condition_(&val, f, c);
+//    cout << "transition: " << val << endl << endl;
+//  }
+//}
 
 }

@@ -18,11 +18,12 @@ int main(int argc, char *argv[])
   wc.load_model_from_obj(argv[1]);
   wc.load_frame_field(argv[2]);
   wc.load_feature_line(argv[3]);
-  wc.init();
 
   wc.vis_edge_frame_field("./standing_wave/X.vtk", "./standing_wave/Y.vtk", 0.01);
-//  wc.solve_phase_transition();
-//  wc.prepare();
+  wc.save_feature_to_vtk("./standing_wave/feature_line.vtk");
+
+  wc.solve_phase_transition();
+  wc.prepare();
 //  wc.solve_wave_value();
 
   wc.save_wave_to_vtk("./standing_wave/wave.vtk");
