@@ -26,11 +26,10 @@ public:
   // solve
   int scale_frame_field(const double scale);
   int solve_phase_transition();
-  int give_an_initial_value(const size_t idx);
   int prepare();
+  int give_an_initial_value(const size_t idx);
   int solve_wave();
   // debug
-  void test_wave_conditions() const;
   int vis_edge_frame_field(const char *file_x, const char *file_y, const double scale) const;
 private:
   int extract_edges();
@@ -42,8 +41,8 @@ private:
   mati_t tris_;
   matd_t nods_;
   mati_t lines_;
-  matd_t local_frame_;
-  matd_t frame_field_;   // 6 x #edge
+  matd_t vert_frm_;
+  matd_t edge_frm_;   // 6 x #edge
   mati_t edges_;         // 2 x #edge
   std::map<size_t, size_t> vert_count_;
 

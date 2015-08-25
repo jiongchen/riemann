@@ -21,21 +21,21 @@ using matd_t = zjucad::matrix::matrix<double>;
 
 namespace riemann {
 
-extern "C" {
+//extern "C" {
 
-void wave_value_condition_(double *val, const double *f, const double *c);
-void wave_value_condition_jac_(double *jac, const double *f, const double *c);
-void wave_value_condition_hes_(double *hes, const double *f, const double *c);
+//void wave_value_condition_(double *val, const double *f, const double *c);
+//void wave_value_condition_jac_(double *jac, const double *f, const double *c);
+//void wave_value_condition_hes_(double *hes, const double *f, const double *c);
 
-void modulus_condition_(double *val, const double *f);
-void modulus_condition_jac_(double *jac, const double *f);
-void modulus_condition_hes_(double *hes, const double *f);
+//void modulus_condition_(double *val, const double *f);
+//void modulus_condition_jac_(double *jac, const double *f);
+//void modulus_condition_hes_(double *hes, const double *f);
 
-void phase_condition_(double *val, const double *f);
-void phase_condition_jac_(double *jac, const double *f);
-void phase_condition_hes_(double *hes, const double *f);
+//void phase_condition_(double *val, const double *f);
+//void phase_condition_jac_(double *jac, const double *f);
+//void phase_condition_hes_(double *hes, const double *f);
 
-}
+//}
 
 //class wave_value_energy : public Functional<double>
 //{
@@ -215,11 +215,11 @@ public:
       jac->push_back(Triplet<double>(off+2*i+0, 4*edge_(0, i)+2, -w_*cIJ_(2, i)));
       jac->push_back(Triplet<double>(off+2*i+0, 4*edge_(0, i)+3, -w_*cIJ_(3, i)));
       // J->I
-//      jac->push_back(Triplet<double>(off+2*i+1, 4*edge_(0, i)+0, w_*1.0));
-//      jac->push_back(Triplet<double>(off+2*i+1,));
-//      jac->push_back(Triplet<double>(off+2*i+1,));
-//      jac->push_back(Triplet<double>(off+2*i+1,));
-//      jac->push_back(Triplet<double>(off+2*i+1, ));
+      jac->push_back(Triplet<double>(off+2*i+1, 4*edge_(0, i)+0, w_*1.0));
+      jac->push_back(Triplet<double>(off+2*i+1, 4*edge_(1, i)+0, -w_*cJI_(0, i)));
+      jac->push_back(Triplet<double>(off+2*i+1, 4*edge_(1, i)+1, -w_*cJI_(1, i)));
+      jac->push_back(Triplet<double>(off+2*i+1, 4*edge_(1, i)+2, -w_*cJI_(2, i)));
+      jac->push_back(Triplet<double>(off+2*i+1, 4*edge_(1, i)+3, -w_*cJI_(3, i)));
     }
     return 0;
   }
@@ -302,9 +302,9 @@ private:
 class feature_cons : public Constraint<double>
 {
 public:
-  feature_cons(const matd_t &f, const map<size_t, size_t> &vert_on_fl)
-    : nx_(f.size()), nf_(0), vert_on_fl_(vert_on_fl) {
-    for (auto &it : vert_on_fl_) {
+  feature_cons(const matd_t &f, const map<size_t, size_t> &vert_on_line)
+    : nx_(f.size()), nf_(0), vert_on_line_(vert_on_line) {
+    for (auto &it : vert_on_line_) {
       if ( it.second == 1 )
         nf_ += 1;
       else if ( it.second == 2 )
@@ -320,7 +320,7 @@ public:
   int Val(const double *x, double *val) const {
     itr_matrix<const double *> X(4, nx_/4, x);
     size_t cnt = 0;
-    for (auto &it : vert_on_fl_) {
+    for (auto &it : vert_on_line_) {
       switch ( it.second ) {
         case 1:
           val[cnt++] += X(3, it.first);
@@ -338,7 +338,7 @@ public:
   }
   int Jac(const double *x, const size_t off, vector<Triplet<double>> *jac) const {
     size_t cnt = 0;
-    for (auto &it : vert_on_fl_) {
+    for (auto &it : vert_on_line_) {
       switch ( it.second ) {
         case 1:
           jac->push_back(Triplet<double>(cnt++, 4*it.first+3, 1.0));
@@ -357,7 +357,7 @@ public:
 private:
   const size_t nx_;
   size_t nf_;
-  const map<size_t, size_t> &vert_on_fl_;
+  const map<size_t, size_t> &vert_on_line_;
 };
 
 //==============================================================================
@@ -447,13 +447,13 @@ int wave_constructor::load_frame_field(const char *filename) {
   size_t edge_num;
   ifs >> edge_num;
   ASSERT(edge_num == e2c_->edges_.size());
-  frame_field_.resize(6, edge_num);
+  edge_frm_.resize(6, edge_num);
   size_t p, q, eid;
   for (size_t i = 0; i < edge_num; ++i) {
     ifs >> p >> q;
     eid = e2c_->get_edge_idx(p, q);
-    ifs >> frame_field_(0, eid) >> frame_field_(1, eid) >> frame_field_(2, eid)
-        >> frame_field_(3, eid) >> frame_field_(4, eid) >> frame_field_(5, eid);
+    ifs >> edge_frm_(0, eid) >> edge_frm_(1, eid) >> edge_frm_(2, eid)
+        >> edge_frm_(3, eid) >> edge_frm_(4, eid) >> edge_frm_(5, eid);
   }
   e2c_.release();
   ifs.close();
@@ -465,9 +465,9 @@ int wave_constructor::vis_edge_frame_field(const char *file_x, const char *file_
     cerr << "[error] edge is not initialized\n";
     return __LINE__;
   }
-  matd_t X = scale*frame_field_(colon(0, 2), colon());
+  matd_t X = scale*edge_frm_(colon(0, 2), colon());
   draw_edge_direct_field(file_x, &nods_[0], nods_.size(2), &edges_[0], edges_.size(2), &X[0]);
-  matd_t Y = scale*frame_field_(colon(3, 5), colon());
+  matd_t Y = scale*edge_frm_(colon(3, 5), colon());
   draw_edge_direct_field(file_y, &nods_[0], nods_.size(2), &edges_[0], edges_.size(2), &Y[0]);
   return 0;
 }
@@ -528,33 +528,54 @@ int wave_constructor::save_wave_to_vtk(const char *filename) const {
 }
 
 int wave_constructor::scale_frame_field(const double scale) {
-  frame_field_ *= scale;
+  edge_frm_ *= scale;
   return 0;
 }
 
 int wave_constructor::build_frame_on_vert() {
-  local_frame_.resize(6, nods_.size(2));
-
+  vector<bool> vis(nods_.size(2));
+  std::fill(vis.begin(), vis.end(), false);
+  for (size_t i = 0; i < edges_.size(2); ++i) {
+    for (size_t j = 0; j < 2; ++j) {
+      if ( !vis[edges_(j, i)] ) {
+        vis[edges_(j, i)] = true;
+        vert_frm_(colon(), edges_(j, i)) = edge_frm_(colon(), i);
+      }
+    }
+  }
   return 0;
 }
 
 int wave_constructor::solve_phase_transition() {
-//  matd_t alpha(2, edge_.size(2));
-//  matd_t beta(2, edge_.size(2));
-//  for (size_t i = 0; i < edge_.size(2); ++i) {
-//    const size_t I = edge_(0, i);
-//    const size_t J = edge_(1, i);
-//    alpha_ij_[i] = w*dot(nods_(colon(), I)-nods_(colon(), J), frameX);
-//    beta_ij_[i] = w*dot(nods_(colon(), I)-nods_(colon(), J), frameY);
-//  }
-//  c_ij_.resize(4, edge_.size(2));
-//  for (size_t i = 0; i < c_ij_.size(2); ++i) {
-//    c_ij_(0, i) = cos(alpha_ij_[i])*cos(beta_ij_[i]);
-//    c_ij_(1, i) = -cos(alpha_ij_[i])*sin(beta_ij_[i]);
-//    c_ij_(2, i) = -sin(alpha_ij_[i])*cos(beta_ij_[i]);
-//    c_ij_(3, i) = sin(alpha_ij_[i])*sin(beta_ij_[i]);
-//  }
-//  return 0;
+  build_frame_on_vert();
+  matd_t alpha(2, edges_.size(2));
+  matd_t beta(2, edges_.size(2));
+  for (size_t i = 0; i < edges_.size(2); ++i) {
+    for (size_t j = 0; j < 2; ++j) {
+      const size_t I = edges_(j, i);
+      const size_t J = edges_(1-j, i);
+      matd_t rotx(3, 1), roty(3, 1), alignx(3, 1), aligny(3, 1);
+      rotate_frame(&edge_frm_(0, i), &edge_frm_(3, i), &vert_frm_(0, I), &vert_frm_(3, I), &rotx[0], &roty[0]);
+      align_vector_field(&rotx[0], &roty[0], &vert_frm_(0, I), &vert_frm_(3, I), &alignx[0], &aligny[0]);
+      alpha(j, i) = M_PI*dot(nods_(colon(), J)-nods_(colon(), I), alignx);
+      beta(j, i) = M_PI*dot(nods_(colon(), J)-nods_(colon(), J), aligny);
+    }
+  }
+  cIJ_.resize(4, edges_.size(2));
+  cJI_.resize(4, edges_.size(2));
+  for (size_t i = 0; i < edges_.size(2); ++i) {
+    double a = alpha(0, i), b = beta(0, i);
+    cIJ_(0, i) = cos(a)*cos(b);
+    cIJ_(1, i) = -cos(a)*sin(b);
+    cIJ_(2, i) = -sin(a)*cos(b);
+    cIJ_(3, i) = sin(a)*sin(b);
+    a = alpha(1, i); b = beta(1, i);
+    cJI_(0, i) = cos(a)*cos(b);
+    cJI_(1, i) = -cos(a)*sin(b);
+    cJI_(2, i) = -sin(a)*cos(b);
+    cJI_(3, i) = sin(a)*sin(b);
+  }
+  return 0;
 }
 
 inline bool is_inflexion(const matd_t &p, const matd_t &front, const matd_t &back) {
@@ -606,7 +627,17 @@ int wave_constructor::prepare() {
   if ( !vert_count_.empty() ) {
     feature_cons_ = std::make_shared<feature_cons>(f_, vert_count_);
   }
-  cout << "[info] number of constraints: " << constraint_->Nf() << endl;
+  cout << "[info] number of energy term: " << constraint_->Nf() << endl;
+  cout << "[info] number of feature constraints: " << feature_cons_->Nf() << endl;
+  return 0;
+}
+
+int wave_constructor::give_an_initial_value(const size_t idx) {
+  if ( idx >= f_.size(2) ) {
+    cerr << "[error] id is out of range\n";
+    return __LINE__;
+  }
+  f_(0, idx) = 1.0;
   return 0;
 }
 
