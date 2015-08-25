@@ -139,5 +139,17 @@ INT build_global_local_mapping(const INT dim, const std::unordered_set<INT> &fix
   return ptr;
 }
 
+template <typename T, int Option>
+int extract_triplets_from_spmat(const Eigen::SparseMatrix<T, Option> &A, std::vector<Eigen::Triplet<T>> *trips) {
+  if ( !trips )
+    return __LINE__;
+  for (size_t j = 0; j < A.outerSize(); ++j) {
+    for (typename Eigen::SparseMatrix<T, Option>::InnerIterator it(A, j); it; ++it) {
+      trips->push_back(Eigen::Triplet<T>(it.row(), it.col(), it.value()));
+    }
+  }
+  return 0;
+}
+
 }
 #endif

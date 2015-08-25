@@ -8,6 +8,7 @@
 #include "def.h"
 #include "write_vtk.h"
 #include "config.h"
+#include "util.h"
 
 using namespace std;
 using namespace zjucad::matrix;
@@ -463,6 +464,52 @@ int wave_constructor::solve_wave_value() {
 
     X += dx;
   }
+  return 0;
+}
+
+int wave_constructor::solve_wave_with_feature() {
+  const size_t xdim = constraint_->Nx();
+  const size_t fdim = constraint_->Nf();
+  const size_t cdim = feature_cons_->Nf();
+  Map<VectorXd> X(&f_[0], xdim);
+  VectorXd unkown = VectorXd::Zero(xdim+cdim);
+  unkown.head(xdim) = X;
+
+  // solve KKT
+  for (size_t iter = 0; iter < 20000; ++iter) {
+    VectorXd cv = VectorXd::Zero(fdim); {
+      constraint_->Val(&unkown[0], cv.data());
+      if ( iter % 100 == 0 )
+        cout << "\t@energy value: " << cv.squaredNorm() << endl;
+    }
+    VectorXd fv = VectorXd::Zero(cdim); {
+      feature_cons_->Val(&unkown[0], fv.data());
+    }
+    SparseMatrix<double> J(fdim, xdim); {
+
+    }
+    SparseMatrix<double> LHS(xdim+cdim, xdim+cdim); {
+      vector<Triplet<double>> trips;
+      SparseMatrix<double> JTJ = J.transpose()*J;
+      extract_triplets_from_spmat<double, ColMajor>(JTJ, &trips);
+      vector<Triplet<double>> cons_trips;
+      feature_cons_->Jac(nullptr, xdim, &cons_trips);
+      for (auto &it : cons_trips) {
+        trips.push_back(Triplet<double>(it.row(), it.col(), it.value()));
+        trips.push_back(Triplet<double>(it.col(), it.row(), it.value()));
+      }
+      LHS.reserve(trips.size());
+      LHS.setFromTriplets(trips.begin(), trips.end());
+    }
+    VectorXd rhs = VectorXd::Zero(xdim+cdim); {
+      rhs.head(xdim) = -J.transpose()*cv;
+      rhs.tail(cdim) = -fv;
+    }
+    // solve
+
+    unkown += dx;
+  }
+  X = unkown.head(xdim);
   return 0;
 }
 

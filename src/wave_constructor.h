@@ -34,6 +34,9 @@ private:
   int build_frame_on_vert();
   void count_vert_on_features();
 
+  int solve_wave_without_feature();
+  int solve_wave_with_feature();
+
   mati_t tris_;
   matd_t nods_;
   matd_t local_frame_;
@@ -50,6 +53,7 @@ private:
   std::unique_ptr<jtf::mesh::edge2cell_adjacent> e2c_;
   std::vector<std::shared_ptr<Constraint<double>>> buff_;
   std::shared_ptr<Constraint<double>> constraint_;
+  std::shared_ptr<Constraint<double>> feature_cons_;
   Eigen::SimplicialCholesky<Eigen::SparseMatrix<double>> solver_;
 };
 
