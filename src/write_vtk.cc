@@ -85,4 +85,29 @@ int draw_face_direct_field(const char *filename,
   return 0;
 }
 
+int draw_edge_direct_field(const char *filename,
+                           const double *vert, const size_t vert_num,
+                           const size_t *edge, const size_t edge_num,
+                           const double *field) {
+  ofstream os(filename);
+  if ( os.fail() )
+    return __LINE__;
+
+  itr_matrix<const double *> nods(3, vert_num, vert);
+  itr_matrix<const size_t *> cell(2, edge_num, edge);
+  itr_matrix<const double *> df(3, edge_num, field);
+
+  matrix<size_t> line(2, edge_num);
+  line(0, colon()) = colon(0, edge_num-1);
+  line(1, colon()) = colon(edge_num, 2*edge_num-1);
+  matrix<double> pts(3, 2*edge_num);
+#pragma omp parallel for
+  for (size_t i = 0; i < edge_num; ++i) {
+    pts(colon(), i) = nods(colon(), cell(colon(), i))*ones<double>(2, 1)/2.0;
+    pts(colon(), i+edge_num) = pts(colon(), i)+df(colon(), i);
+  }
+  line2vtk(os, pts.begin(), pts.size(2), line.begin(), line.size(2));
+  return 0;
+}
+
 }

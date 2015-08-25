@@ -8,15 +8,19 @@ using namespace riemann;
 
 int main(int argc, char *argv[])
 {
-  if ( argc != 2 ) {
-    cerr << "# usage: " << argv[0] << " model.obj\n";
+  if ( argc != 4 ) {
+    cerr << "# usage: " << argv[0] << " model.obj frame.ef feature.fl\n";
     return __LINE__;
   }
   boost::filesystem::create_directory("./standing_wave");
 
   wave_constructor wc;
   wc.load_model_from_obj(argv[1]);
+  wc.load_frame_field(argv[2]);
+  wc.load_feature_line(argv[3]);
   wc.init();
+
+  wc.vis_edge_frame_field("./standing_wave/X.vtk", "./standing_wave/Y.vtk", 0.01);
 //  wc.solve_phase_transition();
 //  wc.prepare();
 //  wc.solve_wave_value();

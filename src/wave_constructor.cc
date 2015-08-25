@@ -3,7 +3,6 @@
 #include <iostream>
 #include <zjucad/matrix/itr_matrix.h>
 #include <zjucad/matrix/io.h>
-#include <jtflib/mesh/mesh.h>
 #include <jtflib/mesh/io.h>
 
 #include "def.h"
@@ -186,8 +185,8 @@ void phase_condition_hes_(double *hes, const double *f);
 class wave_value_cons : public Constraint<double>
 {
 public:
-  wave_value_cons(const mati_t &edge, const matd_t &f, const matd_t &c, const double w=1.0)
-    : edge_(edge), c_(c), nx_(f.size()), nf_(2*edge.size(2)), w_(sqrt(w)) {}
+  wave_value_cons(const mati_t &edge, const matd_t &f, const matd_t &cIJ, const matd_t &cJI, const double w=1.0)
+    : edge_(edge), cIJ_(cIJ), cJI_(cJI), nx_(f.size()), nf_(2*edge.size(2)), w_(sqrt(w)) {}
   size_t Nx() const {
     return nx_;
   }
@@ -199,27 +198,32 @@ public:
 #pragma omp parallel for
     for (size_t i = 0; i < edge_.size(2); ++i) {
       matd_t vert = X(colon(), edge_(colon(), i));
-//      val[2*i+0] += w_*(vert(0, 1)-dot(c_(colon(), i), vert(colon(), 0)));
-//      val[2*i+1] += w_*(vert(0, 0)-dot(, vert(colon(), 1)));
+      val[2*i+0] += w_*(vert(0, 1)-dot(cIJ_(colon(), i), vert(colon(), 0)));
+      val[2*i+1] += w_*(vert(0, 0)-dot(cJI_(colon(), i), vert(colon(), 1)));
     }
     return 0;
   }
   int Jac(const double *x, const size_t off, vector<Triplet<double>> *jac) const {
     itr_matrix<const double *> X(4, nx_/4, x);
     for (size_t i = 0; i < edge_.size(2); ++i) {
-//      jac->push_back(Triplet<double>(off+2*i+0, 4*edge_(1, i)+0, w_*1.0));
-//      jac->push_back(Triplet<double>(off+2*i+0, 4*edge_(0, i)+0, -w_*c_(0, i)));
-//      jac->push_back(Triplet<double>(off+2*i+0, 4*edge_(0, i)+1, -w_*c_(1, i)));
-//      jac->push_back(Triplet<double>(off+2*i+0, 4*edge_(0, i)+2, -w_*c_(2, i)));
-//      jac->push_back(Triplet<double>(off+2*i+0, 4*edge_(0, i)+3, -w_*c_(3, i)));
-
+      // I->J
+      jac->push_back(Triplet<double>(off+2*i+0, 4*edge_(1, i)+0, w_*1.0));
+      jac->push_back(Triplet<double>(off+2*i+0, 4*edge_(0, i)+0, -w_*cIJ_(0, i)));
+      jac->push_back(Triplet<double>(off+2*i+0, 4*edge_(0, i)+1, -w_*cIJ_(1, i)));
+      jac->push_back(Triplet<double>(off+2*i+0, 4*edge_(0, i)+2, -w_*cIJ_(2, i)));
+      jac->push_back(Triplet<double>(off+2*i+0, 4*edge_(0, i)+3, -w_*cIJ_(3, i)));
+      // J->I
 //      jac->push_back(Triplet<double>(off+2*i+1, 4*edge_(0, i)+0, w_*1.0));
+//      jac->push_back(Triplet<double>(off+2*i+1,));
+//      jac->push_back(Triplet<double>(off+2*i+1,));
+//      jac->push_back(Triplet<double>(off+2*i+1,));
+//      jac->push_back(Triplet<double>(off+2*i+1, ));
     }
     return 0;
   }
 private:
   const mati_t &edge_;
-  const matd_t &c_;
+  const matd_t &cIJ_, &cJI_;
   const size_t nx_, nf_;
   const double w_;
 };
@@ -293,13 +297,64 @@ private:
   const double w_;
 };
 
+class feature_cons : public Constraint<double>
+{
+public:
+  feature_cons(const matd_t &f);
+  size_t Nx() const;
+  size_t Nf() const;
+  int Val(const double *x, double *val) const;
+  int Jac(const double *x, const size_t off, vector<Triplet<double>> *jac) const;
+private:
+};
+
 //==============================================================================
 int wave_constructor::load_model_from_obj(const char *filename) {
   return jtf::mesh::load_obj(filename, tris_, nods_);
 }
 
-int wave_constructor::load_frame_size_field(const char *filename) {
-  // assign to frame field and size field
+int wave_constructor::load_frame_field(const char *filename) {
+  e2c_.reset(edge2cell_adjacent::create(tris_, false));
+  if ( !e2c_.get() )
+    return __LINE__;
+  ifstream ifs(filename);
+  if ( ifs.fail() ) {
+    cerr << "[error] can not open " << filename << endl;
+    return __LINE__;
+  }
+  size_t edge_num;
+  ifs >> edge_num;
+  ASSERT(edge_num == e2c_->edges_.size());
+  frame_field_.resize(6, edge_num);
+  size_field_.resize(2, edge_num);
+  size_t p, q, ide;
+  for (size_t i = 0; i < edge_num; ++i) {
+    ifs >> p >> q;
+    ide = e2c_->get_edge_idx(p, q);
+    ifs >> frame_field_(0, i) >> frame_field_(1, i) >> frame_field_(2, i)
+        >> frame_field_(3, i) >> frame_field_(4, i) >> frame_field_(5, i);
+    size_field_(0, i) = norm(frame_field_(colon(0, 2), i));
+    size_field_(1, i) = norm(frame_field_(colon(3, 5), i));
+    frame_field_(colon(0, 2), i) /= size_field_(0, i);
+    frame_field_(colon(3, 5), i) /= size_field_(1, i);
+  }
+  return 0;
+}
+
+int wave_constructor::vis_edge_frame_field(const char *file_x, const char *file_y, const double scale) const {
+  if ( edges_.size() == 0 ) {
+    cerr << "[error] edge is not initialized\n";
+    return __LINE__;
+  }
+  matd_t X = scale*frame_field_(colon(0, 2), colon());
+  draw_edge_direct_field(file_x, &nods_[0], nods_.size(2), &edges_[0], edges_.size(2), &X[0]);
+  matd_t Y = scale*frame_field_(colon(3, 5), colon());
+  draw_edge_direct_field(file_y, &nods_[0], nods_.size(2), &edges_[0], edges_.size(2), &Y[0]);
+  return 0;
+}
+
+int wave_constructor::load_feature_line(const char *filename) {
+  return 0;
 }
 
 int wave_constructor::save_model_to_obj(const char *filename) const {
@@ -314,15 +369,19 @@ int wave_constructor::save_wave_to_vtk(const char *filename) const {
 }
 
 int wave_constructor::extract_edges() {
-  unique_ptr<edge2cell_adjacent> e2c(edge2cell_adjacent::create(tris_, false));
-  if ( !e2c.get() )
+  if ( !e2c_.get() )
     return __LINE__;
-  edges_.resize(2, e2c->edges_.size());
+  edges_.resize(2, e2c_->edges_.size());
 #pragma omp parallel for
-  for (size_t i = 0; i < e2c->edges_.size(); ++i) {
-    edges_(0, i) = e2c->edges_[i].first;
-    edges_(1, i) = e2c->edges_[i].second;
+  for (size_t i = 0; i < e2c_->edges_.size(); ++i) {
+    edges_(0, i) = e2c_->edges_[i].first;
+    edges_(1, i) = e2c_->edges_[i].second;
   }
+  e2c_.release();
+  return 0;
+}
+
+int wave_constructor::build_frame_on_vert() {
   return 0;
 }
 
@@ -333,33 +392,33 @@ int wave_constructor::init() {
   alphaIJ_ = zeros<double>(1, edges_.size(2));
   betaIJ_ = zeros<double>(1, edges_.size(2));
   cIJ_ = zeros<double>(4, edges_.size(2));
-  cout << trans(edges_) << endl;
+  cJI_ = zeros<double>(4, edges_.size(2));
   return 0;
 }
 
 /// @todo CHECK!
-//int wave_constructor::solve_phase_transition() {
-//  alpha_ij_.resize(1,  edge_.size(2));
-//  beta_ij_.resize(1, edge_.size(2));
-//  for (size_t i = 0; i < edge_.size(2); ++i) {
-//    const size_t I = edge_(0, i);
-//    const size_t J = edge_(1, i);
-//    alpha_ij_[i] = w*dot(nods_(colon(), I)-nods_(colon(), J), frameX);
-//    beta_ij_[i] = w*dot(nods_(colon(), I)-nods_(colon(), J), frameY);
-//  }
-//  c_ij_.resize(4, edge_.size(2));
-//  for (size_t i = 0; i < c_ij_.size(2); ++i) {
-//    c_ij_(0, i) = cos(alpha_ij_[i])*cos(beta_ij_[i]);
-//    c_ij_(1, i) = -cos(alpha_ij_[i])*sin(beta_ij_[i]);
-//    c_ij_(2, i) = -sin(alpha_ij_[i])*cos(beta_ij_[i]);
-//    c_ij_(3, i) = sin(alpha_ij_[i])*sin(beta_ij_[i]);
-//  }
-//  return 0;
-//}
+int wave_constructor::solve_phase_transition() {
+  alpha_ij_.resize(1,  edge_.size(2));
+  beta_ij_.resize(1, edge_.size(2));
+  for (size_t i = 0; i < edge_.size(2); ++i) {
+    const size_t I = edge_(0, i);
+    const size_t J = edge_(1, i);
+    alpha_ij_[i] = w*dot(nods_(colon(), I)-nods_(colon(), J), frameX);
+    beta_ij_[i] = w*dot(nods_(colon(), I)-nods_(colon(), J), frameY);
+  }
+  c_ij_.resize(4, edge_.size(2));
+  for (size_t i = 0; i < c_ij_.size(2); ++i) {
+    c_ij_(0, i) = cos(alpha_ij_[i])*cos(beta_ij_[i]);
+    c_ij_(1, i) = -cos(alpha_ij_[i])*sin(beta_ij_[i]);
+    c_ij_(2, i) = -sin(alpha_ij_[i])*cos(beta_ij_[i]);
+    c_ij_(3, i) = sin(alpha_ij_[i])*sin(beta_ij_[i]);
+  }
+  return 0;
+}
 
 int wave_constructor::prepare() {
   buff_.resize(3);
-  buff_[0] = std::make_shared<wave_value_cons>(edges_, f_, cIJ_, 1.0);
+  buff_[0] = std::make_shared<wave_value_cons>(edges_, f_, cIJ_, cJI_, 1.0);
   buff_[1] = std::make_shared<modulus_cons>(f_, 0.15);
   buff_[2] = std::make_shared<phase_cons>(f_, 0.15);
   try {
