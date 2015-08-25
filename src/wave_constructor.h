@@ -29,6 +29,9 @@ public:
 private:
   int extract_edges();
 
+  int solve_wave_without_feature();
+  int solve_wave_with_feature();
+
   mati_t tris_;
   matd_t nods_;
   matd_t frame_field_; // 3 x 2#edge
@@ -42,6 +45,7 @@ private:
 
   std::vector<std::shared_ptr<Constraint<double>>> buff_;
   std::shared_ptr<Constraint<double>> constraint_;
+  std::shared_ptr<Constraint<double>> feature_cons_;
   Eigen::SimplicialCholesky<Eigen::SparseMatrix<double>> solver_;
 };
 
