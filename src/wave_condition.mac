@@ -6,19 +6,18 @@ optimprefix : tt$
 f: openw("wave_condition.f90")$
 
 block(
-  [F, C],
+  [F, Cij, Cji],
   F: genmatrix(F, 4, 2),
-  C: genmatrix(C, 4, 1),
-  wave_value_condition(F, C) := block(
-    [cij, cji, Fi, Fj, rtn],
+  Cij: genmatrix(Cij, 4, 1),
+  Cji: genmatrix(Cji, 4, 1),
+  trans_condition(F, Cij, Cji) := block(
+    [Fi, Fj, rtn],
     Fi: col(F, 1), 
     Fj: col(F, 2),
-    cij: matrix([C[1,1]], [C[2, 1]], [C[3, 1]], [C[4, 1]]),
-    cji: matrix([C[1,1]], [-C[2, 1]], [-C[3, 1]], [C[4,1]]),
-    rtn: (Fj[1, 1]-DOT(cij, Fi))^2+(Fi[1, 1]-DOT(cji, Fj))^2,
+    rtn: (Fj[1, 1]-DOT(Cij, Fi))^2+(Fi[1, 1]-DOT(Cji, Fj))^2,
     matrix([rtn])
   ),
-  with_stdout(f, val_jac_hes_to_f90(wave_value_condition, [F, C])),
+  with_stdout(f, val_jac_hes_to_f90(trans_condition, [F, Cij, Cji])),
   return()
 )$
 

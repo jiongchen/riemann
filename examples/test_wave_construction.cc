@@ -22,9 +22,11 @@ int main(int argc, char *argv[])
   wc.vis_edge_frame_field("./standing_wave/X.vtk", "./standing_wave/Y.vtk", 0.01);
   wc.save_feature_to_vtk("./standing_wave/feature_line.vtk");
 
+  wc.scale_frame_field(0.25);
   wc.solve_phase_transition();
   wc.prepare();
-//  wc.solve_wave_value();
+  wc.give_an_initial_value(1269);
+  wc.solve_wave();
 
   wc.save_wave_to_vtk("./standing_wave/wave.vtk");
 

@@ -35,15 +35,15 @@ private:
   int extract_edges();
   int build_frame_on_vert();
   void count_vert_show_on_feature();
-  int solve_wave_without_feature();
-  int solve_wave_with_feature();
+  int solve_wave_soft_feature();
+  int solve_wave_hard_feature();
 
   mati_t tris_;
   matd_t nods_;
   mati_t lines_;
   matd_t vert_frm_;
-  matd_t edge_frm_;   // 6 x #edge
-  mati_t edges_;         // 2 x #edge
+  matd_t edge_frm_;  // 6 x #edge
+  mati_t edges_;     // 2 x #edge
   std::map<size_t, size_t> vert_count_;
 
   matd_t f_;         // 4 x #vert
