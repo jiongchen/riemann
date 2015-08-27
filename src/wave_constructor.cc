@@ -612,9 +612,7 @@ void wave_constructor::count_vert_show_on_feature() {
         vert_count_[i->first] = 1;
         break;
       case 2:
-        if ( is_inflexion(nods_(colon(), i->first),
-                          nods_(colon(), *adj_vids.begin()),
-                          nods_(colon(), *adj_vids.rbegin())) )
+        if ( is_inflexion(nods_(colon(), i->first), nods_(colon(), *adj_vids.begin()), nods_(colon(), *adj_vids.rbegin())) )
           vert_count_[i->first] = 2;
         else
           vert_count_[i->first] = 1;
@@ -636,7 +634,7 @@ int wave_constructor::prepare() {
   count_vert_show_on_feature();
   if ( !vert_count_.empty() ) {
 #ifdef SOFT_FEATURE
-//    buff_[3] = std::make_shared<feature_cons>(f_, vert_count_, 1e5);
+    buff_[3] = std::make_shared<feature_cons>(f_, vert_count_, 1e5);
 #else
     feature_cons_ = std::make_shared<feature_cons>(f_, vert_count_);
 #endif
@@ -674,15 +672,11 @@ int wave_constructor::solve_wave_soft_feature() {
   const size_t fdim = constraint_->Nf();
   Map<VectorXd> X(&f_[0], xdim);
 
-  for (size_t iter = 0; iter < 50; ++iter) {
+  for (size_t iter = 0; iter < 10000; ++iter) {
     VectorXd cv = VectorXd::Zero(fdim); {
       constraint_->Val(&X[0], cv.data());
-      if ( iter % 1 == 0 ) {
+      if ( iter % 100 == 0 ) {
         cout << "\t@energy value: " << cv.squaredNorm() << endl;
-      }
-      if ( cv.lpNorm<Infinity>() < 1e-8 ) {
-        cout << "[info] converged after " << iter << " iteration\n";
-        break;
       }
     }
     SparseMatrix<double> J(fdim, xdim); {
@@ -697,7 +691,12 @@ int wave_constructor::solve_wave_soft_feature() {
     ASSERT(ltl_solver_.info() == Success);
     VectorXd dx = ltl_solver_.solve(rhs);
     ASSERT(ltl_solver_.info() == Success);
+    double x_norm = X.norm();
     X += dx;
+    if ( dx.norm() <= 1e-10*x_norm ) {
+      cout << "\t@converged\n";
+      break;
+    }
   }
   return 0;
 }

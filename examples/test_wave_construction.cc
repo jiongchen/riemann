@@ -25,7 +25,7 @@ int main(int argc, char *argv[])
   wc.scale_frame_field(0.25);
   wc.solve_phase_transition();
   wc.prepare();
-  wc.give_an_initial_value(1269);
+  wc.give_an_initial_value(1);
   wc.solve_wave();
 
   wc.save_wave_to_vtk("./standing_wave/wave.vtk");
