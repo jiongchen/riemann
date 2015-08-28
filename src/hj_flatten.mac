@@ -1,0 +1,32 @@
+hj_flatten(m) :=
+	if nonscalarp(m) then
+		if matrixp(m) then
+			block([sz:matrix_size(m),rtn:[]],
+			for c:1 while c <= sz[2] do
+				for r:1 while r <= sz[1] do
+					rtn:append(rtn,hj_flatten(m[r,c])),
+				rtn
+			)
+		else
+			block([rtn:flatten(m),rtn2:[]],
+			for i:1 while i <= length(rtn) do
+				rtn2:append(rtn2,hj_flatten(rtn[i])),
+			rtn2
+			)
+	else
+		[m]$
+
+/* build equation list for matrix A and matrix B*/
+flatten_eq(x,y) :=
+	block([fx:hj_flatten(x),fy:hj_flatten(y)],
+		makelist(fx[i]=fy[i], i, 1, length(fx))
+	)$
+
+hj_flatten_demo() :=
+	block([Y:genmatrix(y,3,4)],
+		Y[2,3]: [1, genmatrix(x,3,2), [2,3]],
+		print(Y),
+		hj_flatten([1, Y, [2,3]])
+	);
+
+/*hj_flatten_demo();*/

@@ -2,7 +2,7 @@ file(GLOB header *.h *.hpp)
 file(GLOB source *.cc)
 
 enable_language(Fortran)
-set(SRC_DIR "{${CMAKE_CURRENT_SOURCE_DIR},$ENV{HOME}/.maxima}")
+set(SRC_DIR "{${CMAKE_CURRENT_SOURCE_DIR}}")
 
 add_custom_command(OUTPUT quad_scalar_field.f90
     COMMAND "maxima" ARGS --userdir=${SRC_DIR} -b quad_scalar_field.mac

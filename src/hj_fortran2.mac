@@ -1,0 +1,72 @@
+load(hj_flatten)$
+/*load(f90hj)$*/ /* this [] bug is solved in 5.32*/
+load(f90)$
+
+/* usage: hj_fortran2(calc_dihedral_angle, theta, [x]) */
+
+declare_matrix(name, m) :=
+block([size],
+  size : matrix_size(m),
+  sconcat("REAL(KIND=8) ", name, "(", size[1], ", ", size[2], ")")
+  )$
+
+hj_fortran2(func, func_out, func_in) :=
+block([partswitch0:partswitch, partswitch:true, rtn, in_names],
+  header : sconcat("SUBROUTINE ", func, "(", func_out),
+  in_names : [],
+  for i:1 thru length(func_in) do
+  block([m],
+    m : func_in[i],
+    header : sconcat(header, ", ", op(m[1, 1]))
+    ),
+  header : sconcat(header, ")"),
+  print(header),
+  print("IMPLICIT NONE"),
+  /*optimize: encountered a special form; result may be wrong*/
+  with_stdout("/dev/null",rtn : optimize(apply(func, func_in))),
+  if op(rtn) # block then rtn : [[],rtn],
+  block([block_args],
+    block_args : args(rtn),
+    rtn : block_args[length(block_args)],
+    print(declare_matrix(func_out, rtn)),
+    for i:1 thru length(func_in) do
+    block([m],
+      m : func_in[i],
+      print(declare_matrix(op(m[1,1]), m))
+      ),
+    tmp_vars : block_args[1],
+    for i:1 thru length(tmp_vars) do print("REAL(KIND=8) ", tmp_vars[i]),
+    for i:2 thru length(block_args)-1 do
+    block([rhsi],
+      rhsi : hj_flatten(part(block_args[i], 2)),
+      if length(rhsi) # 1 then
+      block(
+        print("CANNOT handle this"),
+        display(block_args[i]),
+        return()
+        ),
+      f90(part(block_args[i], 1)=rhsi[1])
+      )
+    ),
+  f90(func_out=rtn),
+  print("END")
+  )$
+
+calc_jac(fx, x) := jacobian(list_matrix_entries(transpose(fx)), list_matrix_entries(transpose(x)))$
+
+/* usage: val_jac_hes_to_f90(calc_len_energy, [e, l])*/
+
+val_jac_hes_to_f90(func, func_in) :=
+block([p, jac, hes],
+  hj_fortran2(func, 'val, func_in),
+  p : makelist(concat ('x,i), i, length(func_in)),
+  jac : concat(func, "_jac"),
+  define(funmake(jac, p), calc_jac(apply(func, func_in), func_in[1])),
+  hj_fortran2(jac, 'jac, func_in),
+  hes : concat(func, "_hes"),
+  /* NOTICE: directly using hessian leads to the same result, but difficult to parse */
+  /* define(funmake(hes, p), hessian(list_matrix_entries(apply(func, func_in)), list_matrix_entries(func_in[1]))),*/
+  define(funmake(hes, p), calc_jac(apply(jac, func_in), func_in[1])),
+  hj_fortran2(hes, 'hes, func_in),
+  return()
+  )$

@@ -1,0 +1,38 @@
+load(vect)$
+load(eigen)$
+
+/* return a list */
+FLATTEN(x) := 
+  if nonscalarp(x) then
+    if matrixp(x) then block(
+      [sz: matrix_size(x), rtn: []],
+      for c:1 thru sz[2] do
+	for r:1 thru sz[1] do
+	  rtn: append(rtn, FLATTEN(x[r, c])),
+      rtn
+    )
+    else block(
+      [temp: flatten(x), rtn: []],
+      for i:1 thru length(temp) do
+	rtn: append(rtn, FLATTEN(temp[i])),
+      rtn
+    )
+  else
+    [x]$
+
+FLATTEN_DEMO() := block(
+  [Y: genmatrix(Y, 3, 4)],
+  Y[2, 3]: [1, genmatrix(Z, 3, 2), [2, 3]],
+  print(Y),
+  FLATTEN([1, Y, [4, 5]])
+)$
+ 
+NORM(x) := sqrt(x . x)$
+
+GRAD(fx, x) := jacobian(FLATTEN(fx), FLATTEN(x))$
+
+/* return the cross product of vector x and vector y */
+CROSS(x, y) := transpose(express(list_matrix_entries(x) ~ list_matrix_entries(y)))$
+
+/* return the dot product of vector x and vector y */
+DOT(x, y) := innerproduct(list_matrix_entries(x), list_matrix_entries(y))$

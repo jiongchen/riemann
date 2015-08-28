@@ -1,0 +1,83 @@
+hj_fortran(expr) :=
+	block([partswitch0:partswitch, partswitch:true],
+		/* count the number of expresion */
+		cont:true,
+		num_of_expr : 0,
+		for i:1 while cont do
+			if is(part(expr, i) = end) then
+				cont : false
+			else
+				num_of_expr : i,
+
+		if is(part(expr, 0) = block) then block( /* replace temp variables by array */
+			[temp:part(expr,1), num_of_temp:0, sub_eqs:[]],
+			prefix:sremove("1",string(temp[1])),
+			num_of_temp:length(temp),
+			for i:1 while i <= num_of_temp do block(
+				[],
+				new_tmp_i:parse_string(sconcat(prefix, "(", i, ")")),
+				sub_eqs:append(sub_eqs, [temp[i]=new_tmp_i])
+			),
+			expr:subst(sub_eqs, expr),
+			if num_of_temp # 0 then
+				print(sconcat("      DOUBLE PRECISION ", prefix, "(", num_of_temp, ")")),
+			lh : part(expr, num_of_expr,1),
+			rh : part(expr, num_of_expr,2),
+			print(sconcat("      DOUBLE PRECISION ", lh, "(", length(rh), ",*)"))
+		),
+
+		/* variable declaration */
+		lv:listofvars(expr),
+		lv1:{},
+		for i:1 while i <= length(lv) do block(
+			[var:part(lv[i],0)],
+			if is(var=end) then
+				lv1 : adjoin(lv[i], lv1)
+			else block(
+				[row:part(lv[i],1)],
+				lv1 : adjoin(var, lv1),
+				old_num : get(var, "num"),
+				if old_num # false then
+					old_num : max(old_num, row)
+				else
+				old_num : row,
+				put(var, old_num, "num")
+			)
+		),
+		for i in lv1 do
+			if get(i, "num") # false then
+				print(sconcat("      DOUBLE PRECISION ", i, "(", get(i, "num"), ",*)")),
+
+		if is(part(expr, 0) = block) then block(
+			for i:2 while i<=num_of_expr do
+				fortran(part(expr, i,1)=part(expr, i,2))
+		)
+		else block([],
+			lh : part(expr, 1),
+			rh : part(expr, 2),
+			print(sconcat("      DOUBLE PRECISION ", lh, "(", length(rh), ",*)")),
+
+			fortran(expr)
+		),
+		partswitch : partswitch0,
+		num_of_temp
+	)$
+/*
+F:at(jacobian([atan2(x,y)],[x,y]), [x=z+1,y=z+2]);
+eq_kF:k=F;
+hj_fortran(eq_kF);
+optimprefix:tt$
+O:optimize(eq_kF);
+hj_fortran(O);
+*/
+/*with_stdout("a.txt", );*/
+
+/* need to replace '[]' to '()' in the fortran code*/
+to_fortran(name,E,X) :=
+	block([str:sconcat("      SUBROUTINE ", name, "(", string(X), ")")],
+		str:sremove("[", str),
+		str:sremove("]", str),
+		print(str),
+		hj_fortran(E),
+		print("      END")
+	)$

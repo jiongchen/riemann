@@ -107,3 +107,7 @@ target_link_libraries(test_wave_construction
     riemann
     ${Boost_LIBRARIES}
 )
+
+if(VIENNACL_FOUND)
+    add_executable(test_viennacl test_viennacl.cc)
+endif(VIENNACL_FOUND)

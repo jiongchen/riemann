@@ -3,7 +3,8 @@ cmake_minimum_required(VERSION 2.8)
 
 list(APPEND CMAKE_CXX_FLAGS "-std=c++0x -fpermissive -fopenmp")
 
-include($ENV{HOME}/usr/share/cmake/Modules/geo_sim_sdk.cmake)
+set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake/;${CMAKE_MODULE_PATH}")
+include(geo_sim_sdk)
 include_geo_sim_sdk()
 link_geo_sim_sdk()
 include_directories(${CMAKE_SOURCE_DIR})
@@ -38,6 +39,13 @@ if(IPOPT_FOUND)
     message("IPOPT found")
     include_directories(${IPOPT_INCLUDE_DIRS})
 endif(IPOPT_FOUND)
+
+# ViennaCL
+find_package(ViennaCL)
+if(VIENNACL_FOUND)
+    message("ViennaCL found")
+    include_directories(${VIENNACL_INCLUDE_DIRS})
+endif(VIENNACL_FOUND)
 
 add_subdirectory(src)
 add_subdirectory(examples)
