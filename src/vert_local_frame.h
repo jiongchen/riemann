@@ -5,6 +5,8 @@
 
 namespace riemann {
 
+void gen_rand_orth_vec_3d(const double *x, double *xT);
+
 int calc_vert_local_frame(const zjucad::matrix::matrix<size_t> &tris,
                           const zjucad::matrix::matrix<double> &nods,
                           zjucad::matrix::matrix<double> &frame);

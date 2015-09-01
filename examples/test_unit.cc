@@ -280,8 +280,8 @@ int test_vert_local_frame(ptree &pt) {
   mati_t tris;
   matd_t nods;
   matd_t frame;
-  jtf::mesh::load_obj("../../dat/beetle.obj", tris, nods);
-  jtf::mesh::save_obj("./unitest/beetle.obj", tris, nods);
+  jtf::mesh::load_obj("../../dat/dt_camel_ref.obj", tris, nods);
+  jtf::mesh::save_obj("./unitest/camel.obj", tris, nods);
   riemann::calc_vert_local_frame(tris, nods, frame);
   frame *= 0.01;
   {
