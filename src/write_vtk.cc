@@ -110,4 +110,25 @@ int draw_edge_direct_field(const char *filename,
   return 0;
 }
 
+int draw_vert_direct_field(const char *filename,
+                           const double *vert, const size_t vert_num,
+                           const double *field) {
+  ofstream os(filename);
+  if ( os.fail() )
+    return __LINE__;
+
+  itr_matrix<const double *> nods(3, vert_num, vert);
+  itr_matrix<const double *> df(3, vert_num, field);
+
+  matrix<size_t> line(2, vert_num);
+  line(0, colon()) = colon(0, vert_num-1);
+  line(1, colon()) = colon(vert_num, 2*vert_num-1);
+  matrix<double> pts(3, 2*vert_num);
+  pts(colon(), colon(0, vert_num-1)) = nods;
+  pts(colon(), colon(vert_num, 2*vert_num-1)) = nods+df;
+  line2vtk(os, pts.begin(), pts.size(2), line.begin(), line.size(2));
+  os.close();
+  return 0;
+}
+
 }

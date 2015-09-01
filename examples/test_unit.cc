@@ -17,6 +17,8 @@
 #include "src/cotmatrix.h"
 #include "src/vtk.h"
 #include "src/grad_operator.h"
+#include "src/vert_local_frame.h"
+#include "src/write_vtk.h"
 
 using namespace std;
 using namespace Eigen;
@@ -274,6 +276,28 @@ int test_grad_operator2(ptree &pt) {
   return 0;
 }
 
+int test_vert_local_frame(ptree &pt) {
+  mati_t tris;
+  matd_t nods;
+  matd_t frame;
+  jtf::mesh::load_obj("../../dat/beetle.obj", tris, nods);
+  jtf::mesh::save_obj("./unitest/beetle.obj", tris, nods);
+  riemann::calc_vert_local_frame(tris, nods, frame);
+  frame *= 0.01;
+  {
+    matd_t x = frame(colon(0, 2), colon());
+    riemann::draw_vert_direct_field("./unitest/tangent.vtk", nods.begin(), nods.size(2), x.begin());
+  } {
+    matd_t y = frame(colon(3, 5), colon());
+    riemann::draw_vert_direct_field("./unitest/binormal.vtk", nods.begin(), nods.size(2), y.begin());
+  } {
+    matd_t z = frame(colon(6, 8), colon());
+    riemann::draw_vert_direct_field("./unitest/normal.vtk", nods.begin(), nods.size(2), z.begin());
+  }
+  cout << "[info] done\n";
+  return 0;
+}
+
 int main(int argc, char *argv[])
 {
   ptree pt;
@@ -289,6 +313,7 @@ int main(int argc, char *argv[])
     CALL_SUB_PROG(test_height_vector);
     CALL_SUB_PROG(test_grad_operator);
     CALL_SUB_PROG(test_grad_operator2);
+    CALL_SUB_PROG(test_vert_local_frame);
   } catch (const boost::property_tree::ptree_error &e) {
     cerr << "Usage: " << endl;
     zjucad::show_usage_info(std::cerr, pt);

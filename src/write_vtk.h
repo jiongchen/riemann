@@ -31,6 +31,10 @@ int draw_edge_direct_field(const char *filename,
                            const double *vert, const size_t vert_num,
                            const size_t *edge, const size_t edge_num,
                            const double *field);
+
+int draw_vert_direct_field(const char *filename,
+                           const double *vert, const size_t vert_num,
+                           const double *field);
 }
 
 #endif
