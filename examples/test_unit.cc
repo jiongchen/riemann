@@ -17,7 +17,7 @@
 #include "src/cotmatrix.h"
 #include "src/vtk.h"
 #include "src/grad_operator.h"
-#include "src/vert_local_frame.h"
+#include "src/geometry_extend.h"
 #include "src/write_vtk.h"
 
 using namespace std;
@@ -298,6 +298,44 @@ int test_vert_local_frame(ptree &pt) {
   return 0;
 }
 
+int test_point_proj(ptree &pt) {
+  {
+    cout << "TEST CASE 1\n";
+    double x[3] = {1, 1, 1};
+    double o[3] = {0, 0, 0};
+    double b0[3] = {1, 0, 0};
+    double b1[3] = {0, 1, 0};
+    double px[3], ppx[3];
+    project_point_on_plane(x, o, b0, b1, px);
+    printf("(%lf, %lf, %lf)\n", px[0], px[1], px[2]);
+    project_point_on_plane(px, o, b0, b1, ppx);
+    printf("(%lf, %lf, %lf)\n", ppx[0], ppx[1], ppx[2]);
+  } {
+    cout << "TEST CASE 2\n";
+    double x[3] = {1, 0, 0};
+    double o[3] = {0, 0, 0};
+    double b0[3] = {0, 0, 1};
+    double b1[3] = {1, 1, 0};
+    double px[3], ppx[3];
+    project_point_on_plane(x, o, b0, b1, px);
+    printf("(%lf, %lf, %lf)\n", px[0], px[1], px[2]);
+    project_point_on_plane(px, o, b0, b1, ppx);
+    printf("(%lf, %lf, %lf)\n", ppx[0], ppx[1], ppx[2]);
+  } {
+    cout << "TEST CASE 3\n";
+    double x[3] = {1, 0, 0};
+    double o[3] = {0, 0, 0};
+    double b0[3] = {0, 0, 1};
+    double b1[3] = {1, sqrt(3), 0};
+    double px[3], ppx[3];
+    project_point_on_plane(x, o, b0, b1, px);
+    printf("(%lf, %lf, %lf)\n", px[0], px[1], px[2]);
+    project_point_on_plane(px, o, b0, b1, ppx);
+    printf("(%lf, %lf, %lf)\n", ppx[0], ppx[1], ppx[2]);
+  }
+  return 0;
+}
+
 int main(int argc, char *argv[])
 {
   ptree pt;
@@ -314,6 +352,7 @@ int main(int argc, char *argv[])
     CALL_SUB_PROG(test_grad_operator);
     CALL_SUB_PROG(test_grad_operator2);
     CALL_SUB_PROG(test_vert_local_frame);
+    CALL_SUB_PROG(test_point_proj);
   } catch (const boost::property_tree::ptree_error &e) {
     cerr << "Usage: " << endl;
     zjucad::show_usage_info(std::cerr, pt);
