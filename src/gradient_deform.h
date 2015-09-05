@@ -24,6 +24,8 @@ public:
   int init();
   // manipulate
   int scale_grad_fields(const double scale);
+  int rotate_grad_fields(const double *axis, const double angle);
+  int reverse_grad_fields();
   int set_fixed_verts(const std::vector<size_t> &idx);
   int manipualte(const size_t idx, const double *u);
   // precompute

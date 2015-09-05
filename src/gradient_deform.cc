@@ -2,6 +2,7 @@
 
 #include <zjucad/matrix/itr_matrix.h>
 #include <jtflib/mesh/io.h>
+#include <Eigen/Geometry>
 
 #include "cotmatrix.h"
 #include "grad_operator.h"
@@ -14,9 +15,7 @@ using namespace Eigen;
 
 namespace riemann {
 
-gradient_field_deform::gradient_field_deform() {
-
-}
+gradient_field_deform::gradient_field_deform() {}
 
 int gradient_field_deform::load_origin_model(const char *filename) {
   int rtn = jtf::mesh::load_obj(filename, tris_, nods_);
@@ -112,6 +111,23 @@ int gradient_field_deform::calc_divergence(const VectorXd &vf, VectorXd &div) co
 
 int gradient_field_deform::scale_grad_fields(const double scale) {
   grad_xyz_ *= scale;
+  return 0;
+}
+
+int gradient_field_deform::rotate_grad_fields(const double *axis, const double angle) {
+  Vector3d ax(axis);
+  ax /= ax.norm();
+  Matrix3d rot;
+  rot = AngleAxisd(angle, ax);
+#pragma omp parallel for
+  for (size_t i = 0; i < tris_.size(2); ++i) {
+    grad_xyz_.block<3, 3>(3*i, 0) = (rot*grad_xyz_.block<3, 3>(3*i, 0)).eval();
+  }
+  return 0;
+}
+
+int gradient_field_deform::reverse_grad_fields() {
+  grad_xyz_ *= -1;
   return 0;
 }
 

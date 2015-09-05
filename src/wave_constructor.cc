@@ -521,6 +521,10 @@ int wave_constructor::save_feature_to_vtk(const char *filename) const {
     cerr << "[error] can not open " << filename << endl;
     return __LINE__;
   }
+  if ( lines_.size() == 0 ) {
+    cout << "[info] no features to write\n";
+    return 0;
+  }
   line2vtk(os, &nods_[0], nods_.size(2), &lines_[0], lines_.size(2));
   os.close();
   return 0;
@@ -597,6 +601,8 @@ inline bool is_inflexion(const matd_t &p, const matd_t &front, const matd_t &bac
 }
 
 void wave_constructor::count_vert_show_on_feature() {
+  if ( lines_.size() == 0 )
+    return;
   vert_count_.clear();
   std::map<size_t, std::set<size_t>> tmp_vert_count;
   for(size_t i = 0; i < lines_.size(2); ++i) {
@@ -737,15 +743,15 @@ int wave_constructor::solve_wave_hard_feature() {
       vector<Triplet<double>> cons_trips;
       feature_cons_->Jac(nullptr, xdim, &cons_trips);
       for (auto &it : cons_trips) {
-        trips.push_back(Triplet<double>(it.row(), it.col(), it.value()));
-        trips.push_back(Triplet<double>(it.col(), it.row(), it.value()));
+        trips.push_back(Triplet<double>(it.row(), it.col(), -it.value()));
+        trips.push_back(Triplet<double>(it.col(), it.row(), -it.value()));
       }
       LHS.reserve(trips.size());
       LHS.setFromTriplets(trips.begin(), trips.end());
     }
     VectorXd rhs = VectorXd::Zero(xdim+cdim); {
       rhs.head(xdim) = -J.transpose()*cv;
-      rhs.tail(cdim) = -fv;
+      rhs.tail(cdim) = fv;
     }
     lu_solver_.compute(LHS);
     ASSERT(lu_solver_.info() == Success);

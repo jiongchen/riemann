@@ -6,6 +6,10 @@
 using namespace std;
 using namespace riemann;
 
+#define X 0
+#define Y 1
+#define Z 2
+
 int main(int argc, char *argv[])
 {
   if ( argc != 2 ) {
@@ -18,23 +22,23 @@ int main(int argc, char *argv[])
   handle.load_origin_model(argv[1]);
   handle.save_origin_model("./grad_edit/origin.obj");
   handle.init();
-  enum {X, Y, Z};
   handle.see_coord_grad_fields("./grad_edit/grad_x.vtk", X);
   handle.see_coord_grad_fields("./grad_edit/grad_y.vtk", Y);
   handle.see_coord_grad_fields("./grad_edit/grad_z.vtk", Z);
 
   handle.scale_grad_fields(1.5);
+  handle.reverse_grad_fields();
   handle.see_coord_grad_fields("./grad_edit/scale_grad_x.vtk", X);
   handle.see_coord_grad_fields("./grad_edit/scale_grad_y.vtk", Y);
   handle.see_coord_grad_fields("./grad_edit/scale_grad_z.vtk", Z);
 
   vector<size_t> idx{6976};
   handle.set_fixed_verts(idx);
-  {
-    const size_t idx = 0;
-    const double u[3] = {1.0, -1.0, 1.0};
-    handle.manipualte(idx, u);
-  }
+//  {
+//    const size_t idx = 0;
+//    const double u[3] = {0, 0, 0};
+//    handle.manipualte(idx, u);
+//  }
 
   handle.precompute();
   handle.see_harmonic_field("./grad_edit/hf.vtk");
