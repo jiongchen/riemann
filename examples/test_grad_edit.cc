@@ -26,21 +26,18 @@ int main(int argc, char *argv[])
   handle.see_coord_grad_fields("./grad_edit/grad_y.vtk", Y);
   handle.see_coord_grad_fields("./grad_edit/grad_z.vtk", Z);
 
-  handle.scale_grad_fields(1.5);
-  handle.reverse_grad_fields();
-  handle.see_coord_grad_fields("./grad_edit/scale_grad_x.vtk", X);
-  handle.see_coord_grad_fields("./grad_edit/scale_grad_y.vtk", Y);
-  handle.see_coord_grad_fields("./grad_edit/scale_grad_z.vtk", Z);
+//  handle.scale_grad_fields(1.5);
+//  handle.reverse_grad_fields();
+//  handle.see_coord_grad_fields("./grad_edit/scale_grad_x.vtk", X);
+//  handle.see_coord_grad_fields("./grad_edit/scale_grad_y.vtk", Y);
+//  handle.see_coord_grad_fields("./grad_edit/scale_grad_z.vtk", Z);
 
-  vector<size_t> idx{6976};
-  handle.set_fixed_verts(idx);
-//  {
-//    const size_t idx = 0;
-//    const double u[3] = {0, 0, 0};
-//    handle.manipualte(idx, u);
-//  }
+  vector<size_t> fixIDs{6976};
+  handle.set_fixed_verts(fixIDs);
+  vector<size_t> editIDs{1, 100, 200};
+  handle.edit_boundary(editIDs);
 
-  handle.precompute();
+  handle.propagate_transform();
   handle.see_harmonic_field("./grad_edit/hf.vtk");
   handle.deform();
   handle.save_deformed_model("./grad_edit/deform.obj");

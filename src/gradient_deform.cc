@@ -80,6 +80,8 @@ int gradient_field_deform::init() {
   _nods_ = nods_;
   // initialize harmonic scalar field
   hf_ = VectorXd::Zero(nods_.size(2));
+  // initialize transform field
+  transform_ = MatrixXd::Zero(5, nods_.size(2));
   return 0;
 }
 
@@ -109,39 +111,43 @@ int gradient_field_deform::calc_divergence(const VectorXd &vf, VectorXd &div) co
   return 0;
 }
 
-int gradient_field_deform::scale_grad_fields(const double scale) {
-  grad_xyz_ *= scale;
-  return 0;
-}
+//int gradient_field_deform::scale_grad_fields(const double scale) {
+//  grad_xyz_ *= scale;
+//  return 0;
+//}
 
-int gradient_field_deform::rotate_grad_fields(const double *axis, const double angle) {
-  Vector3d ax(axis);
-  ax /= ax.norm();
-  Matrix3d rot;
-  rot = AngleAxisd(angle, ax);
-#pragma omp parallel for
-  for (size_t i = 0; i < tris_.size(2); ++i) {
-    grad_xyz_.block<3, 3>(3*i, 0) = (rot*grad_xyz_.block<3, 3>(3*i, 0)).eval();
-  }
-  return 0;
-}
+//int gradient_field_deform::rotate_grad_fields(const double *axis, const double angle) {
+//  Vector3d ax(axis);
+//  ax /= ax.norm();
+//  Matrix3d rot;
+//  rot = AngleAxisd(angle, ax);
+//#pragma omp parallel for
+//  for (size_t i = 0; i < tris_.size(2); ++i) {
+//    grad_xyz_.block<3, 3>(3*i, 0) = (rot*grad_xyz_.block<3, 3>(3*i, 0)).eval();
+//  }
+//  return 0;
+//}
 
-int gradient_field_deform::reverse_grad_fields() {
-  grad_xyz_ *= -1;
-  return 0;
-}
+//int gradient_field_deform::reverse_grad_fields() {
+//  grad_xyz_ *= -1;
+//  return 0;
+//}
 
 int gradient_field_deform::set_fixed_verts(const vector<size_t> &idx) {
+  fixDOF_.clear();
   for (auto &id : idx) {
     fixDOF_.insert(id);
   }
+  precompute();
   return 0;
 }
 
-int gradient_field_deform::manipualte(const size_t idx, const double *u) {
-  fixDOF_.insert(idx);
-  hf_[idx] = 1.0;
-  _nods_(colon(), idx) += itr_matrix<const double*>(3, 1, u);
+int gradient_field_deform::edit_boundary(const vector<size_t> &idx) {
+  editDOF_.clear();
+  for (auto &id : idx) {
+    editDOF_.insert(id);
+    hf_[id] = 1.0;
+  }
   return 0;
 }
 
@@ -154,16 +160,33 @@ int gradient_field_deform::precompute() {
   }
   sol_.compute(Ltemp);
   ASSERT(sol_.info() == Success);
+  return 0;
+}
 
+int gradient_field_deform::propagate_transform() {
   // solve for harmonic fields: L(f0+df)=0
-  VectorXd RHS = -L_*hf_;
-  if ( !fixDOF_.empty() )
-    riemann::rm_vector_row(RHS, g2l_);
-  VectorXd df = sol_.solve(RHS);
-  ASSERT(sol_.info() == Success);
+  unordered_set<size_t> noneFreeDOF;
+  for (auto &it : fixDOF_)
+    noneFreeDOF.insert(it);
+  for (auto &it : editDOF_)
+    noneFreeDOF.insert(it);
+  vector<size_t> G2L;
+  build_global_local_mapping((size_t)nods_.size(2), noneFreeDOF, G2L);
+
+  SparseMatrix<double> LHS = L_;
+  VectorXd rhs = -LHS*hf_;
+  if ( !noneFreeDOF.empty() ) {
+    riemann::rm_spmat_col_row(LHS, G2L);
+    riemann::rm_vector_row(rhs, G2L);
+  }
+  SimplicialCholesky<SparseMatrix<double>> solver;
+  solver.compute(LHS);
+  ASSERT(solver.info() == Success);
+  VectorXd df = solver.solve(rhs);
+  ASSERT(solver.info() == Success);
   VectorXd Df = VectorXd::Zero(nods_.size(2));
-  if ( !fixDOF_.empty() )
-    riemann::rc_vector_row(df, g2l_, Df);
+  if ( !noneFreeDOF.empty() )
+    riemann::rc_vector_row(df, G2L, Df);
   else
     df = Df;
   hf_ += Df;

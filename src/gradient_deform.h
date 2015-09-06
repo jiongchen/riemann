@@ -23,13 +23,13 @@ public:
   // init
   int init();
   // manipulate
-  int scale_grad_fields(const double scale);
-  int rotate_grad_fields(const double *axis, const double angle);
-  int reverse_grad_fields();
+//  int scale_grad_fields(const double scale);
+//  int rotate_grad_fields(const double *axis, const double angle);
+//  int reverse_grad_fields();
   int set_fixed_verts(const std::vector<size_t> &idx);
-  int manipualte(const size_t idx, const double *u);
-  // precompute
-  int precompute();
+  int edit_boundary(const std::vector<size_t> &idx);
+  int propagate_transform(); /// todo
+  int calc_guidance_field(); /// todo
   // deform
   int deform();
   // debug
@@ -41,6 +41,7 @@ private:
   int calc_element_area();
   int solve_for_xyz(const int xyz);
   int calc_divergence(const Eigen::VectorXd &vf, Eigen::VectorXd &div) const;
+  int precompute();
 
   mati_t tris_;
   matd_t nods_, _nods_;
@@ -50,7 +51,9 @@ private:
   Eigen::MatrixXd gradB_;           // 3 by 3*#face
   Eigen::VectorXd area_;
 
-  std::unordered_set<size_t> fixDOF_;
+  Eigen::MatrixXd transform_;       // 5 by #vert
+
+  std::unordered_set<size_t> fixDOF_, editDOF_;
   std::vector<size_t> g2l_;
   Eigen::SimplicialCholesky<Eigen::SparseMatrix<double>> sol_;
   Eigen::VectorXd hf_;

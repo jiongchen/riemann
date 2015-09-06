@@ -345,6 +345,25 @@ int test_point_proj(ptree &pt) {
   return 0;
 }
 
+int test_eigen_quaternion(ptree &pt) {
+  Quaternion<double> qt(AngleAxisd(M_PI/2, -Vector3d::UnitY()));
+  cout << "w: " << qt.w() << endl;
+  cout << "x: " << qt.x() << endl;
+  cout << "y: " << qt.y() << endl;
+  cout << "z: " << qt.z() << endl;
+  Matrix3d rot;
+  rot = qt.toRotationMatrix();
+  cout << rot << endl;
+  cout << qt._transformVector(Vector3d::UnitX()) << endl;
+
+  Quaternion<double> qi(Matrix3d::Identity());
+  cout << qi.w() << endl
+       << qi.x() << endl
+       << qi.y() << endl
+       << qi.z() << endl;
+  return 0;
+}
+
 int main(int argc, char *argv[])
 {
   ptree pt;
@@ -362,6 +381,7 @@ int main(int argc, char *argv[])
     CALL_SUB_PROG(test_grad_operator2);
     CALL_SUB_PROG(test_vert_local_frame);
     CALL_SUB_PROG(test_point_proj);
+    CALL_SUB_PROG(test_eigen_quaternion);
   } catch (const boost::property_tree::ptree_error &e) {
     cerr << "Usage: " << endl;
     zjucad::show_usage_info(std::cerr, pt);
