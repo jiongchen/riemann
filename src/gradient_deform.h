@@ -23,9 +23,6 @@ public:
   // init
   int init();
   // manipulate
-//  int scale_grad_fields(const double scale);
-//  int rotate_grad_fields(const double *axis, const double angle);
-//  int reverse_grad_fields();
   int set_fixed_verts(const std::vector<size_t> &idx);
   int edit_boundary(const std::vector<size_t> &idx);
   int propagate_transform(); /// todo
@@ -36,15 +33,20 @@ public:
   int see_coord_grad_fields(const char *filename, const int xyz) const;
   int see_harmonic_field(const char *filename) const;
 private:
-  int calc_init_coord_grad();
-  int calc_bary_basis_grad();
-  int calc_element_area();
+  int calc_bary_basis_grad(const mati_t &tris, const matd_t &nods, Eigen::MatrixXd &gradB);
+  int calc_element_area(const mati_t &tris, const matd_t &nods, Eigen::VectorXd &area);
+  // for fragment
+  int calc_frag_bary_basis_grad();
+  int calc_frag_element_area();
+
   int solve_for_xyz(const int xyz);
   int calc_divergence(const Eigen::VectorXd &vf, Eigen::VectorXd &div) const;
   int precompute();
 
   mati_t tris_;
   matd_t nods_, _nods_;
+  matd_t fragment_;
+
   Eigen::SparseMatrix<double> G_;   // 3*#face by #vert
   Eigen::SparseMatrix<double> L_;   // #vert by #vert
   Eigen::MatrixXd grad_xyz_;

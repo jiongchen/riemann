@@ -22,6 +22,9 @@ void project_point_on_subspace(const double *x, const size_t dim,
 void project_point_on_plane(const double *x, const double *origin,
                             const double *tan0, const double *tan1,
                             double *proj_x);
+
+void rotate_and_scale_triangle(const double *x, const double *quaternion, const double s, const double *xnew);
+
 }
 
 #endif

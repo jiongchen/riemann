@@ -22,9 +22,9 @@ int main(int argc, char *argv[])
   handle.load_origin_model(argv[1]);
   handle.save_origin_model("./grad_edit/origin.obj");
   handle.init();
-  handle.see_coord_grad_fields("./grad_edit/grad_x.vtk", X);
-  handle.see_coord_grad_fields("./grad_edit/grad_y.vtk", Y);
-  handle.see_coord_grad_fields("./grad_edit/grad_z.vtk", Z);
+//  handle.see_coord_grad_fields("./grad_edit/grad_x.vtk", X);
+//  handle.see_coord_grad_fields("./grad_edit/grad_y.vtk", Y);
+//  handle.see_coord_grad_fields("./grad_edit/grad_z.vtk", Z);
 
 //  handle.scale_grad_fields(1.5);
 //  handle.reverse_grad_fields();
