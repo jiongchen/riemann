@@ -41,7 +41,7 @@ if(IPOPT_FOUND)
 endif(IPOPT_FOUND)
 
 # ViennaCL
-find_package(ViennaCL)
+#find_package(ViennaCL)
 if(VIENNACL_FOUND)
     message("ViennaCL found")
     include_directories(${VIENNACL_INCLUDE_DIRS})
