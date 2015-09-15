@@ -9,6 +9,8 @@
 #include <igl/readOFF.h>
 #include <igl/readDMAT.h>
 #include <igl/grad.h>
+#include <hjlib/math/blas_lapack.h>
+#include <zjucad/matrix/lapack.h>
 
 #include "src/config.h"
 #include "src/energy.h"
@@ -374,6 +376,42 @@ int test_high_resolution_timer(ptree &pt) {
   return 0;
 }
 
+int test_defo_grad(ptree &pt) {
+  matd_t nods = rand(3, 3);
+  matd_t origin = nods*ones<double>(3, 1)/3.0;
+  matd_t frame(3, 3); {
+    frame(colon(), 0) = nods(colon(), 1)-nods(colon(), 0);
+    frame(colon(), 1) = nods(colon(), 2)-nods(colon(), 0);
+    frame(colon(), 2) = cross(frame(colon(), 0), frame(colon(), 1));
+    frame(colon(), 1) = cross(frame(colon(), 2), frame(colon(), 0));
+    frame(colon(), 0) /= norm(frame(colon(), 0));
+    frame(colon(), 1) /= norm(frame(colon(), 1));
+    frame(colon(), 2) /= norm(frame(colon(), 2));
+  }
+  matd_t uv(2, 3); {
+    for (size_t i = 0; i < 3; ++i) {
+      uv(0, i) = dot(frame(colon(), 0), nods(colon(), i)-origin);
+      uv(1, i) = dot(frame(colon(), 1), nods(colon(), i)-origin);
+    }
+  }
+  matd_t gradB(3, 3); {
+    calc_tri_linear_basis_grad<3>(&nods[0], &gradB[0]);
+  }
+  // [\nabla u^T]
+  // [\nabla v^T]
+  matd_t defo_grad(2, 2); {
+    matd_t gradU = gradB*trans(uv(0, colon()));
+    matd_t gradV = gradB*trans(uv(1, colon()));
+    defo_grad(0, 0) = dot(frame(colon(), 0), gradU);
+    defo_grad(0, 1) = dot(frame(colon(), 1), gradU);
+    defo_grad(1, 0) = dot(frame(colon(), 0), gradV);
+    defo_grad(1, 1) = dot(frame(colon(), 1), gradV);
+  }
+  cout << "[info] deformation gradient:\n" << defo_grad << endl;
+  cout << "[info] done\n";
+  return 0;
+}
+
 int main(int argc, char *argv[])
 {
   ptree pt;
@@ -393,6 +431,7 @@ int main(int argc, char *argv[])
     CALL_SUB_PROG(test_point_proj);
     CALL_SUB_PROG(test_eigen_quaternion);
     CALL_SUB_PROG(test_high_resolution_timer);
+    CALL_SUB_PROG(test_defo_grad);
   } catch (const boost::property_tree::ptree_error &e) {
     cerr << "Usage: " << endl;
     zjucad::show_usage_info(std::cerr, pt);
