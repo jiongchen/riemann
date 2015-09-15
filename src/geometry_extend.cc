@@ -38,6 +38,30 @@ int calc_vert_local_frame(const mati_t &tris, const matd_t &nods, matd_t &frame)
   return 0;
 }
 
+void project_vector_on_subspace(const double *vect, const size_t dim,
+                                const double *basis, const size_t sub_dim,
+                                double *proj_vect) {
+  Map<const VectorXd> b(vect, dim);
+  Map<const MatrixXd> A(basis, dim, sub_dim);
+  Map<VectorXd> pv(proj_vect, dim);
+  MatrixXd LHS = A.transpose()*A;
+  VectorXd rhs = A.transpose()*b;
+  FullPivLU<MatrixXd> sol;
+  sol.compute(LHS);
+  VectorXd x = sol.solve(rhs);
+  pv = A*x;
+}
+
+void project_point_on_subspace(const double *x, const size_t dim,
+                               const double *origin, const double *basis, const size_t sub_dim,
+                               double *proj_x) {
+  Map<const VectorXd> X(x, dim), O(origin, dim);
+  Map<VectorXd> Px(proj_x, dim);
+  VectorXd OX = X-O, dx(dim);
+  project_vector_on_subspace(&OX[0], dim, basis, sub_dim, &dx[0]);
+  Px = O+dx;
+}
+
 void project_point_on_plane(const double *x, const double *origin,
                             const double *tan0, const double *tan1,
                             double *proj_x) {

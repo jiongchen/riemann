@@ -18,6 +18,6 @@ trying to get familiar with libigl, and may implement some classical algorithms 
 
 [2015-6-25] Implement deformation transfer for triangle meshes [[Sumner04]](http://people.csail.mit.edu/sumner/research/deftransfer/Sumner2004DTF.pdf), which uses gradient based deformation method.
 
-[2015-7-1] Implement another method for solving triangle correspondence guided by harmonic fields in deformation transfer, which is proposed by [[Rhaleb05]](http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.226.1150&rep=rep1&type=pdf).
+[2015-7-1] Implement another method for solving triangle correspondence guided by harmonic fields in deformation transfer, which is proposed by [[Zayer05]](http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.226.1150&rep=rep1&type=pdf).
 
 [2015-8-27] Implement construction of standing wave on surface proposed by [[Zhang10]](http://www.cad.zju.edu.cn/home/hj/10/Huang10WaveQuad.pdf).

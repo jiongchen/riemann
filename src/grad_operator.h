@@ -39,8 +39,12 @@ void calc_tri_linear_basis_grad(const double *vert, double *gradB) {
   Eigen::Map<Eigen::Matrix<double, dim, 3>> G(gradB);
   G.col(0) /= G.col(0).squaredNorm();
   G.col(1) /= G.col(1).squaredNorm();
-  G.col(2) /= G.col(2).suqaredNorm();
+  G.col(2) /= G.col(2).squaredNorm();
 }
+
+void calc_tet_height_vector(const double *vert, double *height);
+
+void calc_tet_linear_basis_grad(const double *vert, double *gradB);
 
 /**
  * @brief calc_grad_operator for 3D triangle mesh

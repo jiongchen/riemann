@@ -9,6 +9,8 @@
 #include <igl/readOFF.h>
 #include <igl/readDMAT.h>
 #include <igl/grad.h>
+#include <hjlib/math/blas_lapack.h>
+#include <zjucad/matrix/lapack.h>
 
 #include "src/config.h"
 #include "src/energy.h"
@@ -19,6 +21,7 @@
 #include "src/grad_operator.h"
 #include "src/geometry_extend.h"
 #include "src/write_vtk.h"
+#include "src/timer.h"
 
 using namespace std;
 using namespace Eigen;
@@ -303,36 +306,147 @@ int test_point_proj(ptree &pt) {
     cout << "TEST CASE 1\n";
     double x[3] = {1, 1, 1};
     double o[3] = {0, 0, 0};
-    double b0[3] = {1, 0, 0};
-    double b1[3] = {0, 1, 0};
+    double b[6] = {1, 0, 0, 0, 1, 0};
     double px[3], ppx[3];
-    project_point_on_plane(x, o, b0, b1, px);
+    project_point_on_plane(x, o, &b[0], &b[3], px);
     printf("(%lf, %lf, %lf)\n", px[0], px[1], px[2]);
-    project_point_on_plane(px, o, b0, b1, ppx);
+    project_point_on_subspace(x, 3, o, b, 2, px);
+    printf("(%lf, %lf, %lf)\n", px[0], px[1], px[2]);
+    project_point_on_plane(px, o, &b[0], &b[3], ppx);
+    printf("(%lf, %lf, %lf)\n", ppx[0], ppx[1], ppx[2]);
+    project_point_on_subspace(px, 3, o, b, 2, ppx);
     printf("(%lf, %lf, %lf)\n", ppx[0], ppx[1], ppx[2]);
   } {
     cout << "TEST CASE 2\n";
     double x[3] = {1, 0, 0};
     double o[3] = {0, 0, 0};
-    double b0[3] = {0, 0, 1};
-    double b1[3] = {1, 1, 0};
+    double b[6] = {0, 0, 1, 1, 1, 0};
     double px[3], ppx[3];
-    project_point_on_plane(x, o, b0, b1, px);
+    project_point_on_plane(x, o, &b[0], &b[3], px);
     printf("(%lf, %lf, %lf)\n", px[0], px[1], px[2]);
-    project_point_on_plane(px, o, b0, b1, ppx);
+    project_point_on_plane(px, o, &b[0], &b[3], ppx);
+    printf("(%lf, %lf, %lf)\n", ppx[0], ppx[1], ppx[2]);
+    project_point_on_subspace(x, 3, o, b, 2, px);
+    printf("(%lf, %lf, %lf)\n", px[0], px[1], px[2]);
+    project_point_on_subspace(px, 3, o, b, 2, px);
     printf("(%lf, %lf, %lf)\n", ppx[0], ppx[1], ppx[2]);
   } {
     cout << "TEST CASE 3\n";
     double x[3] = {1, 0, 0};
     double o[3] = {0, 0, 0};
-    double b0[3] = {0, 0, 1};
-    double b1[3] = {1, sqrt(3), 0};
+    double b[6] = {0, 0, 1, 1, sqrt(3), 0};
     double px[3], ppx[3];
-    project_point_on_plane(x, o, b0, b1, px);
+    project_point_on_plane(x, o, &b[0], &b[3], px);
     printf("(%lf, %lf, %lf)\n", px[0], px[1], px[2]);
-    project_point_on_plane(px, o, b0, b1, ppx);
+    project_point_on_plane(px, o, &b[0], &b[3], ppx);
+    printf("(%lf, %lf, %lf)\n", ppx[0], ppx[1], ppx[2]);
+    project_point_on_subspace(x, 3, o, b, 2, px);
+    printf("(%lf, %lf, %lf)\n", px[0], px[1], px[2]);
+    project_point_on_subspace(px, 3, o, b, 2, px);
     printf("(%lf, %lf, %lf)\n", ppx[0], ppx[1], ppx[2]);
   }
+  return 0;
+}
+
+int test_eigen_quaternion(ptree &pt) {
+  Quaternion<double> qt(AngleAxisd(M_PI/2, -Vector3d::UnitY()));
+  cout << "w: " << qt.w() << endl;
+  cout << "x: " << qt.x() << endl;
+  cout << "y: " << qt.y() << endl;
+  cout << "z: " << qt.z() << endl;
+  Matrix3d rot;
+  rot = qt.toRotationMatrix();
+  cout << rot << endl;
+  cout << qt._transformVector(Vector3d::UnitX()) << endl;
+
+  Quaternion<double> qi(Matrix3d::Identity());
+  cout << qi.w() << endl
+       << qi.x() << endl
+       << qi.y() << endl
+       << qi.z() << endl;
+  return 0;
+}
+
+int test_high_resolution_timer(ptree &pt) {
+  riemann::high_resolution_timer timer;
+  timer.start();
+  sleep(1);
+  timer.stop();
+  timer.log();
+  return 0;
+}
+
+int test_defo_grad(ptree &pt) {
+  matd_t nods = rand(3, 3);
+  matd_t origin = nods*ones<double>(3, 1)/3.0;
+  matd_t frame(3, 3); {
+    frame(colon(), 0) = nods(colon(), 1)-nods(colon(), 0);
+    frame(colon(), 1) = nods(colon(), 2)-nods(colon(), 0);
+    frame(colon(), 2) = cross(frame(colon(), 0), frame(colon(), 1));
+    frame(colon(), 1) = cross(frame(colon(), 2), frame(colon(), 0));
+    frame(colon(), 0) /= norm(frame(colon(), 0));
+    frame(colon(), 1) /= norm(frame(colon(), 1));
+    frame(colon(), 2) /= norm(frame(colon(), 2));
+  }
+  matd_t uv(2, 3); {
+    for (size_t i = 0; i < 3; ++i) {
+      uv(0, i) = dot(frame(colon(), 0), nods(colon(), i)-origin);
+      uv(1, i) = dot(frame(colon(), 1), nods(colon(), i)-origin);
+    }
+  }
+  matd_t gradB(3, 3); {
+    calc_tri_linear_basis_grad<3>(&nods[0], &gradB[0]);
+  }
+  // [\nabla u^T]
+  // [\nabla v^T]
+  srand(time(NULL));
+  matd_t uv_ = rand(2, 3);
+  matd_t defoGrad(2, 2); {
+    matd_t gradU = gradB*trans(uv_(0, colon()));
+    matd_t gradV = gradB*trans(uv_(1, colon()));
+    defoGrad(0, 0) = dot(frame(colon(), 0), gradU);
+    defoGrad(0, 1) = dot(frame(colon(), 1), gradU);
+    defoGrad(1, 0) = dot(frame(colon(), 0), gradV);
+    defoGrad(1, 1) = dot(frame(colon(), 1), gradV);
+    cout << "[info] defoGrad:\n" << defoGrad << endl;
+  } {
+    matd_t Ds = uv(colon(), colon(1, 2))-uv(colon(), 0)*ones<double>(1, 2);
+    inv(Ds);
+    matd_t Dx = uv_(colon(), colon(1, 2))-uv_(colon(), 0)*ones<double>(1, 2);
+    defoGrad = Dx*Ds;
+    cout << "[info] defoGrad:\n" << defoGrad << endl;
+  }
+
+  cout << "[info] done\n";
+  return 0;
+}
+
+int test_defo_grad_other(ptree &pt) {
+  matd_t nods = zeros<double>(3, 4);
+  nods(colon(), colon(1, 3)) = identity_matrix<double>(3);
+
+  matd_t height(3, 4); {
+    calc_tet_height_vector(&nods[0], &height[0]);
+    cout << height << endl;
+  }
+  matd_t gradB(3, 4); {
+    calc_tet_linear_basis_grad(&nods[0], &gradB[0]);
+  }
+  srand(time(NULL));
+  matd_t nods_ = rand(3, 4);
+  matd_t defoGrad(3, 3); {
+    defoGrad(0, colon()) = trans(gradB*trans(nods_(0, colon())));
+    defoGrad(1, colon()) = trans(gradB*trans(nods_(1, colon())));
+    defoGrad(2, colon()) = trans(gradB*trans(nods_(2, colon())));
+    cout << "[info] deformation gradient:\n" << defoGrad << endl;
+  } {
+    matd_t Ds = nods(colon(), colon(1, 3))-nods(colon(), 0)*ones<double>(1, 3);
+    inv(Ds);
+    matd_t Dx = nods_(colon(), colon(1, 3))-nods_(colon(), 0)*ones<double>(1, 3);
+    defoGrad = Dx*Ds;
+    cout << "[info] deformation gradient:\n" << defoGrad << endl;
+  }
+  cout << "[info] done\n";
   return 0;
 }
 
@@ -353,6 +467,10 @@ int main(int argc, char *argv[])
     CALL_SUB_PROG(test_grad_operator2);
     CALL_SUB_PROG(test_vert_local_frame);
     CALL_SUB_PROG(test_point_proj);
+    CALL_SUB_PROG(test_eigen_quaternion);
+    CALL_SUB_PROG(test_high_resolution_timer);
+    CALL_SUB_PROG(test_defo_grad);
+    CALL_SUB_PROG(test_defo_grad_other);
   } catch (const boost::property_tree::ptree_error &e) {
     cerr << "Usage: " << endl;
     zjucad::show_usage_info(std::cerr, pt);

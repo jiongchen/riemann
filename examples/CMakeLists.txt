@@ -25,6 +25,7 @@ target_link_libraries(test_unit
     riemann
     zjucad-ptree
     ${Boost_LIBRARIES}
+    lapack
 )
 
 add_executable(test_dcp test_dcp.cc)
