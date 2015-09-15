@@ -19,6 +19,7 @@
 #include "src/grad_operator.h"
 #include "src/geometry_extend.h"
 #include "src/write_vtk.h"
+#include "src/timer.h"
 
 using namespace std;
 using namespace Eigen;
@@ -364,6 +365,15 @@ int test_eigen_quaternion(ptree &pt) {
   return 0;
 }
 
+int test_high_resolution_timer(ptree &pt) {
+  riemann::high_resolution_timer timer;
+  timer.start();
+  sleep(1);
+  timer.stop();
+  timer.log();
+  return 0;
+}
+
 int main(int argc, char *argv[])
 {
   ptree pt;
@@ -382,6 +392,7 @@ int main(int argc, char *argv[])
     CALL_SUB_PROG(test_vert_local_frame);
     CALL_SUB_PROG(test_point_proj);
     CALL_SUB_PROG(test_eigen_quaternion);
+    CALL_SUB_PROG(test_high_resolution_timer);
   } catch (const boost::property_tree::ptree_error &e) {
     cerr << "Usage: " << endl;
     zjucad::show_usage_info(std::cerr, pt);
