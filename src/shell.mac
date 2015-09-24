@@ -1,0 +1,30 @@
+load(hj_fortran2)$
+load(cj_function)$
+
+optimprefix : tt$
+
+f: openw("shell.f90")$
+
+block(
+  X: genmatrix(X, 3, 3),
+  X0: genmatrix(X0, 3, 3),
+  T: genmatrix(T, 3, 3),
+  lam: genmatrix(lam, 1, 1),
+  miu: genmatrix(miu, 1, 1),
+  membrane(X, X0, T, lam, miu) := block(
+    [E, E0, I, area, A],
+    E0: addcol(col(X0,2)-col(X0,1), col(X0,3)-col(X0,2), col(X0,1)-col(X0,3)),
+    E: addcol(col(X,2)-col(X,1), col(X,3)-col(X,2), col(X,1)-col(X,3)),
+    area: 0.5*NORM(CROSS(col(E0,1),col(E0,2))),
+    I: [],
+    for i:1 while i <= 3 do
+      I: append(I, DOT()),
+    A: zeromatrix(3, 3),
+    for i:1 while i <= 3 do
+      A: A+(I[mod(i+1,3)]+I[]-I[i])*(),
+    A: A/(8.0*area*area),
+  ),
+  with_stdout(f, val_jac_hes_to_f90(membrane, [X, X0, T, lam, miu]))
+)$
+
+close(f)$

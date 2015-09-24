@@ -65,7 +65,7 @@ void cotmatrix(const matrix<size_t> &cell,
       runtime_dim_add_diag_block(dim, des, src, half_cot_val[k], &trips);
     }
   }
-  const size_t lap_size = dim * nods.size(2);
+  const size_t lap_size = dim*nods.size(2);
   L->resize(lap_size, lap_size);
   L->reserve(trips.size());
   L->setFromTriplets(trips.begin(), trips.end());
