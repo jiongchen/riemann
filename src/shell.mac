@@ -14,26 +14,24 @@ block(
   miu: genmatrix(miu, 1, 1),
   tri_membrane(X, X0, T, lam, miu) := block(
     [E, E0, I, area, A, detA, temp, e1e2, rtn],
-    /*
     E0: addcol(col(X0,2)-col(X0,1), col(X0,3)-col(X0,2), col(X0,1)-col(X0,3)),
     E: addcol(col(X,2)-col(X,1), col(X,3)-col(X,2), col(X,1)-col(X,3)),
     area: 0.5*NORM(CROSS(col(E0,1),col(E0,2))),
     I: [],
     for i:1 while i<=3 do
-      I: append(I, DOT(col(E,i), col(E,i))),
+      I: append(I, [DOT(col(E,i), col(E,i))]),
     A: zeromatrix(3, 3),
     for i:1 while i<=3 do
-      A: A+(I[mod(i+1,3)]+I[mod(i+2,3)]-I[i])*(col(T,i).transpose(col(T,i))),
+      A: A+(I[1+mod(i,3)]+I[1+mod(i+1,3)]-I[i])*(col(T,i).transpose(col(T,i))),
     A: A/(8.0*area*area),
     e1e2: CROSS(col(E,1), col(E,2)),
-    temp: e1e2.transpose(e1e2)/(4*area*area),
+    temp: e1e2 . transpose(e1e2)/(4.0*area*area),
     detA: determinant(A+temp),
-    rtn: 0.5*miu*trace(A)+0.25*lam*detA-(0.5*miu+0.25*lam)*log(detA)-miu-0.25*lam,
-    */
-    rtn: trace(X),
-    matrix([rtn])
+    rtn: 0.5*miu*mat_trace(A)+0.25*lam*detA-(0.5*miu+0.25*lam)*log(detA)-miu-0.25*lam,
+    rtn
   ),
-  with_stdout(f, val_jac_hes_to_f90(tri_membrane, [X, X0, T, lam, miu]))
+  with_stdout(f, val_jac_hes_to_f90(tri_membrane, [X, X0, T, lam, miu])),
+  return()
 )$
 
 close(f)$
