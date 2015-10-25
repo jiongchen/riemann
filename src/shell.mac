@@ -5,6 +5,7 @@ optimprefix : tt$
 
 f: openw("shell.f90")$
 
+/* see 2012 SGP paper: Time-Discrete Geodesics in the Space of Shells */
 block(
   [X, X0, T, lam, miu],
   X: genmatrix(X, 3, 3),
@@ -31,6 +32,34 @@ block(
     rtn
   ),
   with_stdout(f, val_jac_hes_to_f90(tri_membrane, [X, X0, T, lam, miu])),
+  return()
+)$
+
+block(
+  [X],
+  X: genmatrix(X, 3, 2),
+  calc_edge_length(X) := matrix([NORM(col(X,1)-col(X,2))]),
+  with_stdout(f, val_jac_hes_to_f90(calc_edge_length, [X])),
+  return()
+)$
+
+block(
+  [X],
+  X: genmatrix(X, 3, 4),
+  calc_dihedral_angle(X) := block(
+    [b, b1x2, b2x3, sint, cost],
+    b: addcol(col(X,2)-col(X,1), col(X,3)-col(X,2), col(X,4)-col(X,3)),
+    b1x2: CROSS(col(b,1), col(b,2)),
+    b2x3: CROSS(col(b,2), col(b,3)),
+    sint: DOT(CROSS(b1x2, b2x3), col(b,2)/NORM(col(b,2))),
+    cost: -DOT(b1x2, b2x3),
+    matrix([ atan2(sint, cost) ])
+  ),
+  with_stdout(f, val_jac_hes_to_f90(calc_dihedral_angle, [X])),
+  return()
+)$
+
+block(
   return()
 )$
 

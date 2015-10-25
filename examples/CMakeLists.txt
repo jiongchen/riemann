@@ -112,3 +112,9 @@ target_link_libraries(test_wave_construction
 if(VIENNACL_FOUND)
     add_executable(test_viennacl test_viennacl.cc)
 endif(VIENNACL_FOUND)
+
+add_executable(test_shell_interp test_shell_interp.cc)
+target_link_libraries(test_shell_interp
+    riemann
+    ${Boost_LIBRARIES}
+)
