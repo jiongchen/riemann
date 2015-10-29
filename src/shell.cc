@@ -1,6 +1,7 @@
 #include "shell.h"
 
 #include <iostream>
+#include <unordered_set>
 #include <zjucad/matrix/itr_matrix.h>
 #include <jtflib/mesh/mesh.h>
 
@@ -160,8 +161,54 @@ class volume_constraint : public Constraint<double>
 {
 public:
 };
+
+class position_constraint : public Constraint<double>
+{
+public:
+  position_constraint(const matd_t &nods, const double w)
+    : dim_(nods.size()), w_(sqrt(w)) {}
+  size_t Nx() const {
+    return dim_;
+  }
+  size_t Nf() const {
+    return 3*idx_.size();
+  }
+  int Val(const double *x, double *val) const {
+    Map<const VectorXd> X(x, Nx());
+    Map<VectorXd> fx(val, Nf());
+    size_t cnt = 0;
+    for (auto &id : idx_) {
+      fx.segment<3>(3*cnt) = w_*(X.segment<3>(id)-po_.segment<3>(id));
+      ++cnt;
+    }
+    return 0;
+  }
+  int Jac(const double *x, const size_t off, vector<Triplet<double>> *jac) const {
+    size_t cnt = 0;
+    for (auto &id : idx_) {
+      jac->push_back(Triplet<double>(off+cnt++, 3*id+0, w_));
+      jac->push_back(Triplet<double>(off+cnt++, 3*id+1, w_));
+      jac->push_back(Triplet<double>(off+cnt++, 3*id+2, w_));
+    }
+    return 0;
+  }
+  void add(const size_t idx, const double *coords) {
+    idx_.insert(idx);
+    po_.segment<3>(3*idx) = Vector3d(coords);
+  }
+  void del(const size_t idx) {
+    auto it = idx_.find(idx);
+    if ( it != idx_.end() )
+      idx_.erase(it);
+  }
+private:
+  const size_t dim_;
+  double w_;
+  unordered_set<size_t> idx_;
+  VectorXd po_;
+};
 //==============================================================================
-void shell_solver::temp_test() const {
+void shell_deformer::temp_test() const {
   const double x[6] = {0,0,0, 3,4,5};
   double len = 0;
   calc_edge_length_(&len, x);
