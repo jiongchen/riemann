@@ -141,7 +141,12 @@ public:
     return xdim_;
   }
   size_t Nf() const {
-    return fdim_;
+    size_t fdim = 0;
+    for (auto &c : buffer_) {
+      if ( c.get() )
+        fdim += c->Nf();
+    }
+    return fdim;
   }
   int Val(const T *x, T *val) const {
     Eigen::Map<Eigen::Matrix<T, -1, 1>> v(val, Nf());
