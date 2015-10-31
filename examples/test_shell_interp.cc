@@ -25,10 +25,10 @@ int main(int argc, char *argv[])
       ("input_mesh,i", po::value<string>(), "input mesh")
       ("output_folder,o", po::value<string>(), "output folder")
       ("ws", po::value<double>()->default_value(1e3), "weight of stretch")
-      ("wb", po::value<double>()->default_value(1e-1), "weight of bending")
+      ("wb", po::value<double>()->default_value(1e0), "weight of bending")
       ("wp", po::value<double>()->default_value(1e4), "weight of position")
       ("max_iter,n", po::value<size_t>()->default_value(10000), "max iter")
-      ("tolerance,e", po::value<double>()->default_value(1e-8), "tolerance")
+      ("tolerance,e", po::value<double>()->default_value(1e-12), "tolerance")
       ;
   po::variables_map vm;
   po::store(po::parse_command_line(argc, argv, desc), vm);
@@ -53,10 +53,16 @@ int main(int argc, char *argv[])
   matrix<double> nods;
   jtf::mesh::load_obj(args.input_mesh.c_str(), tris, nods);
 
-  shell_deformer defo(tris, nods, args.sa);
-  defo.fix_vert(1, &nods(0, 1));
-  matd_t u = nods(colon(), 1111)+0.1*ones<double>(3, 1);
-  defo.fix_vert(1111, &u[0]);
+  shell_deformer defo(tris, nods, args.sa); {
+    size_t idx = 3;
+    matd_t u = nods(colon(), idx);
+    defo.fix_vert(idx, &u[0]);
+  } {
+    size_t idx = 0;
+    matd_t u = nods(colon(), idx)-0.1*ones<double>(3, 1);
+    u[1] += 0.4;
+    defo.fix_vert(idx, &u[0]);
+  }
   defo.prepare();
   defo.solve(&nods[0]);
 

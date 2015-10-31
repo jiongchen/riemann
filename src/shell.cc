@@ -3,6 +3,7 @@
 #include <iostream>
 #include <unordered_set>
 #include <zjucad/matrix/itr_matrix.h>
+#include <zjucad/matrix/io.h>
 #include <jtflib/mesh/mesh.h>
 
 #include "def.h"
@@ -91,7 +92,7 @@ public:
     return edges_.size(2);
   }
   int Val(const double *x, double *val) const {
-    itr_matrix<const double *> X(3, dim_/3, x);
+    itr_matrix<const double *> X(3, Nx()/3, x);
 #pragma omp parallel for
     for (size_t i = 0; i < edges_.size(2); ++i) {
       matd_t vert = X(colon(), edges_(colon(), i));
@@ -102,14 +103,15 @@ public:
     return 0;
   }
   int Jac(const double *x, const size_t off, vector<Triplet<double>> *jac) const {
-    itr_matrix<const double *> X(3, dim_/3, x);
+    itr_matrix<const double *> X(3, Nx()/3, x);
     for (size_t i = 0; i < edges_.size(2); ++i) {
       matd_t vert = X(colon(), edges_(colon(), i));
       matd_t grad = zeros<double>(6, 1);
       calc_edge_length_jac_(&grad[0], &vert[0]);
+      grad *= w_/len_[i];
       for (size_t j = 0; j < 6; ++j) {
-        if ( grad[j] != 0.0 )
-          jac->push_back(Triplet<double>(off+i, 3*edges_(j/3, i)+j%3, w_/len_[i]));
+        if ( grad[j]*grad[j] != 0.0 )
+          jac->push_back(Triplet<double>(off+i, 3*edges_(j/3, i)+j%3, grad[j]));
       }
     }
     return 0;
@@ -145,7 +147,7 @@ public:
     return dias_.size(2);
   }
   int Val(const double *x, double *val) const {
-    itr_matrix<const double *> X(3, dim_/3, x);
+    itr_matrix<const double *> X(3, Nx()/3, x);
 #pragma omp parallel for
     for (size_t i = 0; i < dias_.size(2); ++i) {
       matd_t vert = X(colon(), dias_(colon(), i));
@@ -156,14 +158,15 @@ public:
     return 0;
   }
   int Jac(const double *x, const size_t off, vector<Triplet<double>> *jac) const {
-    itr_matrix<const double *> X(3, dim_/3, x);
+    itr_matrix<const double *> X(3, Nx()/3, x);
     for (size_t i = 0; i < dias_.size(2); ++i) {
       matd_t vert = X(colon(), dias_(colon(), i));
       matd_t grad = zeros<double>(12, 1);
       calc_dihedral_angle_jac_(&grad[0], &vert[0]);
+      grad *= w_*len_[i]/sqrt(area_[i]);
       for (size_t j = 0; j < 12; ++j) {
-        if ( grad[j] != 0.0 )
-          jac->push_back(Triplet<double>(i, 3*dias_(j/3, i)+j%3, w_*len_[i]/sqrt(area_[i])));
+        if ( grad[j]*grad[j] != 0.0 )
+          jac->push_back(Triplet<double>(off+i, 3*dias_(j/3, i)+j%3, grad[j]));
       }
     }
     return 0;
@@ -185,7 +188,9 @@ class position_constraint : public Constraint<double>
 {
 public:
   position_constraint(const matd_t &nods, const double w)
-    : dim_(nods.size()), w_(sqrt(w)) {}
+    : dim_(nods.size()), w_(sqrt(w)) {
+    po_.setZero(dim_);
+  }
   size_t Nx() const {
     return dim_;
   }
@@ -199,7 +204,7 @@ public:
     Map<VectorXd> fx(val, Nf());
     size_t cnt = 0;
     for (auto &id : pid_) {
-      fx.segment<3>(3*cnt) = w_*(X.segment<3>(3*id)-po_.segment<3>(3*id));
+      fx.segment<3>(3*cnt) += w_*(X.segment<3>(3*id)-po_.segment<3>(3*id));
       ++cnt;
     }
     return 0;
@@ -264,10 +269,10 @@ int shell_deformer::solve(double *x) {
   VectorXd xstar = X;
   // gauss-newton
   for (size_t iter = 0; iter < args_.max_iter; ++iter) {
-    VectorXd fc(constraint_->Nf()); {
+    VectorXd fc = VectorXd::Zero(constraint_->Nf()); {
       constraint_->Val(&xstar[0], &fc[0]);
-      if ( iter % 100 == 0 ) {
-        cout << "\t@error: " << fc.lpNorm<Infinity>() << endl;
+      if ( iter % 10 == 0 ) {
+        cout << "\t@iter " << iter << " error: " << fc.squaredNorm() << endl;
       }
     }
     SparseMatrix<double> J(constraint_->Nf(), constraint_->Nx()); {
@@ -281,8 +286,17 @@ int shell_deformer::solve(double *x) {
     VectorXd dx = solver_.solve(-J.transpose()*fc);
     ASSERT(solver_.info() == Success);
     const double xnorm = xstar.norm();
-    xstar += dx;
-    if ( dx.norm() < args_.tolerance*xnorm ) {
+    // line search
+    double h = 2.0;
+    VectorXd xnew(constraint_->Nx()), fnew(constraint_->Nf());
+    do {
+      h *= 0.5;
+      xnew = xstar+h*dx;
+      fnew.setZero();
+      constraint_->Val(&xnew[0], &fnew[0]);
+    } while ( fnew.squaredNorm() >= fc.squaredNorm() && h > 1e-10 );
+    xstar += h*dx;
+    if ( h*dx.norm() <= args_.tolerance*xnorm ) {
       cout << "\t@converged, relative error is below " << args_.tolerance << "\n";
       break;
     }
