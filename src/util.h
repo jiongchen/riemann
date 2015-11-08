@@ -103,7 +103,7 @@ Eigen::SparseMatrix<T> sparse_diag_matrix(const Eigen::DiagonalMatrix<T, -1> &di
 template <typename T>
 bool is_symm(const Eigen::SparseMatrix<T> &A) {
   Eigen::SparseMatrix<T> AT = A.transpose();
-  if ( (AT - A).norm() < 1e-16 )
+  if ( (AT - A).squaredNorm() < 1e-16 )
     return true;
   return false;
 }

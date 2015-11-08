@@ -199,7 +199,7 @@ public:
   }
   int Val(const double *x, double *val) const {
     if ( Nf() == 0 )
-      return 1;
+      return __LINE__;
     Map<const VectorXd> X(x, Nx());
     Map<VectorXd> fx(val, Nf());
     size_t cnt = 0;
@@ -211,7 +211,7 @@ public:
   }
   int Jac(const double *x, const size_t off, vector<Triplet<double>> *jac) const {
     if ( Nf() == 0 )
-      return 1;
+      return __LINE__;
     size_t cnt = 0;
     for (auto &id : pid_) {
       jac->push_back(Triplet<double>(off+cnt++, 3*id+0, w_));
@@ -266,7 +266,7 @@ int shell_deformer::prepare() {
 
 int shell_deformer::solve(double *x) {
   Map<VectorXd> X(x, constraint_->Nx());
-  VectorXd xstar = X;
+  VectorXd xstar = X, dx(constraint_->Nx());
   // gauss-newton
   for (size_t iter = 0; iter < args_.max_iter; ++iter) {
     VectorXd fc = VectorXd::Zero(constraint_->Nf()); {
@@ -283,7 +283,7 @@ int shell_deformer::solve(double *x) {
     }
     solver_.compute(J.transpose()*J);
     ASSERT(solver_.info() == Success);
-    VectorXd dx = solver_.solve(-J.transpose()*fc);
+    dx = -solver_.solve(J.transpose()*fc);
     ASSERT(solver_.info() == Success);
     const double xnorm = xstar.norm();
     // line search
