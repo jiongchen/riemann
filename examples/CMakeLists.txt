@@ -118,3 +118,9 @@ target_link_libraries(test_shell_interp
     riemann
     ${Boost_LIBRARIES}
 )
+
+add_executable(test_bounded_dist test_bounded_dist.cc)
+target_link_libraries(test_bounded_dist
+    riemann
+    ${Boost_LIBRARIES}
+)

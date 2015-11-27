@@ -20,6 +20,7 @@ find_package(Boost COMPONENTS filesystem system program_options REQUIRED)
 # EIGEN3
 find_package(Eigen3 REQUIRED)
 if(EIGEN3_FOUND)
+    message("-- Eigen version: ${EIGEN3_VERSION}")
     include_directories(${EIGEN3_INCLUDE_DIR})
 endif(EIGEN3_FOUND)
 
