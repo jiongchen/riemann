@@ -21,3 +21,5 @@ trying to get familiar with libigl, and may implement some classical algorithms 
 [2015-7-1] Implement another method for solving triangle correspondence guided by harmonic fields in deformation transfer, which is proposed by [[Zayer05]](http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.226.1150&rep=rep1&type=pdf).
 
 [2015-8-27] Implement construction of standing wave on surface proposed by [[Zhang10]](http://www.cad.zju.edu.cn/home/hj/10/Huang10WaveQuad.pdf).
+
+[2015-12-1] Implement a 3D bounded distortion solver according to [[Kovalsky15]](http://www.wisdom.weizmann.ac.il/~ylipman/2015_LargeScaleBD.pdf). 
