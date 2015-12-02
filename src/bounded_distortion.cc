@@ -109,6 +109,7 @@ int bd_solver::pin_down_vert(const size_t id, const double *pos) {
 }
 
 int bd_solver::prefactorize() {
+  cout << "[info] prefactorization......";
   SparseMatrix<double> M(dim_+linc_->nf(), dim_+linc_->nf()); {
     vector<Triplet<double>> trips;
     SparseMatrix<double> TtT = T_.transpose()*T_;
@@ -129,10 +130,12 @@ int bd_solver::prefactorize() {
   }
   ldlt_solver.compute(M);
   ASSERT(ldlt_solver.info() == Success);
+  cout << "...done\n";
   return 0;
 }
 
 int bd_solver::solve(double *initX) const {
+  cout << "[info] solve\n";
   Map<VectorXd> X(initX, dim_);
   const size_t cdim = linc_->nf();
   VectorXd z(lift_dim_), Pz(lift_dim_), n(lift_dim_), eta = VectorXd::Zero(dim_+cdim);

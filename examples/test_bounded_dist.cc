@@ -48,7 +48,7 @@ int main(int argc, char *argv[])
       ("out_folder,o", po::value<string>(), "set the output folder")
       ("bound,k", po::value<double>(), "set the bound")
       ("maxiter,m", po::value<size_t>()->default_value(20000), "max iterations")
-      ("tolerance,t", po::value<double>()->default_value(1e-8), "tolerance")
+      ("tolerance,e", po::value<double>()->default_value(1e-8), "tolerance")
       ;
   po::variables_map vm;
   po::store(po::parse_command_line(argc, argv, desc), vm);
