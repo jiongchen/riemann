@@ -27,8 +27,8 @@ public:
   void set_bound(const double K);
   int pin_down_vert(const size_t id, const double *pos);
   int prefactorize();
-  int solve(double *x0) const;
-  int alter_solve(double *x0) const;
+  int solve(double *initX) const;
+  int alter_solve(double *initX) const;
 private:
   int euclidean_proj(const double *Tx, double *PTx) const;
 

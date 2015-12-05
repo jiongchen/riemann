@@ -6,6 +6,7 @@
 #include <unordered_map>
 
 #include "config.h"
+#include "timer.h"
 
 using namespace std;
 using namespace Eigen;
@@ -110,6 +111,7 @@ int bd_solver::pin_down_vert(const size_t id, const double *pos) {
 
 int bd_solver::prefactorize() {
   cout << "[info] prefactorization......";
+  ldlt_solver.setMode(SimplicialCholeskyLDLT);
   SparseMatrix<double> M(dim_+linc_->nf(), dim_+linc_->nf()); {
     vector<Triplet<double>> trips;
     SparseMatrix<double> TtT = T_.transpose()*T_;
@@ -140,16 +142,22 @@ int bd_solver::solve(double *initX) const {
   const size_t cdim = linc_->nf();
   VectorXd z(lift_dim_), Pz(lift_dim_), n(lift_dim_), eta = VectorXd::Zero(dim_+cdim);
   VectorXd u(dim_+cdim+1), rhs(dim_+cdim+1), temp0, temp1;
+  rhs.setZero();
   linc_->rhs(&rhs[dim_]);
   // linearly constrained least squares
+  high_resolution_timer clk;
+  clk.start();
   for (size_t iter = 0; iter < args_.maxiter; ++iter) {
     z = T_*X;
     euclidean_proj(&z[0], &Pz[0]);
     n = z-Pz;
-    if ( iter % 100 == 0 )
+    if ( iter % 1 == 0 ) {
       cout << "\t@iter " << iter << " normal norm: " << n.norm() << endl;
+      clk.stop();
+      clk.log();
+    }
     if ( n.norm() < args_.tolerance ) {
-      cout << "\t@converged\n";
+      cout << "\t@converged after " << iter << " iterations\n";
       break;
     }
     // linear solve
@@ -167,7 +175,33 @@ int bd_solver::solve(double *initX) const {
   return 0;
 }
 
-int bd_solver::alter_solve(double *x0) const {
+int bd_solver::alter_solve(double *initX) const {
+  cout << "[info] solve\n";
+  Map<VectorXd> X(initX, dim_);
+  const size_t cdim = linc_->nf();
+  VectorXd z(lift_dim_), Pz(lift_dim_), n(lift_dim_), u(dim_+cdim), rhs(dim_+cdim);
+  linc_->rhs(&rhs[dim_]);
+  // solve KKT
+  high_resolution_timer clk;
+  clk.start();
+  for (size_t iter = 0; iter < args_.maxiter; ++iter) {
+    z = T_*X;
+    euclidean_proj(&z[0], &Pz[0]);
+    n = z-Pz;
+    if ( iter % 1 == 0 ) {
+      cout << "\t@iter " << iter << " normal norm: " << n.norm() << endl;
+      clk.stop();
+      clk.log();
+    }
+    if ( n.norm() < args_.tolerance ) {
+      cout << "\t@converged after " << iter << " iterations\n";
+      break;
+    }
+    rhs.head(dim_) = T_.transpose()*Pz;
+    u = ldlt_solver.solve(rhs);
+    ASSERT(ldlt_solver.info() == Success);
+    X = u.head(dim_);
+  }
   return 0;
 }
 

@@ -34,6 +34,7 @@ int read_fixed_verts(const char *path, unordered_map<size_t, Vector3d> &fv) {
   while ( ifs >> id >> x >> y >> z ) {
     fv[id] = Vector3d(x, y, z);
   }
+  cout << "[info] constrained verts: " << fv.size() << endl;
   return 0;
 }
 
