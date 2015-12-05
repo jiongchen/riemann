@@ -28,6 +28,7 @@ public:
   int pin_down_vert(const size_t id, const double *pos);
   int prefactorize();
   int solve(double *x0) const;
+  int alter_solve(double *x0) const;
 private:
   int euclidean_proj(const double *Tx, double *PTx) const;
 

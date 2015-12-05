@@ -167,6 +167,10 @@ int bd_solver::solve(double *initX) const {
   return 0;
 }
 
+int bd_solver::alter_solve(double *x0) const {
+  return 0;
+}
+
 int bd_solver::euclidean_proj(const double *Tx, double *PTx) const {
 #pragma omp parallel for
   for (size_t i = 0; i < tets_.size(2); ++i) {
