@@ -2,3 +2,7 @@ build/
 *.user
 *.user.*
 /.svn/
+/script/*
+!/script/*.sh
+!/script/*.wxm
+!/script/*.tex

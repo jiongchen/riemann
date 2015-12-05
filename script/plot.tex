@@ -1,0 +1,17 @@
+\documentclass{article}
+
+\usepackage{tikz}
+\usepackage{pgfplots}
+
+\begin{document}
+
+\begin{tikzpicture}
+\begin{axis}[xlabel=$x$, ylabel=$y$]
+    \addplot [smooth, mark=none, blue] table {test.txt};
+    \addlegendentry{Case 1}
+    \addplot [smooth, mark=none, red] table {test1.txt};
+    \addlegendentry{Case 2}
+\end{axis}
+\end{tikzpicture}
+
+\end{document}
