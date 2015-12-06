@@ -13,7 +13,7 @@ using triplet_t=Eigen::Triplet<double>;
 int calc_tet_base_inv(const mati_t &tets, const matd_t &nods, matd_t &binv);
 int calc_tet_df_map(const mati_t &tets, const matd_t &binv, Eigen::SparseMatrix<double> *T);
 
-class position_constraint;
+class bd_pos_constraint;
 
 struct bd_args {
   size_t maxiter;
@@ -40,7 +40,7 @@ private:
 
   Eigen::SparseMatrix<double> T_;
   Eigen::VectorXd volume_;
-  std::shared_ptr<position_constraint> linc_;
+  std::shared_ptr<bd_pos_constraint> linc_;
 };
 
 }

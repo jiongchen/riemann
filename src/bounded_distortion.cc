@@ -16,10 +16,10 @@ namespace riemann {
 
 static SimplicialCholesky<SparseMatrix<double>> ldlt_solver;
 
-class position_constraint
+class bd_pos_constraint
 {
 public:
-  position_constraint(const matd_t &nods)
+  bd_pos_constraint(const matd_t &nods)
     : dim_(nods.size()) {}
   size_t nx() const { return dim_; }
   size_t nf() const { return 3*fixed_.size(); }
@@ -98,7 +98,7 @@ bd_solver::bd_solver(const mati_t &tets, const matd_t &nods, const bd_args &args
   matd_t binv;
   calc_tet_base_inv(tets_, nods_, binv);
   calc_tet_df_map(tets_, binv, &T_);
-  linc_ = make_shared<position_constraint>(nods_);
+  linc_ = make_shared<bd_pos_constraint>(nods_);
 }
 
 void bd_solver::set_bound(const double K) {
