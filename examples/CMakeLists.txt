@@ -124,3 +124,5 @@ target_link_libraries(test_bounded_dist
     riemann
     ${Boost_LIBRARIES}
 )
+
+add_executable(text_format text_format.c)

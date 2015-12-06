@@ -20,6 +20,7 @@ struct argument {
   string ini_tet_file;
   string pos_cons_file;
   string output_folder;
+  int method;
   double K;
   bd_args bd;
 };
@@ -47,6 +48,7 @@ int main(int argc, char *argv[])
       ("ini_tet,i", po::value<string>(), "set the initial tet mesh")
       ("pos_cons,c", po::value<string>(), "set the position constraints")
       ("out_folder,o", po::value<string>(), "set the output folder")
+      ("method", po::value<int>()->default_value(0), "solving method: 0 kovalsky15; 1 alternating")
       ("bound,k", po::value<double>(), "set the bound")
       ("maxiter,m", po::value<size_t>()->default_value(20000), "max iterations")
       ("tolerance,e", po::value<double>()->default_value(1e-8), "tolerance")
@@ -63,6 +65,7 @@ int main(int argc, char *argv[])
     args.ini_tet_file  = vm["ini_tet"].as<string>();
     args.pos_cons_file = vm["pos_cons"].as<string>();
     args.output_folder = vm["out_folder"].as<string>();
+    args.method        = vm["method"].as<int>();
     args.K             = vm["bound"].as<double>();
     args.bd.maxiter    = vm["maxiter"].as<size_t>();
     args.bd.tolerance  = vm["tolerance"].as<double>();
@@ -83,10 +86,14 @@ int main(int argc, char *argv[])
     solver.pin_down_vert(elem.first, elem.second.data());
 
   solver.prefactorize();
-  solver.solve(&nods0[0]);
+  if ( args.method == 0 )
+    solver.solve(&nods0[0]);
+  else if ( args.method == 1 )
+    solver.alter_solve(&nods0[0]);
 
   char outfile[256];
-  sprintf(outfile, "%s/bdmap.bound%.0lf.vtk", args.output_folder.c_str(), args.K);
+  sprintf(outfile, "%s/bd_method%d_bound%.1lf_eps%.1e.vtk", args.output_folder.c_str(),
+          args.method, args.K, args.bd.tolerance);
   ofstream os(outfile);
   tet2vtk(os, &nods0[0], nods0.size(2), &tets[0], tets.size(2));
 
