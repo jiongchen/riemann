@@ -245,4 +245,17 @@ int bd_solver::euclidean_proj(const double *Tx, double *PTx) const {
   return 0;
 }
 
+int bd_solver::calc_df_cond_number(const double *x, matd_t &cond) const {
+  Map<const VectorXd> X(x, dim_);
+  VectorXd z = T_*X;
+  cond = zeros<double>(tets_.size(2), 1);
+#pragma omp parallel for
+  for (size_t i = 0; i < tets_.size(2); ++i) {
+    Map<const Matrix3d> df(z.data()+9*i);
+    JacobiSVD<Matrix3d> svd(df, ComputeFullU|ComputeFullV);
+    cond[i] = svd.singularValues()[0]/svd.singularValues()[2];
+  }
+  return 0;
+}
+
 }

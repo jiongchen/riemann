@@ -85,17 +85,32 @@ int main(int argc, char *argv[])
   for (auto &elem : fixv)
     solver.pin_down_vert(elem.first, elem.second.data());
 
+  { // see condition number of initial mesh
+    matd_t cond_num;
+    solver.calc_df_cond_number(&nods0[0], cond_num);
+    char outfile[256];
+    sprintf(outfile, "%s/bd_initial_cond.vtk", args.output_folder.c_str());
+    ofstream os(outfile);
+    tet2vtk(os, &nods0[0], nods0.size(2), &tets[0], tets.size(2));
+    cell_data(os, &cond_num[0], cond_num.size(), "cond_num", "cond_num");
+  }
+
   solver.prefactorize();
   if ( args.method == 0 )
     solver.solve(&nods0[0]);
   else if ( args.method == 1 )
     solver.alter_solve(&nods0[0]);
 
-  char outfile[256];
-  sprintf(outfile, "%s/bd_method%d_bound%.1lf_eps%.1e.vtk", args.output_folder.c_str(),
-          args.method, args.K, args.bd.tolerance);
-  ofstream os(outfile);
-  tet2vtk(os, &nods0[0], nods0.size(2), &tets[0], tets.size(2));
+  { // see condition number of optimized mesh
+    matd_t cond_num;
+    solver.calc_df_cond_number(&nods0[0], cond_num);
+    char outfile[256];
+    sprintf(outfile, "%s/bd_method%d_bound%.1lf_eps%.1e.vtk", args.output_folder.c_str(),
+            args.method, args.K, args.bd.tolerance);
+    ofstream os(outfile);
+    tet2vtk(os, &nods0[0], nods0.size(2), &tets[0], tets.size(2));
+    cell_data(os, &cond_num[0], cond_num.size(), "cond_num", "cond_num");
+  }
 
   cout << "[info] done\n";
   return 0;

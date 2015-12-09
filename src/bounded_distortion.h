@@ -29,6 +29,7 @@ public:
   int prefactorize();
   int solve(double *initX) const;
   int alter_solve(double *initX) const;
+  int calc_df_cond_number(const double *x, matd_t &cond) const;
 private:
   int euclidean_proj(const double *Tx, double *PTx) const;
 
