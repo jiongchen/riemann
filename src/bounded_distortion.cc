@@ -144,6 +144,7 @@ int bd_solver::solve(double *initX) const {
   VectorXd u(dim_+cdim+1), rhs(dim_+cdim+1), temp0, temp1;
   rhs.setZero();
   linc_->rhs(&rhs[dim_]);
+  VectorXd post_step(lift_dim_);
   // linearly constrained least squares
   high_resolution_timer clk;
   clk.start();
@@ -171,6 +172,12 @@ int bd_solver::solve(double *initX) const {
     u[u.size()-1] = (-rhs[rhs.size()-1]+eta.dot(temp0))/eta.dot(temp1);
     u.head(dim_+cdim) = temp0-u[u.size()-1]*temp1;
     X = u.head(dim_);
+    post_step = T_*X-Pz;
+    if ( iter % 1 == 0 ) {
+      cout << "\t@prev step size: " << n.norm() << endl;
+      cout << "\t@post step size: " << post_step.norm() << endl;
+      cout << "\t@turning angle: " << acos(post_step.dot(n)/(n.norm()*post_step.norm()))/M_PI*180 << "\n\n";
+    }
   }
   return 0;
 }
@@ -181,6 +188,7 @@ int bd_solver::alter_solve(double *initX) const {
   const size_t cdim = linc_->nf();
   VectorXd z(lift_dim_), Pz(lift_dim_), n(lift_dim_), u(dim_+cdim), rhs(dim_+cdim);
   linc_->rhs(&rhs[dim_]);
+  VectorXd post_step(lift_dim_);
   // solve KKT
   high_resolution_timer clk;
   clk.start();
@@ -201,6 +209,12 @@ int bd_solver::alter_solve(double *initX) const {
     u = ldlt_solver.solve(rhs);
     ASSERT(ldlt_solver.info() == Success);
     X = u.head(dim_);
+    post_step = T_*X-Pz;
+    if ( iter % 1 == 0 ) {
+      cout << "\t@prev step size: " << n.norm() << endl;
+      cout << "\t@post step size: " << post_step.norm() << endl;
+      cout << "\t@turning angle: " << acos(post_step.dot(n)/(n.norm()*post_step.norm()))/M_PI*180 << "\n\n";
+    }
   }
   return 0;
 }

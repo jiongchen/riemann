@@ -450,6 +450,27 @@ int test_defo_grad_other(ptree &pt) {
   return 0;
 }
 
+int test_defo_grad_third(ptree &pt) {
+  srand(time(NULL));
+  cout << "[info] third test for defomation gradient\n";
+  matd_t nods = rand(2, 3);
+  matd_t nods0 = rand(2, 3);
+
+  matd_t G(2, 3);
+  calc_tri_linear_basis_grad<2>(nods.begin(), G.begin());
+  matd_t defoGrad(2, 2);
+  defoGrad = nods0*trans(G);
+  cout << defoGrad << endl;
+
+  matd_t base = nods(colon(), colon(1, 2))-nods(colon(), 0)*ones<double>(1, 2);
+  inv(base);
+  matd_t defoGrad1 = (nods0(colon(), colon(1, 2))-nods0(colon(), 0)*ones<double>(1, 2))*base;
+  cout << defoGrad1 << endl;
+
+  cout << "[info] done\n";
+  return 0;
+}
+
 int main(int argc, char *argv[])
 {
   ptree pt;
@@ -471,6 +492,7 @@ int main(int argc, char *argv[])
     CALL_SUB_PROG(test_high_resolution_timer);
     CALL_SUB_PROG(test_defo_grad);
     CALL_SUB_PROG(test_defo_grad_other);
+    CALL_SUB_PROG(test_defo_grad_third);
   } catch (const boost::property_tree::ptree_error &e) {
     cerr << "Usage: " << endl;
     zjucad::show_usage_info(std::cerr, pt);
