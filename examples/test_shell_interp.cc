@@ -11,7 +11,7 @@ using namespace zjucad::matrix;
 using namespace riemann;
 namespace po=boost::program_options;
 
-struct arguments {
+struct argument {
   string input_mesh;
   string output_folder;
   shell_args sa;
@@ -37,7 +37,7 @@ int main(int argc, char *argv[])
     cout << desc << endl;
     return 1;
   }
-  arguments args;
+  argument args;
   args.input_mesh = vm["input_mesh"].as<string>();
   args.output_folder = vm["output_folder"].as<string>();
   args.sa.ws = vm["ws"].as<double>();

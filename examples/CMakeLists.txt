@@ -126,3 +126,9 @@ target_link_libraries(test_bounded_dist
 )
 
 add_executable(text_format text_format.c)
+
+add_executable(test_amips test_amips.cc)
+target_link_libraries(test_amips
+    riemann
+    ${Boost_LIBRARIES}
+)

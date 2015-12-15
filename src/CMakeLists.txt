@@ -24,7 +24,14 @@ add_custom_command(OUTPUT shell.f90
     DEPENDS shell.mac
 )
 
-add_library(riemann SHARED ${header} ${source} quad_scalar_field.f90 dt_energy.f90 wave_condition.f90 shell.f90)
+add_custom_command(OUTPUT mips.f90
+    COMMAND "maxima" ARGS --userdir=${SRC_DIR} -b mips.mac
+    DEPENDS mips.mac
+)
+
+add_library(riemann SHARED ${header} ${source}
+                           quad_scalar_field.f90 dt_energy.f90
+                           wave_condition.f90 shell.f90 mips.f90)
 target_link_libraries(riemann
     jtf-mesh
     ${UMFPACK_LIBRARIES}

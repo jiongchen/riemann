@@ -1,0 +1,34 @@
+load(hj_fortran2)$
+load(cj_function)$
+
+optimprefix : tt$
+
+f: openw("mips.f90")$
+
+block(
+  [X, D],
+  X: genmatrix(X, 2, 3),
+  D: genmatrix(D, 2, 2),
+  
+  mips_2d(X, D) := block(
+    [E, J, rtn],
+    E: addcol(col(X,2)-col(X,1), col(X,3)-col(X,1)),
+    J: E.D,
+    rtn: 0.5*mat_trace(transpose(J).J)/determinant(J),
+    matrix([rtn])
+  ),
+  with_stdout(f, val_jac_hes_to_f90(mips_2d, [X, D])),
+  
+  det_2d(X, D) := block(
+    [E, J, rtn],
+    E: addcol(col(X,2)-col(X,1), col(X,3)-col(X,1)),
+    J: E.D,
+    rtn: 0.5*(determinant(J)+determinant(J)^-1),
+    matrix([rtn])
+  ),
+  with_stdout(f, val_jac_hes_to_f90(det_2d, [X, D])),
+  
+  return()
+)$
+
+close(f)$
