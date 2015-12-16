@@ -6,9 +6,10 @@ optimprefix : tt$
 f: openw("mips.f90")$
 
 block(
-  [X, D],
+  [X, D, s],
   X: genmatrix(X, 2, 3),
   D: genmatrix(D, 2, 2),
+  s: genmatrix(s, 1, 1),
   
   mips_2d(X, D) := block(
     [E, J, rtn],
@@ -27,6 +28,13 @@ block(
     matrix([rtn])
   ),
   with_stdout(f, val_jac_hes_to_f90(det_2d, [X, D])),
+  
+  advanced_iso_2d(X, D, s) := block(
+    [rtn],
+    rtn: exp((s*mips_2d(X, D)+s*det_2d(X, D))[1,1]),
+    matrix([rtn])
+  ),
+  with_stdout(f, val_jac_hes_to_f90(advanced_iso_2d, [X, D, s])),
   
   return()
 )$

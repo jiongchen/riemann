@@ -20,6 +20,10 @@ void det_2d_(double *val, const double *x, const double *D);
 void det_2d_jac_(double *jac, const double *x, const double *D);
 void det_2d_hes_(double *hes, const double *x, const double *D);
 
+void advanced_iso_2d_(double *val, const double *x, const double *D, const double *s);
+void advanced_iso_2d_jac_(double *jac, const double *x, const double *D, const double *s);
+void advanced_iso_2d_hes_(double *hes, const double *x, const double *D, const double *s);
+
 }
 
 class mips_energy
@@ -125,13 +129,17 @@ void mips_deformer_2d::unit_test() const {
   R(1, 0) = sin(angle);
   R(1, 1) = cos(angle);
   nods = temp(R*nods);
-  nods *= 5;
+  nods *= 1;
 
   double value = 0;
   mips_2d_(&value, &nods[0], &base[0]);
   cout << value << endl;
 
   det_2d_(&value, &nods[0], &base[0]);
+  cout << value << endl;
+
+  double s = 5;
+  advanced_iso_2d_(&value, &nods[0], &base[0], &s);
   cout << value << endl;
 }
 
