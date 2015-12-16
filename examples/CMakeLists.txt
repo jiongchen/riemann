@@ -132,3 +132,8 @@ target_link_libraries(test_amips
     riemann
     ${Boost_LIBRARIES}
 )
+
+add_executable(boundvert boundvert.cc)
+target_link_libraries(boundvert
+    jtf-mesh
+)

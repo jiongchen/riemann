@@ -25,11 +25,12 @@ void det_2d_hes_(double *hes, const double *x, const double *D);
 class mips_energy
 {
 public:
-  virtual int gra(const double *x, const size_t id, double *grad) = 0;
-  virtual int hes(const double *x, const size_t id, double *hess) = 0;
+  virtual int val(const double *x, double *value) const = 0;
+  virtual int gra(const double *x, const size_t id, double *grad) const = 0;
+  virtual int hes(const double *x, const size_t id, double *hess) const = 0;
 };
 
-static void build_related_elem_map(const mati_t &cell, vector<vector<size_t>> &result) {
+static void gen_rel_elem_to_vert(const mati_t &cell, vector<vector<size_t>> &result) {
   const size_t vert_num = max(cell)+1;
   result.resize(vert_num);
   for (size_t j = 0; j < cell.size(2); ++j) {
@@ -42,21 +43,32 @@ static void build_related_elem_map(const mati_t &cell, vector<vector<size_t>> &r
 class mips_energy_2d : public mips_energy
 {
 public:
-  mips_energy_2d(const mati_t &tris, const matd_t &nods)
-    : dim_(nods.size()), tris_(tris) {
-    binv.resize(4, tris.size(2));
+  mips_energy_2d(const mati_t &tris, const matd_t &nods, const double w=1.0)
+    : w_(w), dim_(nods.size()), tris_(tris) {
+    binv_.resize(4, tris.size(2));
 #pragma omp parallel for
     for (size_t i = 0; i < tris.size(2); ++i) {
       matd_t base = nods(colon(), colon(1, 2))-nods(colon(), 0)*ones<double>(1, 2);
       inv(base);
-      copy(base.begin(), base.end(), &binv(0, i));
+      copy(base.begin(), base.end(), &binv_(0, i));
     }
-    build_related_elem_map(tris, rel_elem);
+//    build_related_elem_map(tris, rel_elem_);
   }
   size_t dim() const {
     return dim_;
   }
-  int gra(const double *x, const size_t id, double *grad) {
+  int val(const double *x, double *value) const {
+    itr_matrix<const double *> X(2, dim_/2, x);
+    for (size_t i = 0; i < tris_.size(2); ++i) {
+      matd_t vert = X(colon(), tris_(colon(), i));
+      double v0 = 0, v1 = 0;
+      mips_2d_(&v0, &vert[0], &binv_(0, i));
+      det_2d_(&v1, &vert[0], &binv_(0, i));
+      *value += w_*(v0+v1);
+    }
+    return 0;
+  }
+  int gra(const double *x, const size_t id, double *grad) const {
     itr_matrix<const double *> X(2, dim_/2, x);
     itr_matrix<double *> G(2, 1, grad);
 //    for (auto i : related_elem[id]) {
@@ -68,24 +80,25 @@ public:
 //    }
     return 0;
   }
-  int hes(const double *x, const size_t id, double *hess) {
+  int hes(const double *x, const size_t id, double *hess) const {
     itr_matrix<const double *> X(3, dim_/3, x);
     itr_matrix<double *> H(2, 2, hess);
 
     return 0;
   }
 private:
+  const double w_;
   const size_t dim_;
   const mati_t &tris_;
-  matd_t binv;
-  vector<vector<size_t>> rel_elem;
+  matd_t binv_;
+  vector<vector<size_t>> rel_elem_;
 };
 
 class move_vertex
 {
 public:
   move_vertex() {
-
+//    energy = make_shared<>();
   }
   int operator()(const size_t id, double *x) {
 
@@ -104,6 +117,16 @@ void mips_deformer_2d::unit_test() const {
   matd_t nods = rand(2, 3);
   matd_t base = nods(colon(), colon(1, 2))-nods(colon(), 0)*ones<double>(1, 2);
   inv(base);
+
+  double angle = M_PI/3;
+  matd_t R(2, 2);
+  R(0, 0) = cos(angle);
+  R(0, 1) = -sin(angle);
+  R(1, 0) = sin(angle);
+  R(1, 1) = cos(angle);
+  nods = temp(R*nods);
+  nods *= 5;
+
   double value = 0;
   mips_2d_(&value, &nods[0], &base[0]);
   cout << value << endl;

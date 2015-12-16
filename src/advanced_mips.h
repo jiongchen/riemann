@@ -11,7 +11,6 @@ using matd_t=zjucad::matrix::matrix<double>;
 class mips_deformer_2d
 {
 public:
-  mips_deformer_2d() {}
   mips_deformer_2d(const mati_t &tris, const matd_t &nods);
   int deform(double *x) const;
   void unit_test() const;
