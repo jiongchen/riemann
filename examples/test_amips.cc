@@ -11,12 +11,14 @@ using namespace riemann;
 using namespace zjucad::matrix;
 namespace po=boost::program_options;
 
+namespace test_amips {
 struct argument {
   string src_mesh;
   string ini_mesh;
   string pos_cons;
   string out_folder;
 };
+}
 
 int main(int argc, char *argv[])
 {

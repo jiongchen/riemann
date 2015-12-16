@@ -15,6 +15,7 @@ using namespace Eigen;
 using namespace zjucad::matrix;
 namespace po=boost::program_options;
 
+namespace test_bd {
 struct argument {
   string src_tet_file;
   string ini_tet_file;
@@ -24,6 +25,7 @@ struct argument {
   double K;
   bd_args bd;
 };
+}
 
 int read_fixed_verts(const char *path, unordered_map<size_t, Vector3d> &fv) {
   ifstream ifs(path);
@@ -60,7 +62,7 @@ int main(int argc, char *argv[])
     cout << desc << endl;
     return __LINE__;
   }
-  argument args; {
+  test_bd::argument args; {
     args.src_tet_file  = vm["src_tet"].as<string>();
     args.ini_tet_file  = vm["ini_tet"].as<string>();
     args.pos_cons_file = vm["pos_cons"].as<string>();

@@ -11,11 +11,13 @@ using namespace zjucad::matrix;
 using namespace riemann;
 namespace po=boost::program_options;
 
+namespace test_shell_interp {
 struct argument {
   string input_mesh;
   string output_folder;
   shell_args sa;
 };
+}
 
 int main(int argc, char *argv[])
 {
@@ -37,14 +39,15 @@ int main(int argc, char *argv[])
     cout << desc << endl;
     return 1;
   }
-  argument args;
-  args.input_mesh = vm["input_mesh"].as<string>();
-  args.output_folder = vm["output_folder"].as<string>();
-  args.sa.ws = vm["ws"].as<double>();
-  args.sa.wb = vm["wb"].as<double>();
-  args.sa.wp = vm["wp"].as<double>();
-  args.sa.max_iter = vm["max_iter"].as<size_t>();
-  args.sa.tolerance = vm["tolerance"].as<double>();
+  test_shell_interp::argument args; {
+    args.input_mesh = vm["input_mesh"].as<string>();
+    args.output_folder = vm["output_folder"].as<string>();
+    args.sa.ws = vm["ws"].as<double>();
+    args.sa.wb = vm["wb"].as<double>();
+    args.sa.wp = vm["wp"].as<double>();
+    args.sa.max_iter = vm["max_iter"].as<size_t>();
+    args.sa.tolerance = vm["tolerance"].as<double>();
+  }
 
   if ( !boost::filesystem::exists(args.output_folder) )
     boost::filesystem::create_directory(args.output_folder);
