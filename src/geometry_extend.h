@@ -25,6 +25,8 @@ void project_point_on_plane(const double *x, const double *origin,
 
 void rotate_and_scale_triangle(const double *x, const double *quaternion, const double s, const double *xnew);
 
+int calc_one_ring_face(const zjucad::matrix::matrix<size_t> &tris,
+                       std::vector<std::vector<size_t>> &p2f);
 }
 
 #endif

@@ -79,4 +79,19 @@ void project_point_on_plane(const double *x, const double *origin,
   Px = O+A*u;
 }
 
+int calc_one_ring_face(const matrix<size_t> &tris, vector<vector<size_t>> &p2f) {
+  if ( tris.size(1) != 3 ) {
+    cerr << "[info] calc_one_ring_face: not triangle mesh!\n";
+    return __LINE__;
+  }
+  const size_t vert_num = zjucad::matrix::max(tris)+1;
+  p2f.resize(vert_num);
+  for (size_t i = 0; i < tris.size(2); ++i) {
+    p2f[tris(0, i)].push_back(i);
+    p2f[tris(1, i)].push_back(i);
+    p2f[tris(2, i)].push_back(i);
+  }
+  return 0;
+}
+
 }

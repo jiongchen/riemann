@@ -1,9 +1,15 @@
 #include "advanced_mips.h"
 
 #include <iostream>
+#include <unordered_map>
 #include <hjlib/math/blas_lapack.h>
 #include <zjucad/matrix/lapack.h>
 #include <zjucad/matrix/itr_matrix.h>
+#include <jtflib/mesh/mesh.h>
+#include <boost/math/special_functions/sign.hpp>
+
+#include "config.h"
+#include "geometry_extend.h"
 
 using namespace std;
 using namespace zjucad::matrix;
@@ -29,34 +35,26 @@ void advanced_iso_2d_hes_(double *hes, const double *x, const double *D, const d
 class mips_energy
 {
 public:
+  virtual size_t dim() const = 0;
   virtual int val(const double *x, double *value) const = 0;
-  virtual int gra(const double *x, const size_t id, double *grad) const = 0;
-  virtual int hes(const double *x, const size_t id, double *hess) const = 0;
+  virtual int val(const double *x, const size_t id, double *f) const = 0;
+  virtual int gra(const double *x, const size_t id, double *g) const = 0;
+  virtual int hes(const double *x, const size_t id, double *H) const = 0;
 };
-
-static void gen_rel_elem_to_vert(const mati_t &cell, vector<vector<size_t>> &result) {
-  const size_t vert_num = max(cell)+1;
-  result.resize(vert_num);
-  for (size_t j = 0; j < cell.size(2); ++j) {
-    for (size_t i = 0; i < cell.size(1); ++i) {
-      result[cell(i, j)].push_back(j);
-    }
-  }
-}
 
 class mips_energy_2d : public mips_energy
 {
 public:
-  mips_energy_2d(const mati_t &tris, const matd_t &nods, const double w=1.0)
-    : w_(w), dim_(nods.size()), tris_(tris) {
-    binv_.resize(4, tris.size(2));
-#pragma omp parallel for
+  mips_energy_2d(const mati_t &tris, const matd_t &nods)
+    : dim_(nods.size()), tris_(tris), s_(5.0) {
+    binv_.resize(4, tris_.size(2));
     for (size_t i = 0; i < tris.size(2); ++i) {
-      matd_t base = nods(colon(), colon(1, 2))-nods(colon(), 0)*ones<double>(1, 2);
+      matd_t base = nods(colon(), tris_(colon(1, 2), i))
+          -nods(colon(), tris_(0, i))*ones<double>(1, 2);
       inv(base);
-      copy(base.begin(), base.end(), &binv_(0, i));
+      std::copy(base.begin(), base.end(), &binv_(0, i));
     }
-//    build_related_elem_map(tris, rel_elem_);
+    calc_one_ring_face(tris_, p2f_);
   }
   size_t dim() const {
     return dim_;
@@ -65,58 +63,128 @@ public:
     itr_matrix<const double *> X(2, dim_/2, x);
     for (size_t i = 0; i < tris_.size(2); ++i) {
       matd_t vert = X(colon(), tris_(colon(), i));
-      double v0 = 0, v1 = 0;
-      mips_2d_(&v0, &vert[0], &binv_(0, i));
-      det_2d_(&v1, &vert[0], &binv_(0, i));
-      *value += w_*(v0+v1);
+      double va = 0;
+      advanced_iso_2d_(&va, &vert[0], &binv_(0, i), &s_);
+      *value += va;
     }
     return 0;
   }
-  int gra(const double *x, const size_t id, double *grad) const {
+  int val(const double *x, const size_t id, double *v) const {
     itr_matrix<const double *> X(2, dim_/2, x);
-    itr_matrix<double *> G(2, 1, grad);
-//    for (auto i : related_elem[id]) {
-//      matd_t vert = X(colon(), tris_(colon(), i));
-//      matd_t g = zeros<double>(6, 1);
-//      mips_2d_jac_(&g[0], &vert[0], &binv(0, i));
-//      std::find(tris(0, i), tris(3, i), id)-tris(0, );
-//      grad += ;
-//    }
+    for (auto &fid : p2f_[id]) {
+      matd_t vert = X(colon(), tris_(colon(), fid));
+      double va = 0;
+      advanced_iso_2d_(&va, &vert[0], &binv_(0, fid), &s_);
+      *v += va;
+    }
     return 0;
   }
-  int hes(const double *x, const size_t id, double *hess) const {
-    itr_matrix<const double *> X(3, dim_/3, x);
-    itr_matrix<double *> H(2, 2, hess);
-
+  int gra(const double *x, const size_t id, double *g) const {
+    itr_matrix<const double *> X(2, dim_/2, x);
+    itr_matrix<double *> grad(2, 1, g);
+    for (auto &fa : p2f_[id]) {
+      matd_t vert = X(colon(), tris_(colon(), fa));
+      matd_t jac = zeros<double>(6, 1);
+      advanced_iso_2d_jac_(&jac[0], &vert[0], &binv_(0, fa), &s_);
+      int pos = std::find(&tris_(0, fa), &tris_(0, fa)+3, id)-&tris_(0, fa);
+      ASSERT(pos >= 0 && pos < 3);
+      grad += jac(colon(2*pos, 2*pos+1));
+    }
     return 0;
   }
+  int hes(const double *x, const size_t id, double *H) const {
+    return __LINE__;
+  }
+public:
+  vector<vector<size_t>> p2f_;
 private:
-  const double w_;
   const size_t dim_;
   const mati_t &tris_;
+  const double s_;
   matd_t binv_;
-  vector<vector<size_t>> rel_elem_;
 };
 
 class move_vertex
 {
 public:
-  move_vertex() {
-//    energy = make_shared<>();
+  move_vertex(const mati_t &tris, const matd_t &nods)
+    : tris_(tris) {
+    energy_ = make_shared<mips_energy_2d>(tris, nods);
+    matd_t e0 = nods(colon(), tris(colon(1, 2), 0))-nods(colon(), tris(colon(0, 1), 0));
+    sign_ = boost::math::sign(det(e0));
   }
-  int operator()(const size_t id, double *x) {
-
+  int operator()(const size_t id, double *x) const {
+    itr_matrix<double *> X(2, energy_->dim()/2, x);
+    double v0 = 0, v1 = 0;
+    energy_->val(x, id, &v0);
+    matd_t g = zeros<double>(2, 1);
+    double lambda = calc_step_length(id, x, g);
+    X(colon(), id) -= lambda*g;
+    energy_->val(x, id, &v1);
+    if ( v1 > v0 )
+      X(colon(), id) += 0.85*lambda*g;
+    return 0;
   }
+public:
+  shared_ptr<mips_energy_2d> energy_;
 private:
-  shared_ptr<mips_energy_2d> energy;
+  bool has_invert_elem_one_ring(const size_t id, const double *x) const {
+    itr_matrix<const double *> X(2, energy_->dim()/2, x);
+    for (auto &fa : energy_->p2f_[id]) {
+      matd_t ev = X(colon(), tris_(colon(1, 2), fa))
+          -X(colon(), tris_(colon(0, 1), fa));
+      if ( det(ev)*sign_ <= 0.0 )
+        return true;
+    }
+    return false;
+  }
+  double calc_step_length(const size_t id, const double *x, matd_t &d) const {
+    itr_matrix<const double *> X(2, energy_->dim()/2, x);
+    for (auto &fa : energy_->p2f_[id]) {
+      int pos = std::find(&tris_(0, fa), &tris_(0, fa)+3, id)-&tris_(0, fa);
+      matd_t e0 = X(colon(), tris_((pos+1)%3, fa))-X(colon(), tris_(pos, fa));
+      matd_t e1 = X(colon(), tris_((pos+2)%3, fa))-X(colon(), tris_(pos, fa));
+      if ( dot(cross(e0, d), cross(d, e1)) > 0 ) {
+        return dot(e0, d)/norm(d);
+      }
+    }
+    return 1.0;
+  }
+  const mati_t &tris_;
+  double sign_;
 };
-//========================== 2d mesh deformer ==================================
-mips_deformer_2d::mips_deformer_2d(const mati_t &tris, const matd_t &nods) {
 
+//========================== 2d mesh deformer ==================================
+mips_deformer_2d::mips_deformer_2d(const mati_t &tris, const matd_t &nods)
+  : dim_(nods.size()) {
+  move_ = make_shared<move_vertex>(tris, nods);
 }
 
+int mips_deformer_2d::deform(double *x, const size_t maxiter) const {
+  cout << "[info] deform the mesh" << endl;
+  double prev_val = 0, post_val = 0;
+  move_->energy_->val(x, &prev_val);
+  for (size_t iter = 0; iter < maxiter; ++iter) {
+    apply(x);
 
+    move_->energy_->val(x, &post_val);
+    if ( post_val-prev_val < 1e-6*prev_val ) {
+      cout << "\t@converged after " << iter+1 << " iteration\n";
+      break;
+    }
+    prev_val = post_val;
+  }
+  return 0;
+}
 
+int mips_deformer_2d::apply(double *x) const {
+  for (size_t i = 0; i < dim_/2; ++i) {
+    (*move_)(i, x);
+  }
+  return 0;
+}
+
+//==============================================================================
 void mips_deformer_2d::unit_test() const {
   matd_t nods = rand(2, 3);
   matd_t base = nods(colon(), colon(1, 2))-nods(colon(), 0)*ones<double>(1, 2);
