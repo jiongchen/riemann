@@ -31,6 +31,7 @@ block(
   
   advanced_iso_2d(X, D, s) := block(
     [rtn],
+    /*rtn: (0.5*mips_2d(X, D)+0.5*det_2d(X, D))[1,1],*/
     rtn: exp((s*mips_2d(X, D)+s*det_2d(X, D))[1,1]),
     matrix([rtn])
   ),

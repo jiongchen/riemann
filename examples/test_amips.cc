@@ -82,7 +82,16 @@ int main(int argc, char *argv[])
 
   mips_deformer_2d solver(tris, nods);
   solver.set_fixed_vert(fix_vert);
-  solver.deform(&nods0[0], 100);
+//  solver.unit_test();
+
+  matd_t dir(2, 1);
+  dir[0] = 0;
+  dir[1] = 1;
+//  for (size_t k = 0; k < 10; ++k) {
+//    nods0(colon(), 22) += 0.05*dir;
+//    solver.deform(&nods0[0], 1000);
+//  }
+  solver.deform(&nods0[0], 1001);
 
   sprintf(filename, "%s/deform.vtk", args.out_folder.c_str());
   ofstream os(filename); {

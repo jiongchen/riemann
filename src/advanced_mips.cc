@@ -11,6 +11,8 @@
 #include "config.h"
 #include "geometry_extend.h"
 
+#define TOLERANCE 1e-12
+
 using namespace std;
 using namespace zjucad::matrix;
 
@@ -118,12 +120,21 @@ public:
     energy_->val(x, id, &v0);
     matd_t g = zeros<double>(2, 1);
     energy_->gra(x, id, &g[0]);
+    if ( norm(g) < TOLERANCE )
+      return 0;
+    g *= -1;
     double lambda = calc_step_length(id, x, g);
-//    cout << "\t\t#pid: " << id << " step: " << lambda << endl;
-    X(colon(), id) -= lambda*g;
+//    cout << lambda << endl;
+//    getchar();
+    X(colon(), id) += lambda*g;
     energy_->val(x, id, &v1);
+//    cout << v0 << " " << v1 << endl;
+//    getchar();
     if ( v1 > v0 || has_invert_elem_one_ring(id, x) )
-      X(colon(), id) += 0.85*lambda*g;
+      X(colon(), id) -= 0.85*lambda*g;
+//    double v4 = 0;
+//    energy_->val(x, id, &v4);
+//    ASSERT(v4 <= v0);
     return 0;
   }
 public:
@@ -133,24 +144,27 @@ private:
     itr_matrix<const double *> X(2, energy_->dim()/2, x);
     for (auto &fa : energy_->p2f_[id]) {
       matd_t ev = X(colon(), tris_(colon(1, 2), fa))-X(colon(), tris_(colon(0, 1), fa));
-      if ( det(ev)*sign_ <= 0.0 )
+      if ( det(ev)*sign_ < 0.0 )
         return true;
     }
     return false;
   }
   double calc_step_length(const size_t id, const double *x, matd_t &d) const {
+    if ( norm(d) < TOLERANCE )
+      return 0.0;
     itr_matrix<const double *> X(2, energy_->dim()/2, x);
     for (auto &fa : energy_->p2f_[id]) {
       int pos = std::find(&tris_(0, fa), &tris_(0, fa)+3, id)-&tris_(0, fa);
       ASSERT(pos >= 0 && pos < 3);
-      matd_t e0 = X(colon(), tris_((pos+1)%3, fa))-X(colon(), tris_(pos, fa));
-      matd_t e1 = X(colon(), tris_((pos+2)%3, fa))-X(colon(), tris_(pos, fa));
-      if ( dot(cross(e0, d), cross(d, e1)) > 0 ) {
-        return (e0(0, 0)*e1(1, 0)-e1(0, 0)*e0(1, 0))
-            /(d(0, 0)*(e1(1, 0)-e0(1, 0))+d(1, 0)*(e0(0, 0)-e1(0, 0)));
+      matd_t a = X(colon(), tris_((pos+1)%3, fa))-X(colon(), tris_(pos, fa));
+      matd_t b = X(colon(), tris_((pos+2)%3, fa))-X(colon(), tris_(pos, fa));
+      double x = -(b[1]*d[0]-b[0]*d[1])/(a[1]*b[0]-a[0]*b[1]);
+      double y = (a[1]*d[0]-a[0]*d[1])/(a[1]*b[0]-a[0]*b[1]);
+      if ( x >= 0 && y >= 0 ) {
+        return -(a[0]*b[1]-a[1]*b[0])/(d[1]*(b[0]-a[0])+d[0]*(a[1]-b[1]));
       }
     }
-    return 1.0;
+    return 0.0;
   }
   const mati_t &tris_;
   double sign_;
@@ -187,6 +201,8 @@ int mips_deformer_2d::deform(double *x, const size_t maxiter) const {
 }
 
 int mips_deformer_2d::apply(double *x) const {
+//  (*move_)(129, x);
+
   for (size_t i = 0; i < dim_/2; ++i) {
     if ( fixed_.find(i) == fixed_.end() )
       (*move_)(i, x);

@@ -1,0 +1,45 @@
+/* [wxMaxima batch file version 1] [ DO NOT EDIT BY HAND! ]*/
+/* [ Created with wxMaxima version 13.04.2 ] */
+
+/* [wxMaxima: input   start ] */
+a: matrix([a0], [a1], [0]);
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: input   start ] */
+b: matrix([b0], [b1], [0]);
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: input   start ] */
+d: matrix([d0], [d1], [0]);
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: input   start ] */
+load(cj_function);
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: input   start ] */
+load(f90);
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: input   start ] */
+DOT(CROSS(a, d), CROSS(d, b));
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: input   start ] */
+A: submatrix(3, addcol(k*d-a, b-k*d));
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: input   start ] */
+detA: determinant(A);
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: input   start ] */
+solve(detA=0, k);
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: input   start ] */
+solve([a0*x+b0*y=d0, a1*x+b1*y=d1], [x,y]);
+/* [wxMaxima: input   end   ] */
+
+/* Maxima can't load/batch files which end with a comment! */
+"Created with wxMaxima"$
