@@ -15,6 +15,7 @@ class mips_deformer_2d
 {
 public:
   mips_deformer_2d(const mati_t &tris, const matd_t &nods);
+  void set_fixed_vert(const std::unordered_set<size_t> &fixed);
   int deform(double *x, const size_t maxiter=20000) const;
   void unit_test() const;
 private:
