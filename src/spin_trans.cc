@@ -2,19 +2,21 @@
 
 #include <iostream>
 #include <jtflib/mesh/util.h>
+#include <jtflib/mesh/mesh.h>
 
 #include "config.h"
 #include "util.h"
 #include "arpaca.h"
+#include "cotmatrix.h"
 
 using namespace std;
 using namespace Eigen;
 using namespace zjucad::matrix;
+using namespace jtf::mesh;
 
 namespace riemann {
 
-extern "C"
-void conv_quat_to_mat(const double *q, double *m) {
+static void conv_quat_to_mat(const double *q, double *m) {
   m[0] = q[0];
   m[1] = q[1];
   m[2] = q[2];
@@ -35,27 +37,30 @@ void conv_quat_to_mat(const double *q, double *m) {
   m[14] = -q[1];
   m[15] = q[0];
 }
-
 /// -------------------------------
 /// ATTENTION: NODE IS 4xN MATRIX -
 /// -------------------------------
 spin_trans::spin_trans(const mati_t &tris, const matd_t &nods)
   : tris_(tris), nods_(nods) {
+  ASSERT(nods.size(1) == 4);
   Mf_.setZero(4*tris_.size(2));
   Mv_.setZero(4*nods_.size(2));
   for (size_t i = 0; i < tris_.size(2); ++i) {
     matd_t vert = nods(colon(1, 3), tris_(colon(), i));
-    double area = jtf::mesh::cal_face_area(vert);
+    const double area = jtf::mesh::cal_face_area(vert);
     Mf_.segment<4>(4*i) = area*Vector4d::Ones();
-    Mv_.segment<4>(4*tris_(0, i)) += 1.0/3*area*Vector4d::Ones();
-    Mv_.segment<4>(4*tris_(1, i)) += 1.0/3*area*Vector4d::Ones();
-    Mv_.segment<4>(4*tris_(2, i)) += 1.0/3*area*Vector4d::Ones();
+    Mv_.segment<4>(4*tris_(0, i)) += area/3*Vector4d::Ones();
+    Mv_.segment<4>(4*tris_(1, i)) += area/3*Vector4d::Ones();
+    Mv_.segment<4>(4*tris_(2, i)) += area/3*Vector4d::Ones();
   }
+  rho_ = zeros<double>(tris_.size(2), 1);
+  cotmatrix(tris_, nods_(colon(1, 3), colon()), 4, &L_);
+  build_dirac_operator(Dirac_);
 }
 
 void spin_trans::set_curvature_change(const matd_t &delta) {
   ASSERT(delta.size() == tris_.size(2));
-  rho_ = &delta[0];
+  rho_ = delta;
 }
 
 void spin_trans::build_dirac_operator(SparseMatrix<double> &D) {
@@ -90,26 +95,47 @@ void spin_trans::build_rho_operator(SparseMatrix<double> &R) {
   R.setFromTriplets(trips.begin(), trips.end());
 }
 
-int spin_trans::solve_eigen_prob() {
-  build_dirac_operator(Dirac_);
+int spin_trans::solve_eigen_prob(VectorXd &lambda) {
+  /// solve integrable condition: $(D-\rho)\lambda=0$, given
+  /// arbitrary $\rho$, we solve an eigenvalue problem to find
+  /// the smallest shift s.t. $(D-\rho)\lambda=\gamma\lambda$
+  cout << "[info] solve for similarity field\n";
   build_rho_operator(R_);
   SparseMatrix<double> A = Dirac_-R_;
-  SparseMatrix<double> LHS = (A*Mv_.cwiseSqrt().asDiagonal()).transpose()
-      *Mf_.asDiagonal()*A*Mv_.cwiseSqrt().asDiagonal();
-  if ( is_symm(LHS) ) {
+  VectorXd V = Mv_.cwiseSqrt().cwiseInverse();
+  SparseMatrix<double> LHS = (A*V.asDiagonal()).transpose()*Mf_.asDiagonal()*A*V.asDiagonal();
+  if ( !is_symm(LHS) ) {
     cerr << "[info] unsymmetric matrix for eigen solve\n";
     return __LINE__;
   }
   arpaca::SymmetricEigenSolver<double> solver
       = arpaca::Solve(LHS, 10, arpaca::MAGNITUDE_SMALLEST);
-  lambda_ = solver.eigenvectors().col(0);
+  cout << solver.GetInfo() << endl;
+  lambda = V.asDiagonal()*solver.eigenvectors().col(0);
   return 0;
 }
 
-int spin_trans::solve_poisson_prob(matd_t &nods) {
-  Map<VectorXd> X(&nods[0], nods_.size());
-  SparseMatrix<double> L;
-  VectorXd rhs;
+int spin_trans::solve_poisson_prob(const VectorXd &lambda, matd_t &x) {
+  Map<VectorXd> X(&x[0], nods_.size());
+  VectorXd divf = VectorXd::Zero(x.size());
+  // compute divergence
+  for (size_t i = 0; i < tris_.size(2); ++i) {
+
+  }
+  X = ldlt_solver_.solve(divf);
+  ASSERT(ldlt_solver_.info() == Success);
+  return 0;
+}
+
+void spin_trans::precompute() {
+  ldlt_solver_.compute(L_);
+  ASSERT(ldlt_solver_.info() == Success);
+}
+
+int spin_trans::deform(matd_t &x) {
+  VectorXd lambda;
+  solve_eigen_prob(lambda);
+  solve_poisson_prob(lambda, x);
   return 0;
 }
 

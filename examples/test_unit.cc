@@ -487,7 +487,12 @@ int test_insert_block(ptree &pt) {
 }
 
 int test_cwise_oper(ptree &pt) {
-
+  srand(time(NULL));
+  VectorXd x = VectorXd::Random(10);
+  cout << x.transpose() << endl;
+  cout << x.cwiseAbs().cwiseSqrt().transpose() << endl;
+  cout << x.transpose() << endl;
+  return 0;
 }
 
 int main(int argc, char *argv[])
@@ -513,6 +518,7 @@ int main(int argc, char *argv[])
     CALL_SUB_PROG(test_defo_grad_other);
     CALL_SUB_PROG(test_defo_grad_third);
     CALL_SUB_PROG(test_insert_block);
+    CALL_SUB_PROG(test_cwise_oper);
   } catch (const boost::property_tree::ptree_error &e) {
     cerr << "Usage: " << endl;
     zjucad::show_usage_info(std::cerr, pt);
