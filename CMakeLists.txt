@@ -43,6 +43,9 @@ if(IPOPT_FOUND)
     include_directories(${IPOPT_INCLUDE_DIRS})
 endif(IPOPT_FOUND)
 
+# ARPACK
+find_package(Arpack REQUIRED)
+
 # ViennaCL
 if(USE_CUDA)
     find_package(ViennaCL)

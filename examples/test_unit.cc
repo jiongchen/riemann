@@ -22,6 +22,7 @@
 #include "src/geometry_extend.h"
 #include "src/write_vtk.h"
 #include "src/timer.h"
+#include "src/util.h"
 
 using namespace std;
 using namespace Eigen;
@@ -471,6 +472,24 @@ int test_defo_grad_third(ptree &pt) {
   return 0;
 }
 
+int test_insert_block(ptree &pt) {
+  srand(time(NULL));
+  Matrix3d A = Matrix3d::Random();
+  cout << A << endl << endl;
+
+  SparseMatrix<double> B(10, 10);
+  vector<Triplet<double>> trips;
+  insert_block(4, 4, A.data(), 3, 3, &trips);
+  B.setFromTriplets(trips.begin(), trips.end());
+  cout << B << endl << endl;
+  cout << "done\n";
+  return 0;
+}
+
+int test_cwise_oper(ptree &pt) {
+
+}
+
 int main(int argc, char *argv[])
 {
   ptree pt;
@@ -493,6 +512,7 @@ int main(int argc, char *argv[])
     CALL_SUB_PROG(test_defo_grad);
     CALL_SUB_PROG(test_defo_grad_other);
     CALL_SUB_PROG(test_defo_grad_third);
+    CALL_SUB_PROG(test_insert_block);
   } catch (const boost::property_tree::ptree_error &e) {
     cerr << "Usage: " << endl;
     zjucad::show_usage_info(std::cerr, pt);

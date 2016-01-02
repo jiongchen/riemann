@@ -35,4 +35,5 @@ add_library(riemann SHARED ${header} ${source}
 target_link_libraries(riemann
     jtf-mesh
     ${UMFPACK_LIBRARIES}
+    ${ARPACK_LIBRARIES}
 )

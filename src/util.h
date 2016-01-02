@@ -29,6 +29,19 @@ void runtime_dim_add_diag_block(const size_t dim, const size_t row, const size_t
 }
 
 template <typename T>
+void insert_block(const size_t start_x, const size_t start_y, const T *data,
+                  const size_t rows, const size_t cols,
+                  std::vector<Eigen::Triplet<T>> *trips) {
+  // inserted block is column major
+  for (size_t j = 0; j < cols; ++j) {
+    for (size_t i = 0; i < rows; ++i) {
+      size_t idx = i+j*rows;
+      trips->push_back(Eigen::Triplet<T>(start_x+i, start_y+j, data[idx]));
+    }
+  }
+}
+
+template <typename T>
 void rm_spmat_col_row(Eigen::SparseMatrix<T> &A,
                       const std::unordered_set<size_t> &idx) {
   std::vector<size_t> g2l(A.cols());

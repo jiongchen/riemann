@@ -77,12 +77,10 @@ target_link_libraries(test_deform_transfer
     ${Boost_LIBRARIES}
 )
 
-find_package(Arpack REQUIRED)
 add_executable(test_lap_eigen test_lap_eigen.cc)
 target_link_libraries(test_lap_eigen
     riemann
     ${Boost_LIBRARIES}
-    ${ARPACK_LIBRARIES}
 )
 
 add_executable(test_grad_edit test_grad_edit.cc)
@@ -136,4 +134,10 @@ target_link_libraries(test_amips
 add_executable(boundvert boundvert.cc)
 target_link_libraries(boundvert
     jtf-mesh
+)
+
+add_executable(test_spin_trans test_spin_trans.cc)
+target_link_libraries(test_spin_trans
+    riemann
+    ${Boost_LIBRARIES}
 )
