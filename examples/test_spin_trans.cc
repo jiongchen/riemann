@@ -3,6 +3,7 @@
 #include <boost/program_options.hpp>
 #include <boost/filesystem.hpp>
 #include <jtflib/mesh/io.h>
+#include <zjucad/matrix/io.h>
 
 #include "src/spin_trans.h"
 
@@ -20,8 +21,19 @@ struct argument {
 };
 }
 
-static void read_curvature_change(const char *filename, matd_t &delta) {
-
+static int read_curvature_change(const char *filename, matd_t &delta) {
+  ifstream ifs(filename);
+  if ( ifs.fail() ) {
+    cerr << "[info] cannot open " << filename << endl;
+    return __LINE__;
+  }
+  cout << "[info] load curvature change\n";
+  size_t fid; double dv;
+  while ( ifs >> fid >> dv ) {
+    cout << "\tface: " << fid << " delta: " << dv << endl;
+    delta[fid] = dv;
+  }
+  return 0;
 }
 
 int main(int argc, char *argv[])
@@ -53,18 +65,21 @@ int main(int argc, char *argv[])
   jtf::mesh::load_obj(args.input_mesh.c_str(), tris, nods);
   matd_t delta = zeros<double>(tris.size(2), 1);
   read_curvature_change(args.curv_file.c_str(), delta);
+
+  // R^3->Im H
   matd_t nodx = zeros<double>(4, nods.size(2));
   nodx(colon(1, 3), colon()) = nods;
+  matd_t xnew = nodx;
 
   spin_trans solver(tris, nodx);
-  solver.precompute();
-
   solver.set_curvature_change(delta);
-  solver.deform(nodx);
+  solver.deform(xnew);
 
   // Output
-  nods = nodx(colon(1, 3), colon());
   char outfile[256];
+  sprintf(outfile, "%s/origin.obj", args.output_folder.c_str());
+  jtf::mesh::save_obj(outfile, tris, nods);
+  nods = xnew(colon(1, 3), colon());
   sprintf(outfile, "%s/spin.obj", args.output_folder.c_str());
   jtf::mesh::save_obj(outfile, tris, nods);
 

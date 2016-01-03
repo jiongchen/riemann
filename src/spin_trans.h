@@ -14,12 +14,11 @@ class spin_trans
 public:
   spin_trans(const mati_t &tris, const matd_t &nods);
   void set_curvature_change(const matd_t &delta);
-  void precompute();
   int deform(matd_t &x);
 private:
   void build_dirac_operator(Eigen::SparseMatrix<double> &D);
   void build_rho_operator(Eigen::SparseMatrix<double> &R);
-  void calc_div_f(const matd_t &x, Eigen::VectorXd divf);
+  void calc_div_f(const Eigen::VectorXd &lambda, Eigen::VectorXd &divf);
   int solve_eigen_prob(Eigen::VectorXd &lambda);
   int solve_poisson_prob(const Eigen::VectorXd &lambda, matd_t &x);
 private:
@@ -29,7 +28,7 @@ private:
 
   Eigen::VectorXd Mf_, Mv_;
   Eigen::SparseMatrix<double> Dirac_, R_, L_;
-  Eigen::SimplicialCholesky<Eigen::SparseMatrix<double>> ldlt_solver_;
+  Eigen::SimplicialCholesky<Eigen::SparseMatrix<double>> solver_;
 };
 
 }
