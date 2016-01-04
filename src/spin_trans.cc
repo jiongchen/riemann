@@ -165,7 +165,6 @@ int spin_trans::solve_poisson_prob(const VectorXd &lambda, matd_t &x) {
   Map<VectorXd> X(&x[0], x.size());
   VectorXd divf;
   calc_div_f(lambda, divf);
-  divf *= -1.0; // corresponds to the change on Laplacian
 
   // fix the first point to remove the kernel of Laplacian
   vector<size_t> g2l(L_.cols());
