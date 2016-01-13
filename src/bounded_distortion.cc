@@ -183,7 +183,7 @@ int bd_solver::solve(double *initX) const {
 }
 
 int bd_solver::alter_solve(double *initX) const {
-  cout << "[info] solve\n";
+  cout << "[info] alternating solve\n";
   Map<VectorXd> X(initX, dim_);
   const size_t cdim = linc_->nf();
   VectorXd z(lift_dim_), Pz(lift_dim_), n(lift_dim_), u(dim_+cdim), rhs(dim_+cdim);
@@ -215,6 +215,46 @@ int bd_solver::alter_solve(double *initX) const {
       cout << "\t@post step size: " << post_step.norm() << endl;
       cout << "\t@turning angle: " << acos(post_step.dot(n)/(n.norm()*post_step.norm()))/M_PI*180 << "\n\n";
     }
+  }
+  return 0;
+}
+
+int bd_solver::alter_solve_chebyshev(double *initX) const {
+  // x_{k+1} = \omega(\gamma(\hat x_{k+1}-x_k)+x_k-x_{k-1})+x_{k-1}
+  // TODO: CHECK
+  cout << "[INFO] alternating solve using chebyshev\n";
+  Map<VectorXd> X(initX, dim_);
+  const size_t cdim = linc_->nf();
+  VectorXd curr_x(dim_), prev_x = X, z(lift_dim_), Pz(lift_dim_), n(lift_dim_), u(dim_+cdim), rhs(dim_+cdim);
+  linc_->rhs(&rhs[dim_]);
+
+  static const size_t S = 10;
+  static const double rho = 0, gamma = 0.75;
+  double omega;
+  for (size_t iter = 0; iter < args_.maxiter; ++iter) {
+    z = T_*X;
+    euclidean_proj(&z[0], &Pz[0]);
+    n = z-Pz;
+    if ( iter % 1 == 0 ) {
+      cout << "\t@iter " << iter << " normal norm: " << n.norm() << endl;
+    }
+    if ( n.norm() < args_.tolerance ) {
+      cout << "\t@CONVERGED after " << iter << " iterations\n";
+      break;
+    }
+    rhs.head(dim_) = T_.transpose()*Pz;
+    u = ldlt_solver.solve(rhs);
+    ASSERT(ldlt_solver.info() == Success);
+    curr_x = X;
+    X = u.head(dim_);
+    if ( iter < S )
+      omega = 1.0;
+    else if ( iter == S )
+      omega = 2.0/(2.0-rho*rho);
+    else
+      omega = 4.0/(4.0-rho*rho*omega);
+    X = omega*(gamma*(X-curr_x)+curr_x-prev_x)+prev_x;
+    prev_x = curr_x;
   }
   return 0;
 }
