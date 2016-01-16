@@ -1,47 +1,71 @@
 #include <iostream>
+#include <jtflib/mesh/io.h>
+#include <boost/program_options.hpp>
 #include <boost/filesystem.hpp>
+#include <Eigen/Dense>
 
 #include "src/gradient_deform.h"
+#include "src/write_vtk.h"
 
 using namespace std;
 using namespace riemann;
+using namespace Eigen;
 
-#define X 0
-#define Y 1
-#define Z 2
+static int read_fixed_vert(const char *filename, vector<size_t> &vert) {
+  ifstream ifs(filename);
+  if ( ifs.fail() ) {
+    cerr << "[INFO] cannot open " << filename << endl;
+    return __LINE__;
+  }
+  size_t id;
+  while ( ifs >> id ) {
+    vert.push_back(id);
+  }
+  cout << "[INFO] constrained verts: " << vert.size() << endl;
+  return 0;
+}
+
+namespace test_grad_edit {
+struct argument {
+  string input_obj_file;
+  string fix_vert_file;
+  string edit_vert_file;
+  string output_folder;
+};
+}
 
 int main(int argc, char *argv[])
 {
-  if ( argc != 2 ) {
-    cerr << "# Usage: " << argv[0] << " model.obj\n";
+  if ( argc != 4 ) {
+    cerr << "# Usage: " << argv[0] << " model.obj fix.fv edit.fv\n";
     return __LINE__;
   }
   boost::filesystem::create_directory("./grad_edit");
 
-  gradient_field_deform handle;
-  handle.load_origin_model(argv[1]);
-  handle.save_origin_model("./grad_edit/origin.obj");
-  handle.init();
-//  handle.see_coord_grad_fields("./grad_edit/grad_x.vtk", X);
-//  handle.see_coord_grad_fields("./grad_edit/grad_y.vtk", Y);
-//  handle.see_coord_grad_fields("./grad_edit/grad_z.vtk", Z);
+  mati_t tris; matd_t nods;
+  jtf::mesh::load_obj(argv[1], tris, nods);
+  vector<size_t> fix_vert, edit_vert;
+  read_fixed_vert(argv[2], fix_vert);
+  read_fixed_vert(argv[3], edit_vert);
 
-//  handle.scale_grad_fields(1.5);
-//  handle.reverse_grad_fields();
-//  handle.see_coord_grad_fields("./grad_edit/scale_grad_x.vtk", X);
-//  handle.see_coord_grad_fields("./grad_edit/scale_grad_y.vtk", Y);
-//  handle.see_coord_grad_fields("./grad_edit/scale_grad_z.vtk", Z);
+  gradient_field_deform dfm(tris, nods);
+  dfm.set_fixed_verts(fix_vert);
+  dfm.set_edited_verts(edit_vert);
+  dfm.solve_harmonic_field();
 
-  vector<size_t> fixIDs{6976};
-  handle.set_fixed_verts(fixIDs);
-  vector<size_t> editIDs{1, 100, 200};
-  handle.edit_boundary(editIDs);
+  MatrixXd dG = dfm.Gxyz_;
+  dG *= 0.1;
 
-  handle.propagate_transform();
-  handle.see_harmonic_field("./grad_edit/hf.vtk");
-  handle.deform();
-  handle.save_deformed_model("./grad_edit/deform.obj");
+  char outfile[256];
+  sprintf(outfile, "./grad_edit/harmonic.vtk");
+  draw_vert_value_to_vtk(outfile, &nods[0], nods.size(2), &tris[0], tris.size(2), &dfm.hf_[0]);
+  sprintf(outfile, "./grad_edit/gradX.vtk");
+  draw_face_direct_field(outfile, &nods[0], nods.size(2), &tris[0], tris.size(2), &dG(0, 0));
+  sprintf(outfile, "./grad_edit/gradY.vtk");
+  draw_face_direct_field(outfile, &nods[0], nods.size(2), &tris[0], tris.size(2), &dG(0, 1));
+  sprintf(outfile, "./grad_edit/gradZ.vtk");
+  draw_face_direct_field(outfile, &nods[0], nods.size(2), &tris[0], tris.size(2), &dG(0, 2));
 
-  cout << "[info] done\n";
+  cout << "[INFO] done\n";
   return 0;
 }

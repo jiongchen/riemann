@@ -7,58 +7,40 @@
 
 namespace riemann {
 
+using mati_t=zjucad::matrix::matrix<size_t>;
+using matd_t=zjucad::matrix::matrix<double>;
+
 /// Lp = div w;
 /// distinguish the gradient to coordinates
 /// on surface and the deformation gradient
 class gradient_field_deform
 {
 public:
-  using mati_t = zjucad::matrix::matrix<size_t>;
-  using matd_t = zjucad::matrix::matrix<double>;
-  gradient_field_deform();
-  // io
-  int load_origin_model(const char *filename);
-  int save_origin_model(const char *filename) const;
-  int save_deformed_model(const char *filename) const;
-  // init
-  int init();
-  // manipulate
-  int set_fixed_verts(const std::vector<size_t> &idx);
-  int edit_boundary(const std::vector<size_t> &idx);
-  int propagate_transform(); /// todo
-  int calc_guidance_field(); /// todo
-  // deform
-  int deform();
-  // debug
-  int see_coord_grad_fields(const char *filename, const int xyz) const;
-  int see_harmonic_field(const char *filename) const;
+  gradient_field_deform(const mati_t &tris, const matd_t &nods);
+  void set_fixed_verts(const std::vector<size_t> &idx);
+  void set_edited_verts(const std::vector<size_t> &idx);
+//  int edit_boundary(const std::vector<size_t> &idx, uniform transform);
+  int solve_harmonic_field(); /// todo
+  int deform(double *x);
+public:
+  Eigen::MatrixXd Gxyz_;
+  Eigen::VectorXd hf_;
 private:
   int calc_bary_basis_grad(const mati_t &tris, const matd_t &nods, Eigen::MatrixXd &gradB);
-  int calc_element_area(const mati_t &tris, const matd_t &nods, Eigen::VectorXd &area);
-  // for fragment
-  int calc_frag_bary_basis_grad();
-  int calc_frag_element_area();
-
-  int solve_for_xyz(const int xyz);
-  int calc_divergence(const Eigen::VectorXd &vf, Eigen::VectorXd &div) const;
+  int solve_xyz(const int xyz);
+  int calc_div(const Eigen::VectorXd &vf, Eigen::VectorXd &div) const;
   int precompute();
+private:
+  const mati_t &tris_;
+  const matd_t &nods_;
 
-  mati_t tris_;
-  matd_t nods_, _nods_;
-  matd_t fragment_;
-
-  Eigen::SparseMatrix<double> G_;   // 3*#face by #vert
-  Eigen::SparseMatrix<double> L_;   // #vert by #vert
-  Eigen::MatrixXd grad_xyz_;
+  Eigen::SparseMatrix<double> G_, L_;
   Eigen::MatrixXd gradB_;           // 3 by 3*#face
   Eigen::VectorXd area_;
 
   Eigen::MatrixXd transform_;       // 5 by #vert
-
-  std::unordered_set<size_t> fixDOF_, editDOF_;
+  std::unordered_set<size_t> fixDoF_, editDoF_;
   std::vector<size_t> g2l_;
-  Eigen::SimplicialCholesky<Eigen::SparseMatrix<double>> sol_;
-  Eigen::VectorXd hf_;
 };
 
 }

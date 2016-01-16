@@ -27,7 +27,7 @@ struct argument {
 };
 }
 
-int read_fixed_verts(const char *path, unordered_map<size_t, Vector3d> &fv) {
+static int read_fixed_verts(const char *path, unordered_map<size_t, Vector3d> &fv) {
   ifstream ifs(path);
   if ( ifs.fail() ) {
     cerr << "[info] can not open " << path << endl;
