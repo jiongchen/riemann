@@ -9,8 +9,6 @@ include_geo_sim_sdk()
 link_geo_sim_sdk()
 include_directories(${CMAKE_SOURCE_DIR})
 
-option(USE_CUDA "use cuda" ON)
-
 # BOOST
 set(Boost_USE_STATIC_LIBS ON)
 set(Boost_USE_MULTITHREADED ON)
@@ -47,13 +45,14 @@ endif(IPOPT_FOUND)
 find_package(Arpack REQUIRED)
 
 # ViennaCL
-if(USE_CUDA)
+find_package(CUDA)
+if(CUDA_FOUND)
     find_package(ViennaCL)
     if(VIENNACL_FOUND)
         message("ViennaCL found @ ${VIENNACL_INCLUDE_DIRS}")
         include_directories(${VIENNACL_INCLUDE_DIRS})
     endif(VIENNACL_FOUND)
-endif(USE_CUDA)
+endif(CUDA_FOUND)
 
 add_subdirectory(src)
 add_subdirectory(examples)
