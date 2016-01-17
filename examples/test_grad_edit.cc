@@ -51,7 +51,26 @@ int main(int argc, char *argv[])
   gradient_field_deform dfm(tris, nods);
   dfm.set_fixed_verts(fix_vert);
   dfm.set_edited_verts(edit_vert);
-  dfm.solve_harmonic_field();
+
+  Quaterniond Q; {
+    Vector3d axis(0, -1, 0);
+    double angle = M_PI/3;
+    Q = Quaterniond(AngleAxisd(angle, axis));
+  }
+  dfm.prescribe_uniform_transform(Q, 1.0);
+//  dfm.precompute();
+
+  mati_t rtris; matd_t rnods;
+  {
+    dfm.solve_harmonic_field();
+    dfm.propogate_transform();
+    dfm.interp_face_transform();
+    dfm.rotate_surf_piecewise(rtris, rnods);
+    dfm.update_gradient_field();
+    dfm.prefactorize();
+  }
+
+  dfm.deform(&nods[0]);
 
   MatrixXd dG = dfm.Gxyz_;
   dG *= 0.1;
@@ -65,6 +84,10 @@ int main(int argc, char *argv[])
   draw_face_direct_field(outfile, &nods[0], nods.size(2), &tris[0], tris.size(2), &dG(0, 1));
   sprintf(outfile, "./grad_edit/gradZ.vtk");
   draw_face_direct_field(outfile, &nods[0], nods.size(2), &tris[0], tris.size(2), &dG(0, 2));
+  sprintf(outfile, "./grad_edit/rotated_fragment.obj");
+  jtf::mesh::save_obj(outfile, rtris, rnods);
+  sprintf(outfile, "./grad_edit/deformed.obj");
+  jtf::mesh::save_obj(outfile, tris, nods);
 
   cout << "[INFO] done\n";
   return 0;
