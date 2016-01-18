@@ -30,14 +30,14 @@ int main(int argc, char *argv[])
   dt.save_reference_source_mesh("./dt/source_ref.obj");
   dt.save_reference_target_mesh("./dt/target_ref.obj");
 
-  dt.solve_corres_harmonic();
+//  dt.solve_corres_harmonic();
 
-//  dt.solve_corres_precompute();
-//  dt.solve_corres_first_phase();
-//  dt.see_corres_mesh("./dt/out_first.obj");
-//  dt.solve_corres_second_phase();
-//  dt.see_corres_mesh("./dt/out_second.obj");
-//  dt.compute_triangle_corres();
+  dt.solve_corres_precompute();
+  dt.solve_corres_first_phase();
+  dt.see_corres_mesh("./dt/out_first.obj");
+  dt.solve_corres_second_phase();
+  dt.see_corres_mesh("./dt/out_second.obj");
+  dt.compute_triangle_corres();
 
   dt.deformation_transfer_precompute();
 

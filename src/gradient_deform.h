@@ -20,7 +20,7 @@ public:
   void set_edited_verts(const std::vector<size_t> &idx);
   void prescribe_uniform_transform(const Eigen::Quaterniond &q, const double s); // local rigid
   int precompute();
-  int deform(double *x);
+  int deform(double *x) const;
   // internal in future
     int solve_harmonic_field();
     void propogate_transform();
@@ -30,7 +30,7 @@ public:
     void update_gradient_field();
     void prefactorize();
 private:
-  int solve_xyz(double *x, const int xyz);
+  int solve_xyz(double *x, const int xyz) const;
   int calc_div(const Eigen::VectorXd &vf, Eigen::VectorXd &div) const;
 public:
   const size_t dim_;

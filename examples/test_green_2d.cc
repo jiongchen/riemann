@@ -17,6 +17,7 @@ int main(int argc, char *argv[])
     green_deform_2d def;
     def.load_sample_points(argv[1]);
     def.load_cage(argv[2]);
+    def.dump_cage("./green/cage_origin.vtk");
     def.calc_green_coords();
     {
         const double pos[2] = {-0.1, 1.1};

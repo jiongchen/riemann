@@ -189,14 +189,14 @@ int gradient_field_deform::precompute() {
 int gradient_field_deform::calc_div(const VectorXd &vf, VectorXd &div) const {
   div.setZero(nods_.size(2));
   for (size_t i = 0; i < tris_.size(2); ++i) {
-    for (size_t j = 0; j < 3; ++j) {
-      div[tris_(j, i)] += gradShape_.block<3, 1>(3*j, i).dot(vf.segment<3>(3*i))*area_[i];
-    }
+    div[tris_(0, i)] += gradShape_.block<3, 1>(0, i).dot(vf.segment<3>(3*i))*area_[i];
+    div[tris_(1, i)] += gradShape_.block<3, 1>(3, i).dot(vf.segment<3>(3*i))*area_[i];
+    div[tris_(2, i)] += gradShape_.block<3, 1>(6, i).dot(vf.segment<3>(3*i))*area_[i];
   }
   return 0;
 }
 
-int gradient_field_deform::solve_xyz(double *x, const int xyz) {
+int gradient_field_deform::solve_xyz(double *x, const int xyz) const {
   Map<MatrixXd> X(x, 3, nods_.size(2));
   VectorXd xstar = X.row(xyz).transpose(), rhs;
 
@@ -220,7 +220,7 @@ int gradient_field_deform::solve_xyz(double *x, const int xyz) {
   return 0;
 }
 
-int gradient_field_deform::deform(double *x) {
+int gradient_field_deform::deform(double *x) const {
   cout << "[info] deform...";
   solve_xyz(x, 0);
   solve_xyz(x, 1);

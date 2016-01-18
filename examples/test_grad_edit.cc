@@ -54,7 +54,7 @@ int main(int argc, char *argv[])
 
   Quaterniond Q; {
     Vector3d axis(0, -1, 0);
-    double angle = M_PI/3;
+    double angle = 0.75*M_PI;
     Q = Quaterniond(AngleAxisd(angle, axis));
   }
   dfm.prescribe_uniform_transform(Q, 1.0);
