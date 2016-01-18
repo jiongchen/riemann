@@ -32,7 +32,7 @@ It's just a spare-time project of my own, consisting of full/partial implementat
 
 [2015-08-27] Implement construction of standing wave on surface proposed by [[Zhang10]](http://www.cad.zju.edu.cn/home/hj/10/Huang10WaveQuad.pdf).
 
-![image] (/img/half_size/.png)
+![image] (/img/half_size/wave.png)
 
 [2015-12-01] Implement a 3D bounded distortion solver according to [[Kovalsky15]](http://www.wisdom.weizmann.ac.il/~ylipman/2015_LargeScaleBD.pdf).
 
