@@ -16,6 +16,9 @@ int calc_tet_df_map(const mati_t &tets, const matd_t &binv, Eigen::SparseMatrix<
 class bd_pos_constraint;
 
 struct bd_args {
+  double K;
+  int method;
+  double sr;
   size_t maxiter;
   double tolerance;
 };
@@ -27,17 +30,17 @@ public:
   void set_bound(const double K);
   int pin_down_vert(const size_t id, const double *pos);
   int prefactorize();
+  int optimize(double *init_x) const;
+  int calc_df_cond_number(const double *x, matd_t &cond) const;
+private:
   int solve(double *initX) const;
   int alter_solve(double *initX) const;
   int alter_solve_chebyshev(double *initX) const;
-  int calc_df_cond_number(const double *x, matd_t &cond) const;
-private:
   int euclidean_proj(const double *Tx, double *PTx) const;
-
+private:
   const mati_t &tets_;
   const matd_t &nods_;
   const size_t dim_, lift_dim_;
-  double K_;
   bd_args args_;
 
   Eigen::SparseMatrix<double> T_;

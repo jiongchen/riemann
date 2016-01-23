@@ -102,7 +102,7 @@ bd_solver::bd_solver(const mati_t &tets, const matd_t &nods, const bd_args &args
 }
 
 void bd_solver::set_bound(const double K) {
-  K_ = K;
+  args_.K = K;
 }
 
 int bd_solver::pin_down_vert(const size_t id, const double *pos) {
@@ -134,6 +134,17 @@ int bd_solver::prefactorize() {
   ASSERT(ldlt_solver.info() == Success);
   cout << "...done\n";
   return 0;
+}
+
+int bd_solver::optimize(double *init_x) const {
+  int rtn = 0;
+  switch ( args_.method ) {
+    case 0: rtn = solve(init_x); break;
+    case 1: rtn = alter_solve(init_x); break;
+    case 2: rtn = alter_solve_chebyshev(init_x); break;
+    default: rtn = __LINE__; break;
+  }
+  return rtn;
 }
 
 int bd_solver::solve(double *initX) const {
@@ -190,21 +201,25 @@ int bd_solver::alter_solve(double *initX) const {
   linc_->rhs(&rhs[dim_]);
   VectorXd post_step(lift_dim_);
   // solve KKT
+  double prev_err_norm = 1;
   high_resolution_timer clk;
   clk.start();
   for (size_t iter = 0; iter < args_.maxiter; ++iter) {
     z = T_*X;
     euclidean_proj(&z[0], &Pz[0]);
     n = z-Pz;
-    if ( iter % 1 == 0 ) {
-      cout << "\t@iter " << iter << " normal norm: " << n.norm() << endl;
-      clk.stop();
-      clk.log();
-    }
-    if ( n.norm() < args_.tolerance ) {
-      cout << "\t@converged after " << iter << " iterations\n";
+    double curr_err_norm = n.norm();
+    if ( curr_err_norm < args_.tolerance ) {
+      cout << "\t@CONVERGED after " << iter << " iterations\n";
       break;
     }
+    if ( iter % 1 == 0 ) {
+      cout << "\t@iter " << iter << " normal norm: " << n.norm() << endl;
+      cout << "\t@spectral radius: " << curr_err_norm/prev_err_norm << endl;
+      clk.stop();
+//      clk.log();
+    }
+    prev_err_norm = curr_err_norm;
     rhs.head(dim_) = T_.transpose()*Pz;
     u = ldlt_solver.solve(rhs);
     ASSERT(ldlt_solver.info() == Success);
@@ -221,15 +236,14 @@ int bd_solver::alter_solve(double *initX) const {
 
 int bd_solver::alter_solve_chebyshev(double *initX) const {
   // x_{k+1} = \omega(\gamma(\hat x_{k+1}-x_k)+x_k-x_{k-1})+x_{k-1}
-  // TODO: CHECK
   cout << "[INFO] alternating solve using chebyshev\n";
   Map<VectorXd> X(initX, dim_);
   const size_t cdim = linc_->nf();
   VectorXd curr_x(dim_), prev_x = X, z(lift_dim_), Pz(lift_dim_), n(lift_dim_), u(dim_+cdim), rhs(dim_+cdim);
   linc_->rhs(&rhs[dim_]);
 
-  static const size_t S = 10;
-  static const double rho = 0, gamma = 0.75;
+  static const size_t S = 15;
+  static const double rho = args_.sr, gamma = 0.75;
   double omega;
   for (size_t iter = 0; iter < args_.maxiter; ++iter) {
     z = T_*X;
@@ -271,27 +285,27 @@ int bd_solver::euclidean_proj(const double *Tx, double *PTx) const {
       diag[2] *= -1;
       U.col(2) *= -1;
     }
-    if ( diag[0] <= K_*diag[2] ) {
+    if ( diag[0] <= args_.K*diag[2] ) {
       Map<Matrix3d>(PTx+9*i) = df;
       continue;
     }
-    double t = (K_*diag[0]+diag[2])/(1+K_*K_);
-    if ( K_*t >= diag[1] && diag[1] >= t ) {
-      diag[0] = K_*t;
+    double t = (args_.K*diag[0]+diag[2])/(1+args_.K*args_.K);
+    if ( args_.K*t >= diag[1] && diag[1] >= t ) {
+      diag[0] = args_.K*t;
       diag[2] = t;
       Map<Matrix3d>(PTx+9*i) = U*diag.asDiagonal()*V.transpose();
       continue;
     }
-    if ( diag[1] > K_*t ) {
-      double tt = (K_*diag[0]+K_*diag[1]+diag[2])/(1+2*K_*K_);
-      diag[0] = diag[1] = K_*tt;
+    if ( diag[1] > args_.K*t ) {
+      double tt = (args_.K*diag[0]+args_.K*diag[1]+diag[2])/(1+2*args_.K*args_.K);
+      diag[0] = diag[1] = args_.K*tt;
       diag[2] = tt;
       Map<Matrix3d>(PTx+9*i) = U*diag.asDiagonal()*V.transpose();
       continue;
     }
     if ( t > diag[1] ) {
-      double tt = (K_*diag[0]+diag[1]+diag[2])/(2+K_*K_);
-      diag[0] = K_*tt;
+      double tt = (args_.K*diag[0]+diag[1]+diag[2])/(2+args_.K*args_.K);
+      diag[0] = args_.K*tt;
       diag[1] = diag[2] = tt;
       Map<Matrix3d>(PTx+9*i) = U*diag.asDiagonal()*V.transpose();
     }
