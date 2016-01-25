@@ -141,3 +141,5 @@ target_link_libraries(test_spin_trans
     riemann
     ${Boost_LIBRARIES}
 )
+
+add_executable(test_complex test_complex.cc)

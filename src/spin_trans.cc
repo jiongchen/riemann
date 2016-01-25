@@ -139,6 +139,29 @@ int spin_trans::solve_eigen_prob(VectorXd &lambda) {
   return 0;
 }
 
+int spin_trans::solve_eigen_prob_inv_power(VectorXd &lambda) {
+  cout << "[INFO] solve for similarity field\n";
+  build_rho_operator(R_);
+  ASSERT(R_.cols() == L_.cols());
+  SparseMatrix<double> A = Dirac_-R_;
+  VectorXd V = Mv_.cwiseSqrt().cwiseInverse();
+  SparseMatrix<double> LHS = (A*V.asDiagonal()).transpose()*Mf_.asDiagonal()*A*V.asDiagonal();
+  if ( !is_symm(LHS) ) {
+    cerr << "[INFO] unsymmetric matrix for eigen solve\n";
+    return __LINE__;
+  }
+  SimplicialCholesky<SparseMatrix<double>> solver;
+  solver.compute(LHS);
+  ASSERT(solver.info() == Success);
+  // inverse power method
+  VectorXd eigvec;
+  for (size_t iter = 0; iter < 20000; ++iter) {
+
+  }
+  lambda = V.asDiagonal()*eigvec;
+  return 0;
+}
+
 void spin_trans::calc_div_f(const VectorXd &lambda, VectorXd &divf) {
   divf.setZero(nods_.size());
   for (size_t i = 0; i < tris_.size(2); ++i) {
@@ -184,6 +207,7 @@ int spin_trans::solve_poisson_prob(const VectorXd &lambda, matd_t &x) {
   ASSERT(solver_.info() == Success);
   VectorXd dx = solver_.solve(rhs);
   ASSERT(solver_.info() == Success);
+
   VectorXd Dx = VectorXd::Zero(x.size());
   rc_vector_row(dx, g2l, Dx);
   X += Dx;

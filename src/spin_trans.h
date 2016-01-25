@@ -20,6 +20,7 @@ private:
   void build_rho_operator(Eigen::SparseMatrix<double> &R);
   void calc_div_f(const Eigen::VectorXd &lambda, Eigen::VectorXd &divf);
   int solve_eigen_prob(Eigen::VectorXd &lambda);
+  int solve_eigen_prob_inv_power(Eigen::VectorXd &lambda);
   int solve_poisson_prob(const Eigen::VectorXd &lambda, matd_t &x);
 private:
   const mati_t &tris_;
