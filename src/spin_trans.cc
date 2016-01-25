@@ -154,9 +154,11 @@ int spin_trans::solve_eigen_prob_inv_power(VectorXd &lambda) {
   solver.compute(LHS);
   ASSERT(solver.info() == Success);
   // inverse power method
-  VectorXd eigvec;
-  for (size_t iter = 0; iter < 20000; ++iter) {
-
+  VectorXd eigvec = VectorXd::Ones(LHS.cols());
+  eigvec /= eigvec.norm();
+  for (size_t iter = 0; iter < 3; ++iter) {
+    eigvec = (solver.solve(eigvec)).eval();
+    eigvec /= eigvec.norm();
   }
   lambda = V.asDiagonal()*eigvec;
   return 0;
@@ -216,7 +218,7 @@ int spin_trans::solve_poisson_prob(const VectorXd &lambda, matd_t &x) {
 
 int spin_trans::deform(matd_t &x) {
   VectorXd lambda;
-  solve_eigen_prob(lambda);
+  solve_eigen_prob_inv_power(lambda);
   solve_poisson_prob(lambda, x);
   return 0;
 }
