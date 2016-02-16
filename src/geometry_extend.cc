@@ -94,4 +94,35 @@ int calc_one_ring_face(const matrix<size_t> &tris, vector<vector<size_t>> &p2f) 
   return 0;
 }
 
+void calc_face_local_frame(const mati_t &tris, const matd_t &nods, matd_t &origin, matd_t &axis) {
+  origin.resize(3, tris.size(2));
+  axis.resize(9, tris.size(2));
+#pragma omp parallel for
+  for (size_t i = 0; i < tris.size(2); ++i) {
+    matd_t vert = nods(colon(), tris(colon(), i));
+    matd_t edge = vert(colon(), colon(1, 2))-vert(colon(), colon(0, 1));
+    origin(colon(), i) = vert*ones<double>(3, 1)/3.0;
+    axis(colon(0, 2), i) = edge(colon(), 0);
+    axis(colon(6, 8), i) = cross(edge(colon(), 0), edge(colon(), 1));
+    axis(colon(3, 5), i) = cross(axis(colon(6, 8), i), axis(colon(0, 2), i));
+    axis(colon(0, 2), i) /= norm(axis(colon(0, 2), i));
+    axis(colon(3, 5), i) /= norm(axis(colon(3, 5), i));
+    axis(colon(6, 8), i) /= norm(axis(colon(6, 8), i));
+  }
+}
+
+void calc_local_uv(const mati_t &tris, const matd_t &nods, const matd_t &origin, const matd_t &axis, matd_t &uv) {
+  uv.resize(6, tris.size(2));
+#pragma omp parallel for
+  for (size_t i = 0; i < tris.size(2); ++i) {
+    matd_t disp = nods(colon(), tris(colon(), i))-origin(colon(), i)*ones<double>(1, 3);
+    uv(0, i) = dot(axis(colon(0, 2), i), disp(colon(), 0));
+    uv(1, i) = dot(axis(colon(3, 5), i), disp(colon(), 0));
+    uv(2, i) = dot(axis(colon(0, 2), i), disp(colon(), 1));
+    uv(3, i) = dot(axis(colon(3, 5), i), disp(colon(), 1));
+    uv(4, i) = dot(axis(colon(0, 2), i), disp(colon(), 2));
+    uv(5, i) = dot(axis(colon(3, 5), i), disp(colon(), 2));
+  }
+}
+
 }

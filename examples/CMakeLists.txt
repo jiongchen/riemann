@@ -143,3 +143,9 @@ target_link_libraries(test_spin_trans
 )
 
 add_executable(test_complex test_complex.cc)
+
+add_executable(test_arap_param test_arap_param.cc)
+target_link_libraries(test_arap_param
+    riemann
+    ${Boost_LIBRARIES}
+)

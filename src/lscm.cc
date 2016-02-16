@@ -37,7 +37,7 @@ void lscm_param::set_fixed_bnd_vert(const size_t id, const double *x) {
   uv_[2*id+1] = x[1];
 }
 
-int lscm_param::apply() {
+int lscm_param::apply(double *x) {
   g2l_.resize(uv_.rows());
   size_t ptr = 0;
   for (size_t i = 0; i < g2l_.size(); ++i) {
@@ -89,6 +89,8 @@ int lscm_param::apply() {
   conformal_energy_->Val(uv_.data(), &value);
   cout << "# info: energy: " << value << endl;
 
+  if ( x != nullptr )
+    std::copy(uv_.data(), uv_.data()+uv_.size(), x);
   return 0;
 }
 

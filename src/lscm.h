@@ -19,7 +19,7 @@ public:
   ///> used for remove the kernel of Lc
   ///> in spetral conformal map, dont need to pinn vertices on boundary
   void set_fixed_bnd_vert(const size_t id, const double *x);
-  int apply();
+  int apply(double *x=nullptr);
   int apply_spetral();
   int get_param_mesh(mati_t *param_tris, matd_t *param_nods);
 private:

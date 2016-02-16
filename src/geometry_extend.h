@@ -5,6 +5,9 @@
 
 namespace riemann {
 
+using mati_t=zjucad::matrix::matrix<size_t>;
+using matd_t=zjucad::matrix::matrix<double>;
+
 void gen_rand_orth_vec_3d(const double *x, double *xT);
 
 int calc_vert_local_frame(const zjucad::matrix::matrix<size_t> &tris,
@@ -27,6 +30,11 @@ void rotate_and_scale_triangle(const double *x, const double *quaternion, const 
 
 int calc_one_ring_face(const zjucad::matrix::matrix<size_t> &tris,
                        std::vector<std::vector<size_t>> &p2f);
+
+void calc_face_local_frame(const mati_t &tris, const matd_t &nods, matd_t &origin, matd_t &axis);
+
+void calc_local_uv(const mati_t &tris, const matd_t &nods, const matd_t &origin, const matd_t &axis, matd_t &uv);
+
 }
 
 #endif

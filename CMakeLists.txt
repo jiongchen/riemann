@@ -37,7 +37,7 @@ endif(SuiteSparse_FOUND)
 # IPOPT
 find_package(IPOPT REQUIRED)
 if(IPOPT_FOUND)
-    message("IPOPT found")
+    message("-- IPOPT found")
     include_directories(${IPOPT_INCLUDE_DIRS})
 endif(IPOPT_FOUND)
 
