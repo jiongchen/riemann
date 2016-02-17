@@ -93,6 +93,8 @@ public:
       }
       JacobiSVD<Matrix2d> svd(S, ComputeFullU|ComputeFullV);
       R_[i] = svd.matrixU()*svd.matrixV().transpose();
+      if ( R_[i].determinant() < 0.0 )
+        R_[i].col(1) *= -1;
     }
   }
 private:
@@ -101,7 +103,7 @@ private:
   const size_t dim_;
   matd_t luv_;
   matd_t cotv_;
-  std::vector<Eigen::Matrix2d> R_;
+  vector<Matrix2d> R_;
 };
 
 arap_param_solver::arap_param_solver(const mati_t &tris, const matd_t &nods) {
@@ -121,7 +123,7 @@ int arap_param_solver::precompute() {
 int arap_param_solver::solve(double *x0) const {
   Map<VectorXd> x(x0, arap_->Nx());
   VectorXd dx(arap_->Nx());
-  for (size_t iter = 0; iter < 200; ++iter) {
+  for (size_t iter = 0; iter < 2000; ++iter) {
     double value = 0; {
       arap_->Val(&x[0], &value);
       if ( iter % 10 == 0 ) {

@@ -35,7 +35,7 @@ int main(int argc, char *argv[])
   lscm.set_fixed_bnd_vert(bnd[bnd.size()/2], &pos[2]);
   cout << "[INFO] fixed point: " << bnd[0] << " " << bnd[bnd.size()/2] << endl;
   lscm.apply(&uv[0]);
-  uv3(colon(0, 1), colon()) = uv;
+  uv3(colon(0, 1), colon()) = uv*5;
   jtf::mesh::save_obj("./arap_param/lscm_param.obj", tris, uv3);
 
   // ARAP

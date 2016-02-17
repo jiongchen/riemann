@@ -27,6 +27,7 @@ int main(int argc, char *argv[])
     igl::boundary_loop(V, F, bnd);
     b(0) = bnd(0);
     b(1) = bnd(round(bnd.size() / 2));
+    cout << "[INFO] boundary vert: " << b(0) << " " << b(1) << endl;
     MatrixXd bc(2, 2);
     bc << 0, 0, 1, 0;
 
