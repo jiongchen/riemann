@@ -41,3 +41,5 @@ It's just a spare-time project of my own, consisting of full/partial implementat
 [2016-01-03] Implement spin transformations without considering boundary conditions [[Crane11]](http://www.cs.columbia.edu/~keenan/Projects/SpinTransformations/paper.pdf).
 
 ![image] (/img/half_size/spin.png)
+
+[2016-02-18] Implement ARAP parameterization [[Liu08]](http://www.cs.harvard.edu/~sjg/papers/arap.pdf).

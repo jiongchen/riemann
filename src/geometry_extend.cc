@@ -3,6 +3,8 @@
 #include <Eigen/Eigen>
 #include <jtflib/mesh/util.h>
 
+#include "util.h"
+
 using namespace std;
 using namespace zjucad::matrix;
 using namespace Eigen;
@@ -122,6 +124,17 @@ void calc_local_uv(const mati_t &tris, const matd_t &nods, const matd_t &origin,
     uv(3, i) = dot(axis(colon(3, 5), i), disp(colon(), 1));
     uv(4, i) = dot(axis(colon(0, 2), i), disp(colon(), 2));
     uv(5, i) = dot(axis(colon(3, 5), i), disp(colon(), 2));
+  }
+}
+
+void calc_tris_cot_value(const mati_t &tris, const matd_t &nods, matd_t &cotv) {
+  cotv.resize(3, tris.size(2));
+#pragma omp parallel for
+  for (size_t i = 0; i < tris.size(2); ++i) {
+    matd_t vert = nods(colon(), tris(colon(), i));
+    cotv(0, i) = cal_cot_val(&vert(0, 2), &vert(0, 0), &vert(0, 1));
+    cotv(1, i) = cal_cot_val(&vert(0, 0), &vert(0, 1), &vert(0, 2));
+    cotv(2, i) = cal_cot_val(&vert(0, 1), &vert(0, 2), &vert(0, 0));
   }
 }
 

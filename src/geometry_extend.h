@@ -35,6 +35,8 @@ void calc_face_local_frame(const mati_t &tris, const matd_t &nods, matd_t &origi
 
 void calc_local_uv(const mati_t &tris, const matd_t &nods, const matd_t &origin, const matd_t &axis, matd_t &uv);
 
+void calc_tris_cot_value(const mati_t &tris, const matd_t &nods, matd_t &cotv);
+
 }
 
 #endif

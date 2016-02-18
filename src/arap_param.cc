@@ -14,17 +14,6 @@ using namespace Eigen;
 
 namespace riemann {
 
-static void calc_tris_cot_value(const mati_t &tris, const matd_t &nods, matd_t &cotv) {
-  cotv.resize(3, tris.size(2));
-#pragma omp parallel for
-  for (size_t i = 0; i < tris.size(2); ++i) {
-    matd_t vert = nods(colon(), tris(colon(), i));
-    cotv(0, i) = cal_cot_val(&vert(0, 2), &vert(0, 0), &vert(0, 1));
-    cotv(1, i) = cal_cot_val(&vert(0, 0), &vert(0, 1), &vert(0, 2));
-    cotv(2, i) = cal_cot_val(&vert(0, 1), &vert(0, 2), &vert(0, 0));
-  }
-}
-
 class arap_param_energy : public Functional<double>
 {
 public:
@@ -92,9 +81,10 @@ public:
         S += cotv_(j, i)*(X.col(gp)-X.col(gq))*(U.block<2, 1>(2*p, i)-U.block<2, 1>(2*q, i)).transpose();
       }
       JacobiSVD<Matrix2d> svd(S, ComputeFullU|ComputeFullV);
-      R_[i] = svd.matrixU()*svd.matrixV().transpose();
-      if ( R_[i].determinant() < 0.0 )
-        R_[i].col(1) *= -1;
+      Matrix2d U = svd.matrixU(), V = svd.matrixV();
+      if( U.determinant()*V.determinant() < 0.0 )
+        U.col(1) *= -1.0;
+      R_[i] = U*V.transpose();
     }
   }
 private:
@@ -127,7 +117,7 @@ int arap_param_solver::solve(double *x0) const {
     double value = 0; {
       arap_->Val(&x[0], &value);
       if ( iter % 10 == 0 ) {
-        cout << "\t@energy value: " << value << endl;
+        cout << "\t@iter " << iter << " energy value: " << value << endl;
       }
     }
     // local solve
