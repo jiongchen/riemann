@@ -43,3 +43,5 @@ It's just a spare-time project of my own, consisting of full/partial implementat
 ![image] (/img/half_size/spin.png)
 
 [2016-02-18] Implement ARAP parameterization [[Liu08]](http://www.cs.harvard.edu/~sjg/papers/arap.pdf).
+
+![image] (/img/half_size/arap_param.png)
