@@ -5,18 +5,21 @@
 // This Source Code Form is subject to the terms of the Mozilla Public License
 // v. 2.0. If a copy of the MPL was not distributed with this file, You can
 // obtain one at http://mozilla.org/MPL/2.0/.
+#ifndef IGL_VIEWER_VIEWER_PLUGIN_H
+#define IGL_VIEWER_VIEWER_PLUGIN_H
 
-#ifndef IGL_VIEWER_PLUGIN_H
-#define IGL_VIEWER_PLUGIN_H
+// TODO:
+// * create plugins/skeleton.h
+// * pass time in draw function
+// * remove Preview3D from comments
+// * clean comments
 #include <string>
 #include <igl/igl_inline.h>
-
-#ifdef ENABLE_XML_SERIALIZATION
-  #include <igl/xml/XMLSerializer.h>
-  #include <igl/xml/XMLSerialization.h>
-#endif
+#include <vector>
 
 namespace igl
+{
+namespace viewer
 {
 
 // Abstract class for plugins
@@ -33,21 +36,15 @@ namespace igl
 class Viewer;
 
 class ViewerPlugin
-#ifdef ENABLE_XML_SERIALIZATION
-: public ::igl::XMLSerialization
-#endif
 {
 public:
   IGL_INLINE ViewerPlugin()
-  #ifdef ENABLE_XML_SERIALIZATION
-  : XMLSerialization("dummy")
-  #endif
   {plugin_name = "dummy";}
 
   virtual ~ViewerPlugin(){}
 
   // This function is called when the viewer is initialized (no mesh will be loaded at this stage)
-  IGL_INLINE virtual void init(igl::Viewer *_viewer)
+  IGL_INLINE virtual void init(Viewer *_viewer)
   {
     viewer = _viewer;
   }
@@ -69,7 +66,19 @@ public:
     return false;
   }
 
-  // Runs immediately after a new mesh had been loaded.
+  // This function is called when the scene is serialized
+  IGL_INLINE virtual bool serialize(std::vector<char>& buffer) const
+  {
+    return false;
+  }
+
+  // This function is called when the scene is deserialized
+  IGL_INLINE virtual bool deserialize(const std::vector<char>& buffer)
+  {
+    return false;
+  }
+
+  // Runs immediately after a new mesh has been loaded.
   IGL_INLINE virtual bool post_load()
   {
     return false;
@@ -117,16 +126,25 @@ public:
     return false;
   }
 
-  // This function is called when a keyboard key is pressed
+  // This function is called when a keyboard key is pressed. Unlike key_down
+  // this will reveal the actual character being sent (not just the physical
+  // key)
   // - modifiers is a bitfield that might one or more of the following bits Preview3D::NO_KEY, Preview3D::SHIFT, Preview3D::CTRL, Preview3D::ALT;
-  IGL_INLINE virtual bool key_down(unsigned char key, int modifiers)
+  IGL_INLINE virtual bool key_pressed(unsigned int key, int modifiers)
+  {
+    return false;
+  }
+
+  // This function is called when a keyboard key is down
+  // - modifiers is a bitfield that might one or more of the following bits Preview3D::NO_KEY, Preview3D::SHIFT, Preview3D::CTRL, Preview3D::ALT;
+  IGL_INLINE virtual bool key_down(int key, int modifiers)
   {
     return false;
   }
 
   // This function is called when a keyboard key is release
   // - modifiers is a bitfield that might one or more of the following bits Preview3D::NO_KEY, Preview3D::SHIFT, Preview3D::CTRL, Preview3D::ALT;
-  IGL_INLINE virtual bool key_up(unsigned char key, int modifiers)
+  IGL_INLINE virtual bool key_up(int key, int modifiers)
   {
     return false;
   }
@@ -137,6 +155,22 @@ protected:
   Viewer *viewer;
 };
 
+#ifdef ENABLE_SERIALIZATION
+namespace serialization
+{
+  IGL_INLINE void serialize(const ViewerPlugin& obj,std::vector<char>& buffer)
+  {
+    obj.serialize(buffer);
+  }
+
+  IGL_INLINE void deserialize(ViewerPlugin& obj,const std::vector<char>& buffer)
+  {
+    obj.deserialize(buffer);
+  }
+}
+#endif
+
+}
 }
 
 #endif

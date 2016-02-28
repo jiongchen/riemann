@@ -1,9 +1,9 @@
 // This file is part of libigl, a simple c++ geometry processing library.
-// 
+//
 // Copyright (C) 2013 Alec Jacobson <alecjacobson@gmail.com>
-// 
-// This Source Code Form is subject to the terms of the Mozilla Public License 
-// v. 2.0. If a copy of the MPL was not distributed with this file, You can 
+//
+// This Source Code Form is subject to the terms of the Mozilla Public License
+// v. 2.0. If a copy of the MPL was not distributed with this file, You can
 // obtain one at http://mozilla.org/MPL/2.0/.
 #include "render_to_png.h"
 #include <YImage.hpp>
@@ -19,7 +19,7 @@
 #  include <GL/gl.h>
 #endif
 
-IGL_INLINE bool igl::render_to_png(
+IGL_INLINE bool igl::png::render_to_png(
   const std::string png_file,
   const int width,
   const int height,
@@ -49,3 +49,7 @@ IGL_INLINE bool igl::render_to_png(
   delete img;
   return ret;
 }
+
+#ifdef IGL_STATIC_LIBRARY
+// Explicit template specialization
+#endif

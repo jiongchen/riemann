@@ -30,7 +30,6 @@ IGL_INLINE bool igl::read_triangle_mesh(
   std::vector<std::vector<Index> > & F)
 {
   using namespace std;
-  using namespace igl;
   // dirname, basename, extension and filename
   string d,b,e,f;
   pathinfo(str,d,b,e,f);
@@ -40,7 +39,14 @@ IGL_INLINE bool igl::read_triangle_mesh(
   vector<vector<Index> > FTC, FN;
   if(e == "obj")
   {
-    return readOBJ(str,V,TC,N,F,FTC,FN);
+    // Annoyingly obj can store 4 coordinates, truncate to xyz for this generic
+    // read_triangle_mesh
+    bool success = readOBJ(str,V,TC,N,F,FTC,FN);
+    for(auto & v : V)
+    {
+      v.resize(std::min(v.size(),(size_t)3));
+    }
+    return success;
   }else if(e == "off")
   {
     return readOFF(str,V,F,N);
@@ -99,6 +105,12 @@ IGL_INLINE bool igl::read_triangle_mesh(
     {
       return false;
     }
+    // Annoyingly obj can store 4 coordinates, truncate to xyz for this generic
+    // read_triangle_mesh
+    for(auto & v : vV)
+    {
+      v.resize(std::min(v.size(),(size_t)3));
+    }
   }else if(ext == "off")
   {
     if(!readOFF(filename,vV,vF,vN))
@@ -148,4 +160,5 @@ IGL_INLINE bool igl::read_triangle_mesh(
 template bool igl::read_triangle_mesh<Eigen::Matrix<double, -1, -1, 0, -1, -1>, Eigen::Matrix<int, -1, -1, 0, -1, -1> >(std::basic_string<char, std::char_traits<char>, std::allocator<char> >, Eigen::PlainObjectBase<Eigen::Matrix<double, -1, -1, 0, -1, -1> >&, Eigen::PlainObjectBase<Eigen::Matrix<int, -1, -1, 0, -1, -1> >&);
 template bool igl::read_triangle_mesh<double, int>(std::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::vector<std::vector<double, std::allocator<double> >, std::allocator<std::vector<double, std::allocator<double> > > >&, std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > >&);
 template bool igl::read_triangle_mesh<Eigen::Matrix<double, -1, 3, 0, -1, 3>, Eigen::Matrix<int, -1, 3, 0, -1, 3> >(std::string, Eigen::PlainObjectBase<Eigen::Matrix<double, -1, 3, 0, -1, 3> >&, Eigen::PlainObjectBase<Eigen::Matrix<int, -1, 3, 0, -1, 3> >&);
+template bool igl::read_triangle_mesh<Eigen::Matrix<float, -1, 3, 1, -1, 3>, Eigen::Matrix<unsigned int, -1, 3, 1, -1, 3> >(std::basic_string<char, std::char_traits<char>, std::allocator<char> >, Eigen::PlainObjectBase<Eigen::Matrix<float, -1, 3, 1, -1, 3> >&, Eigen::PlainObjectBase<Eigen::Matrix<unsigned int, -1, 3, 1, -1, 3> >&);
 #endif

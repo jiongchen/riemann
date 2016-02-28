@@ -14,7 +14,6 @@
 
 // Bug in unsupported/Eigen/SparseExtra needs iostream first
 #include <iostream>
-#include <unsupported/Eigen/SparseExtra>
 
 template <typename DerivedV, typename DerivedF, typename Scalar>
 IGL_INLINE void igl::cotmatrix(
@@ -22,7 +21,6 @@ IGL_INLINE void igl::cotmatrix(
   const Eigen::PlainObjectBase<DerivedF> & F, 
   Eigen::SparseMatrix<Scalar>& L)
 {
-  using namespace igl;
   using namespace Eigen;
   using namespace std;
 

@@ -8,7 +8,7 @@
 
 #include "cross_field_missmatch.h"
 
-
+#include <cmath>
 #include <vector>
 #include <deque>
 #include <igl/comb_cross_field.h>
@@ -19,7 +19,7 @@
 #include <igl/rotation_matrix_from_directions.h>
 
 namespace igl {
-  template <typename DerivedV, typename DerivedF, typename DerivedO>
+  template <typename DerivedV, typename DerivedF>
   class MissMatchCalculator
   {
   public:
@@ -28,6 +28,7 @@ namespace igl {
     const Eigen::PlainObjectBase<DerivedF> &F;
     const Eigen::PlainObjectBase<DerivedV> &PD1;
     const Eigen::PlainObjectBase<DerivedV> &PD2;
+//#warning "Constructing Eigen::PlainObjectBase directly is deprecated"
     Eigen::PlainObjectBase<DerivedV> N;
 
   private:
@@ -35,6 +36,7 @@ namespace igl {
     std::vector<bool> V_border; // bool
     std::vector<std::vector<int> > VF;
     std::vector<std::vector<int> > VFi;
+//#warning "Constructing Eigen::PlainObjectBase directly is deprecated"
     Eigen::PlainObjectBase<DerivedF> TT;
     Eigen::PlainObjectBase<DerivedF> TTi;
 
@@ -64,7 +66,7 @@ namespace igl {
       //    std::cerr << "Dani: " << dir0(0) << " " << dir0(1) << " " << dir0(2) << " " << dir1Rot(0) << " " << dir1Rot(1) << " " << dir1Rot(2) << " " << angle_diff << std::endl;
 
       double step=M_PI/2.0;
-      int i=(int)floor((angle_diff/step)+0.5);
+      int i=(int)std::floor((angle_diff/step)+0.5);
       int k=0;
       if (i>=0)
         k=i%4;
@@ -88,10 +90,10 @@ public:
     igl::per_face_normals(V,F,N);
     V_border = igl::is_border_vertex(V,F);
     igl::vertex_triangle_adjacency(V,F,VF,VFi);
-    igl::triangle_triangle_adjacency(V,F,TT,TTi);
+    igl::triangle_triangle_adjacency(F,TT,TTi);
   }
 
-  inline void calculateMissmatch(Eigen::PlainObjectBase<DerivedO> &Handle_MMatch)
+  inline void calculateMissmatch(Eigen::PlainObjectBase<DerivedF> &Handle_MMatch)
   {
     Handle_MMatch.setConstant(F.rows(),3,-1);
     for (size_t i=0;i<F.rows();i++)
@@ -108,16 +110,16 @@ public:
 
 };
 }
-template <typename DerivedV, typename DerivedF, typename DerivedO>
+template <typename DerivedV, typename DerivedF>
 IGL_INLINE void igl::cross_field_missmatch(const Eigen::PlainObjectBase<DerivedV> &V,
                                            const Eigen::PlainObjectBase<DerivedF> &F,
                                            const Eigen::PlainObjectBase<DerivedV> &PD1,
                                            const Eigen::PlainObjectBase<DerivedV> &PD2,
                                            const bool isCombed,
-                                           Eigen::PlainObjectBase<DerivedO> &missmatch)
+                                           Eigen::PlainObjectBase<DerivedF> &missmatch)
 {
-  Eigen::PlainObjectBase<DerivedV> PD1_combed;
-  Eigen::PlainObjectBase<DerivedV> PD2_combed;
+  DerivedV PD1_combed;
+  DerivedV PD2_combed;
 
   if (!isCombed)
     igl::comb_cross_field(V,F,PD1,PD2,PD1_combed,PD2_combed);
@@ -126,10 +128,13 @@ IGL_INLINE void igl::cross_field_missmatch(const Eigen::PlainObjectBase<DerivedV
     PD1_combed = PD1;
     PD2_combed = PD2;
   }
-  igl::MissMatchCalculator<DerivedV, DerivedF, DerivedO> sf(V, F, PD1_combed, PD2_combed);
+  igl::MissMatchCalculator<DerivedV, DerivedF> sf(V, F, PD1_combed, PD2_combed);
   sf.calculateMissmatch(missmatch);
 }
 
 #ifdef IGL_STATIC_LIBRARY
 // Explicit template specialization
+template void igl::cross_field_missmatch<Eigen::Matrix<double, -1, 3, 0, -1, 3>, Eigen::Matrix<int, -1, 3, 0, -1, 3> >(Eigen::PlainObjectBase<Eigen::Matrix<double, -1, 3, 0, -1, 3> > const&, Eigen::PlainObjectBase<Eigen::Matrix<int, -1, 3, 0, -1, 3> > const&, Eigen::PlainObjectBase<Eigen::Matrix<double, -1, 3, 0, -1, 3> > const&, Eigen::PlainObjectBase<Eigen::Matrix<double, -1, 3, 0, -1, 3> > const&, bool, Eigen::PlainObjectBase<Eigen::Matrix<int, -1, 3, 0, -1, 3> >&);
+template void igl::cross_field_missmatch<Eigen::Matrix<double, -1, -1, 0, -1, -1>, Eigen::Matrix<int, -1, -1, 0, -1, -1> >(Eigen::PlainObjectBase<Eigen::Matrix<double, -1, -1, 0, -1, -1> > const&, Eigen::PlainObjectBase<Eigen::Matrix<int, -1, -1, 0, -1, -1> > const&, Eigen::PlainObjectBase<Eigen::Matrix<double, -1, -1, 0, -1, -1> > const&, Eigen::PlainObjectBase<Eigen::Matrix<double, -1, -1, 0, -1, -1> > const&, bool, Eigen::PlainObjectBase<Eigen::Matrix<int, -1, -1, 0, -1, -1> >&);
+
 #endif

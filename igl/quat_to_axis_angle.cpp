@@ -18,7 +18,6 @@ IGL_INLINE void igl::quat_to_axis_angle(
   Q_type *axis, 
   Q_type & angle)
 {
-  using namespace igl;
     if( fabs(q[3])>(1.0 + igl::EPS<Q_type>()) )
     {
         //axis[0] = axis[1] = axis[2] = 0; // no, keep the previous value
@@ -70,7 +69,7 @@ IGL_INLINE void igl::quat_to_axis_angle_deg(
 }
 
 #ifndef IGL_NO_HEADER
-// Explicit template instanciation
+// Explicit template specialization
 template void igl::quat_to_axis_angle<float>(float const*, float*, float&);
 template void igl::quat_to_axis_angle_deg<float>(float const*, float*, float&);
 #endif

@@ -6,6 +6,8 @@
 // v. 2.0. If a copy of the MPL was not distributed with this file, You can
 // obtain one at http://mozilla.org/MPL/2.0/.
 #include "writePLY.h"
+#include <vector>
+
 #include <igl/ply.h>
 #include <vector>
 
@@ -37,7 +39,7 @@ IGL_INLINE bool igl::writePLY(
     int *verts;              /* vertex index list */
   } Face;
 
-  PlyProperty vert_props[] = 
+  PlyProperty vert_props[] =
   { /* list of property information for a vertex */
     {"x", PLY_DOUBLE, PLY_DOUBLE, offsetof(Vertex,x), 0, 0, 0, 0},
     {"y", PLY_DOUBLE, PLY_DOUBLE, offsetof(Vertex,y), 0, 0, 0, 0},
@@ -49,7 +51,7 @@ IGL_INLINE bool igl::writePLY(
     {"t", PLY_DOUBLE, PLY_DOUBLE, offsetof(Vertex,t), 0, 0, 0, 0},
   };
 
-  PlyProperty face_props[] = 
+  PlyProperty face_props[] =
   { /* list of property information for a face */
     {"vertex_indices", PLY_INT, PLY_INT, offsetof(Face,verts),
       1, PLY_UCHAR, PLY_UCHAR, offsetof(Face,nverts)},
@@ -91,7 +93,7 @@ IGL_INLINE bool igl::writePLY(
   {
     return false;
   }
-  PlyFile * ply = ply_write(fp, 2,elem_names, 
+  PlyFile * ply = ply_write(fp, 2,elem_names,
       (ascii ? PLY_ASCII : PLY_BINARY_LE));
   if(ply==NULL)
   {
@@ -102,7 +104,7 @@ IGL_INLINE bool igl::writePLY(
   plist.push_back(vert_props[0]);
   plist.push_back(vert_props[1]);
   plist.push_back(vert_props[2]);
-  if (has_normals) 
+  if (has_normals)
   {
     plist.push_back(vert_props[3]);
     plist.push_back(vert_props[4]);
@@ -130,7 +132,6 @@ IGL_INLINE bool igl::writePLY(
   }
 
   ply_close(ply);
-  fclose(fp);
   for(size_t i = 0;i<(size_t)F.rows();i++)
   {
     delete[] flist[i].verts;
@@ -154,4 +155,5 @@ IGL_INLINE bool igl::writePLY(
 #ifdef IGL_STATIC_LIBRARY
 // Explicit template specialization
 template bool igl::writePLY<Eigen::Matrix<double, -1, -1, 0, -1, -1>, Eigen::Matrix<int, -1, -1, 0, -1, -1> >(std::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, Eigen::PlainObjectBase<Eigen::Matrix<double, -1, -1, 0, -1, -1> > const&, Eigen::PlainObjectBase<Eigen::Matrix<int, -1, -1, 0, -1, -1> > const&, bool);
+template bool igl::writePLY<Eigen::Matrix<double, -1, 3, 0, -1, 3>, Eigen::Matrix<int, -1, 3, 0, -1, 3> >(std::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, Eigen::PlainObjectBase<Eigen::Matrix<double, -1, 3, 0, -1, 3> > const&, Eigen::PlainObjectBase<Eigen::Matrix<int, -1, 3, 0, -1, 3> > const&, bool);
 #endif

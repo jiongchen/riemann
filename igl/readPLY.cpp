@@ -153,7 +153,6 @@ IGL_INLINE bool igl::readPLY(
     }
   }
   ply_close(in_ply);
-  fclose(fp);
   return true;
 }
 
@@ -182,6 +181,18 @@ IGL_INLINE bool igl::readPLY(
     list_to_matrix(vF,F) &&
     list_to_matrix(vN,N) &&
     list_to_matrix(vUV,UV);
+}
+
+template <
+  typename DerivedV,
+  typename DerivedF>
+IGL_INLINE bool igl::readPLY(
+  const std::string & filename,
+  Eigen::PlainObjectBase<DerivedV> & V,
+  Eigen::PlainObjectBase<DerivedF> & F)
+{
+  Eigen::MatrixXd N,UV;
+  return readPLY(filename,V,F,N,UV);
 }
 
 #ifdef IGL_STATIC_LIBRARY

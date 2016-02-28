@@ -24,7 +24,7 @@ int main(int argc, char *argv[])
     igl::readOBJ(argv[1], V, F);
 
     VectorXi bnd, b(2, 1);
-    igl::boundary_loop(V, F, bnd);
+    igl::boundary_loop(F, bnd);
     b(0) = bnd(0);
     b(1) = bnd(round(bnd.size() / 2));
     cout << "[INFO] boundary vert: " << b(0) << " " << b(1) << endl;

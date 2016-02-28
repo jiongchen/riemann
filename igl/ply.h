@@ -1,8 +1,5 @@
 #ifndef IGL_PLY_H
 #define IGL_PLY_H
-// Use unnamed namespace to avoid duplicate symbols
-namespace 
-{
 /*
 
 Header for PLY polygon files.
@@ -216,8 +213,8 @@ extern char *my_alloc();
 
 inline int get_native_binary_type2();
 
-inline PlyFile *ply_write(FILE *, int, char **, int);
-inline PlyFile *ply_open_for_writing(char *, int, char **, int, float *);
+inline PlyFile *ply_write(FILE *, int,const char **, int);
+inline PlyFile *ply_open_for_writing(char *, int,const char **, int, float *);
 inline void ply_describe_element(PlyFile *, const char *, int, int, PlyProperty *);
 inline void ply_describe_property(PlyFile *, const char *, PlyProperty *);
 inline void ply_element_count(PlyFile *, const char *, int);
@@ -324,8 +321,11 @@ properly to target OSs with binary files.
 #include <stdlib.h>
 #include <math.h>
 #include <string.h>
-#include "ply.h"
+//#include "ply.h"
 
+// Use unnamed namespace to avoid duplicate symbols
+namespace
+{
 const char *type_names[] = {
 "invalid",
 "char", "short", "int",
@@ -341,6 +341,7 @@ const char *alt_type_names[] = {  /* names of scalar types */
 int ply_type_size[] = {
   0, 1, 2, 4, 1, 2, 4, 4, 8
 };
+}
 
 typedef union
 {
@@ -349,8 +350,11 @@ typedef union
 } endian_test_type;
 
 
+namespace
+{
 static int native_binary_type = -1;
 static int types_checked = 0;
+}
 
 #define NO_OTHER_PROPS  -1
 
@@ -502,7 +506,7 @@ Exit:
 inline PlyFile *ply_open_for_writing(
   const char *filename,
   int nelems,
-  char **elem_names,
+  const char **elem_names,
   int file_type,
   float *version
 )
@@ -1685,7 +1689,9 @@ Entry:
 
 inline void ply_free_other_elements (PlyOtherElems *other_elems)
 {
-  other_elems = other_elems;
+  // Alec: 
+  //other_elems = other_elems;
+  delete(other_elems);
 }
 
 
@@ -1706,6 +1712,8 @@ Entry:
 inline void ply_close(PlyFile *plyfile)
 {
   fclose (plyfile->fp);
+  // Alec:
+  plyfile->fp = NULL;
 
   /* free up memory associated with the PLY file */
   free (plyfile);
@@ -3080,5 +3088,4 @@ inline char *my_alloc(int size, int lnum, const char *fe)
 }
 
 
-}
 #endif

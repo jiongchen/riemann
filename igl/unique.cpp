@@ -1,9 +1,9 @@
 // This file is part of libigl, a simple c++ geometry processing library.
-// 
+//
 // Copyright (C) 2013 Alec Jacobson <alecjacobson@gmail.com>
-// 
-// This Source Code Form is subject to the terms of the Mozilla Public License 
-// v. 2.0. If a copy of the MPL was not distributed with this file, You can 
+//
+// This Source Code Form is subject to the terms of the Mozilla Public License
+// v. 2.0. If a copy of the MPL was not distributed with this file, You can
 // obtain one at http://mozilla.org/MPL/2.0/.
 #include "unique.h"
 #include "sort.h"
@@ -63,6 +63,15 @@ IGL_INLINE void igl::unique(
 
 }
 
+template <typename T>
+IGL_INLINE void igl::unique(
+  const std::vector<T> & A,
+  std::vector<T> & C)
+{
+  std::vector<size_t> IA,IC;
+  return igl::unique(A,C,IA,IC);
+}
+
 template <
   typename DerivedA,
   typename DerivedC,
@@ -86,6 +95,24 @@ IGL_INLINE void igl::unique(
   list_to_matrix(vIC,IC);
 }
 
+template <
+  typename DerivedA,
+  typename DerivedC
+  >
+IGL_INLINE void igl::unique(
+    const Eigen::PlainObjectBase<DerivedA> & A,
+    Eigen::PlainObjectBase<DerivedC> & C)
+{
+  using namespace std;
+  using namespace Eigen;
+  vector<typename DerivedA::Scalar > vA;
+  vector<typename DerivedC::Scalar > vC;
+  vector<size_t> vIA,vIC;
+  matrix_to_list(A,vA);
+  unique(vA,vC,vIA,vIC);
+  list_to_matrix(vC,C);
+}
+
 // Obsolete slow version converting to vectors
 // template <typename DerivedA, typename DerivedIA, typename DerivedIC>
 // IGL_INLINE void igl::unique_rows(
@@ -95,7 +122,7 @@ IGL_INLINE void igl::unique(
 //   Eigen::PlainObjectBase<DerivedIC>& IC)
 // {
 //   using namespace std;
-// 
+//
 //   typedef Eigen::Matrix<typename DerivedA::Scalar, Eigen::Dynamic, 1> RowVector;
 //   vector<SortableRow<RowVector> > rows;
 //   rows.resize(A.rows());
@@ -106,12 +133,12 @@ IGL_INLINE void igl::unique(
 //     rows[i] = SortableRow<RowVector>(ri);
 //   }
 //   vector<SortableRow<RowVector> > vC;
-// 
+//
 //   // unique on rows
 //   vector<size_t> vIA;
 //   vector<size_t> vIC;
 //   unique(rows,vC,vIA,vIC);
-// 
+//
 //   // Convert to eigen
 //   C.resize(vC.size(),A.cols());
 //   IA.resize(vIA.size(),1);
@@ -180,10 +207,9 @@ IGL_INLINE void igl::unique_rows(
   Eigen::PlainObjectBase<DerivedIC>& IC)
 {
   using namespace std;
-  using namespace igl;
   using namespace Eigen;
   VectorXi IM;
-  Eigen::PlainObjectBase<DerivedA> sortA;
+  DerivedA sortA;
   sortrows(A,true,sortA,IM);
 
 
@@ -231,4 +257,7 @@ template void igl::unique_rows<Eigen::Matrix<int, -1, 2, 0, -1, 2>, Eigen::Matri
 template void igl::unique<Eigen::Matrix<int, -1, -1, 0, -1, -1>, Eigen::Matrix<int, -1, 1, 0, -1, 1>, Eigen::Matrix<int, -1, 1, 0, -1, 1>, Eigen::Matrix<int, -1, 1, 0, -1, 1> >(Eigen::PlainObjectBase<Eigen::Matrix<int, -1, -1, 0, -1, -1> > const&, Eigen::PlainObjectBase<Eigen::Matrix<int, -1, 1, 0, -1, 1> >&, Eigen::PlainObjectBase<Eigen::Matrix<int, -1, 1, 0, -1, 1> >&, Eigen::PlainObjectBase<Eigen::Matrix<int, -1, 1, 0, -1, 1> >&);
 template void igl::unique<Eigen::Matrix<int, -1, 1, 0, -1, 1>, Eigen::Matrix<int, -1, 1, 0, -1, 1>, Eigen::Matrix<int, -1, 1, 0, -1, 1>, Eigen::Matrix<int, -1, 1, 0, -1, 1> >(Eigen::PlainObjectBase<Eigen::Matrix<int, -1, 1, 0, -1, 1> > const&, Eigen::PlainObjectBase<Eigen::Matrix<int, -1, 1, 0, -1, 1> >&, Eigen::PlainObjectBase<Eigen::Matrix<int, -1, 1, 0, -1, 1> >&, Eigen::PlainObjectBase<Eigen::Matrix<int, -1, 1, 0, -1, 1> >&);
 template void igl::unique_rows<Eigen::Matrix<int, -1, -1, 0, -1, -1>, Eigen::Matrix<long, -1, 1, 0, -1, 1>, Eigen::Matrix<long, -1, 1, 0, -1, 1> >(Eigen::PlainObjectBase<Eigen::Matrix<int, -1, -1, 0, -1, -1> > const&, Eigen::PlainObjectBase<Eigen::Matrix<int, -1, -1, 0, -1, -1> >&, Eigen::PlainObjectBase<Eigen::Matrix<long, -1, 1, 0, -1, 1> >&, Eigen::PlainObjectBase<Eigen::Matrix<long, -1, 1, 0, -1, 1> >&);
+template void igl::unique<int>(std::vector<int, std::allocator<int> > const&, std::vector<int, std::allocator<int> >&);
+template void igl::unique<long>(std::vector<long, std::allocator<long> > const&, std::vector<long, std::allocator<long> >&, std::vector<unsigned long, std::allocator<unsigned long> >&, std::vector<unsigned long, std::allocator<unsigned long> >&);
+template void igl::unique_rows<Eigen::Matrix<double, -1, 3, 0, -1, 3>, Eigen::Matrix<int, -1, 1, 0, -1, 1>, Eigen::Matrix<int, -1, 1, 0, -1, 1> >(Eigen::PlainObjectBase<Eigen::Matrix<double, -1, 3, 0, -1, 3> > const&, Eigen::PlainObjectBase<Eigen::Matrix<double, -1, 3, 0, -1, 3> >&, Eigen::PlainObjectBase<Eigen::Matrix<int, -1, 1, 0, -1, 1> >&, Eigen::PlainObjectBase<Eigen::Matrix<int, -1, 1, 0, -1, 1> >&);
 #endif

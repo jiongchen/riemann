@@ -11,47 +11,33 @@
 #include <Eigen/Core>
 namespace igl
 {
-  // Wrapper for gluUnproject that uses the current GL_MODELVIEW_MATRIX,
-  // GL_PROJECTION_MATRIX, and GL_VIEWPORT
-  // Inputs:
-  //   win*  screen space x, y, and z coordinates respectively
-  // Outputs:
-  //   obj*  pointers to 3D objects' x, y, and z coordinates respectively
-  // Returns return value of gluUnProject call
-  IGL_INLINE int unproject(
-    const double winX,
-    const double winY,
-    const double winZ,
-    double* objX,
-    double* objY,
-    double* objZ);
-  template <typename Derivedwin, typename Derivedobj>
-  IGL_INLINE int unproject(
-    const Eigen::PlainObjectBase<Derivedwin> & win,
-    Eigen::PlainObjectBase<Derivedobj> & obj);
-  template <typename Derivedwin>
-  IGL_INLINE Eigen::PlainObjectBase<Derivedwin> unproject(
-    const Eigen::PlainObjectBase<Derivedwin> & win);
-
   // Eigen reimplementation of gluUnproject
+  //
   // Inputs:
   //   win  screen space x, y, and z coordinates
-  // Returns:
-  //   the unprojected x, y, and z coordinates
-  // Returns return value of gluUnProject call
-  IGL_INLINE Eigen::Vector3f unproject(
-    const Eigen::Vector3f& win,
-    const Eigen::Matrix4f& model,
-    const Eigen::Matrix4f& proj,
-    const Eigen::Vector4f& viewport);
-    
-  template <typename Derivedwin, typename Derivedobj>
-  IGL_INLINE int unproject(
-    const Eigen::PlainObjectBase<Derivedwin> & win,
-    Eigen::PlainObjectBase<Derivedobj> & obj);
-  template <typename Derivedwin>
-  IGL_INLINE Eigen::PlainObjectBase<Derivedwin> unproject(
-    const Eigen::PlainObjectBase<Derivedwin> & win);
+  //   model  4x4 model-view matrix
+  //   proj  4x4 projection matrix
+  //   viewport  4-long viewport vector
+  // Outputs:
+  //   scene  the unprojected x, y, and z coordinates
+  template <
+    typename Derivedwin,
+    typename Derivedmodel,
+    typename Derivedproj,
+    typename Derivedviewport,
+    typename Derivedscene>
+  IGL_INLINE void unproject(
+    const Eigen::PlainObjectBase<Derivedwin>&  win,
+    const Eigen::PlainObjectBase<Derivedmodel>& model,
+    const Eigen::PlainObjectBase<Derivedproj>& proj,
+    const Eigen::PlainObjectBase<Derivedviewport>&  viewport,
+    Eigen::PlainObjectBase<Derivedscene> & scene);
+  template <typename Scalar>
+  IGL_INLINE Eigen::Matrix<Scalar,3,1> unproject(
+    const Eigen::Matrix<Scalar,3,1>&  win,
+    const Eigen::Matrix<Scalar,4,4>& model,
+    const Eigen::Matrix<Scalar,4,4>& proj,
+    const Eigen::Matrix<Scalar,4,1>&  viewport);
 }
 
 

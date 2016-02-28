@@ -8,6 +8,7 @@
 #include "active_set.h"
 #include "min_quad_with_fixed.h"
 #include "slice.h"
+#include "slice_into.h"
 #include "cat.h"
 #include "matlab_format.h"
 
@@ -44,7 +45,9 @@ IGL_INLINE igl::SolverStatus igl::active_set(
   )
 {
 //#define ACTIVE_SET_CPP_DEBUG
-  using namespace igl;
+#ifdef ACTIVE_SET_CPP_DEBUG
+#  warning "ACTIVE_SET_CPP_DEBUG"
+#endif
   using namespace Eigen;
   using namespace std;
   SolverStatus ret = SOLVER_STATUS_ERROR;
@@ -64,8 +67,8 @@ IGL_INLINE igl::SolverStatus igl::active_set(
   assert((Aieq.size() == 0 && Bieq.size() == 0) || Aieq.cols() == n);
   assert((Aieq.size() == 0 && Bieq.size() == 0) || Aieq.rows() == Bieq.rows());
   assert((Aieq.size() == 0 && Bieq.size() == 0) || Bieq.cols() == 1);
-  Eigen::PlainObjectBase<Derivedlx> lx;
-  Eigen::PlainObjectBase<Derivedux> ux;
+  Eigen::Matrix<typename Derivedlx::Scalar,Eigen::Dynamic,1> lx;
+  Eigen::Matrix<typename Derivedux::Scalar,Eigen::Dynamic,1> ux;
   if(p_lx.size() == 0)
   {
     lx = Eigen::PlainObjectBase<Derivedlx>::Constant(
@@ -259,39 +262,52 @@ IGL_INLINE igl::SolverStatus igl::active_set(
     }
 #endif
     
-#ifdef ACTIVE_SET_CPP_DEBUG
-    cout<<"  min_quad_with_fixed_precompute"<<endl;
-#endif
-    if(!min_quad_with_fixed_precompute(A,known_i,Aeq_i,params.Auu_pd,data))
-    {
-      cerr<<"Error: min_quad_with_fixed precomputation failed."<<endl;
-      if(iter > 0 && Aeq_i.rows() > Aeq.rows())
-      {
-        cerr<<"  *Are you sure rows of [Aeq;Aieq] are linearly independent?*"<<
-          endl;
-      }
-      ret = SOLVER_STATUS_ERROR;
-      break;
-    }
-#ifdef ACTIVE_SET_CPP_DEBUG
-    cout<<"  min_quad_with_fixed_solve"<<endl;
-#endif
     Eigen::PlainObjectBase<DerivedZ> sol;
-    if(!min_quad_with_fixed_solve(data,B,Y_i,Beq_i,Z,sol))
+    if(known_i.size() == A.rows())
     {
-      cerr<<"Error: min_quad_with_fixed solve failed."<<endl;
-      ret = SOLVER_STATUS_ERROR;
-      break;
-    }
-    //cout<<matlab_format((Aeq*Z-Beq).eval(),"cr")<<endl;
-    //cout<<matlab_format(Z,"Z")<<endl;
+      // Everything's fixed?
 #ifdef ACTIVE_SET_CPP_DEBUG
-    cout<<"  post"<<endl;
+      cout<<"  everything's fixed."<<endl;
 #endif
+      Z.resize(A.rows(),Y_i.cols());
+      slice_into(Y_i,known_i,1,Z);
+      sol.resize(0,Y_i.cols());
+      assert(Aeq_i.rows() == 0 && "All fixed but linearly constrained");
+    }else
+    {
+#ifdef ACTIVE_SET_CPP_DEBUG
+      cout<<"  min_quad_with_fixed_precompute"<<endl;
+#endif
+      if(!min_quad_with_fixed_precompute(A,known_i,Aeq_i,params.Auu_pd,data))
+      {
+        cerr<<"Error: min_quad_with_fixed precomputation failed."<<endl;
+        if(iter > 0 && Aeq_i.rows() > Aeq.rows())
+        {
+          cerr<<"  *Are you sure rows of [Aeq;Aieq] are linearly independent?*"<<
+            endl;
+        }
+        ret = SOLVER_STATUS_ERROR;
+        break;
+      }
+#ifdef ACTIVE_SET_CPP_DEBUG
+      cout<<"  min_quad_with_fixed_solve"<<endl;
+#endif
+      if(!min_quad_with_fixed_solve(data,B,Y_i,Beq_i,Z,sol))
+      {
+        cerr<<"Error: min_quad_with_fixed solve failed."<<endl;
+        ret = SOLVER_STATUS_ERROR;
+        break;
+      }
+      //cout<<matlab_format((Aeq*Z-Beq).eval(),"cr")<<endl;
+      //cout<<matlab_format(Z,"Z")<<endl;
+#ifdef ACTIVE_SET_CPP_DEBUG
+      cout<<"  post"<<endl;
+#endif
+      // Computing Lagrange multipliers needs to be adjusted slightly if A is not symmetric
+      assert(data.Auu_sym);
+    }
 
     // Compute Lagrange multiplier values for known_i
-    // This needs to be adjusted slightly if A is not symmetric
-    assert(data.Auu_sym);
     SparseMatrix<AT> Ak;
     // Slow
     slice(A,known_i,1,Ak);

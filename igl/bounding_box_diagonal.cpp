@@ -13,7 +13,6 @@
 IGL_INLINE double igl::bounding_box_diagonal(
   const Eigen::MatrixXd & V)
 {
-  using namespace igl;
   using namespace Eigen;
   VectorXd maxV,minV;
   VectorXi maxVI,minVI;
@@ -23,5 +22,5 @@ IGL_INLINE double igl::bounding_box_diagonal(
 }
 
 #ifdef IGL_STATIC_LIBRARY
-// Explicit template instanciation
+// Explicit template specialization
 #endif

@@ -24,10 +24,9 @@ IGL_INLINE void igl::remove_duplicate_vertices(
   Eigen::PlainObjectBase<DerivedSVI>& SVI,
   Eigen::PlainObjectBase<DerivedSVJ>& SVJ)
 {
-  using namespace igl;
   if(epsilon > 0)
   {
-    Eigen::PlainObjectBase<DerivedV> rV,rSV;
+    DerivedV rV,rSV;
     round((V/(10.0*epsilon)).eval(),rV);
     unique_rows(rV,rSV,SVI,SVJ);
     slice(V,SVI,colon<int>(0,V.cols()-1),SV);
@@ -56,14 +55,6 @@ IGL_INLINE void igl::remove_duplicate_vertices(
   using namespace Eigen;
   using namespace std;
   remove_duplicate_vertices(V,epsilon,SV,SVI,SVJ);
-  // remap faces
-// #ifndef _WIN32
-//   SF = F.unaryExpr(bind1st(mem_fun( 
-//     static_cast<VectorXi::Scalar&(VectorXi::*)(VectorXi::Index)>
-//       (&VectorXi::operator())), &SVJ)).eval();
-// #else
-  // Why doesn't the above compile on windows?
-  // Daniele: it also does not compile with CLANG
   SF.resize(F.rows(),F.cols());
   for(int f = 0;f<F.rows();f++)
   {
@@ -72,10 +63,11 @@ IGL_INLINE void igl::remove_duplicate_vertices(
       SF(f,c) = SVJ(F(f,c));
     }
   }
-// #endif
 }
 
 #ifdef IGL_STATIC_LIBRARY
 // Explicit instanciation
 template void igl::remove_duplicate_vertices<Eigen::Matrix<double, -1, -1, 0, -1, -1>, Eigen::Matrix<int, -1, -1, 0, -1, -1>, Eigen::Matrix<double, -1, -1, 0, -1, -1>, Eigen::Matrix<int, -1, -1, 0, -1, -1>, Eigen::Matrix<int, -1, -1, 0, -1, -1>, Eigen::Matrix<int, -1, -1, 0, -1, -1> >(Eigen::PlainObjectBase<Eigen::Matrix<double, -1, -1, 0, -1, -1> > const&, Eigen::PlainObjectBase<Eigen::Matrix<int, -1, -1, 0, -1, -1> > const&, double, Eigen::PlainObjectBase<Eigen::Matrix<double, -1, -1, 0, -1, -1> >&, Eigen::PlainObjectBase<Eigen::Matrix<int, -1, -1, 0, -1, -1> >&, Eigen::PlainObjectBase<Eigen::Matrix<int, -1, -1, 0, -1, -1> >&, Eigen::PlainObjectBase<Eigen::Matrix<int, -1, -1, 0, -1, -1> >&);
+template void igl::remove_duplicate_vertices<Eigen::Matrix<double, -1, 3, 0, -1, 3>, Eigen::Matrix<int, -1, 3, 0, -1, 3>, Eigen::Matrix<double, -1, 3, 0, -1, 3>, Eigen::Matrix<int, -1, 1, 0, -1, 1>, Eigen::Matrix<int, -1, 1, 0, -1, 1>, Eigen::Matrix<int, -1, 3, 0, -1, 3> >(Eigen::PlainObjectBase<Eigen::Matrix<double, -1, 3, 0, -1, 3> > const&, Eigen::PlainObjectBase<Eigen::Matrix<int, -1, 3, 0, -1, 3> > const&, double, Eigen::PlainObjectBase<Eigen::Matrix<double, -1, 3, 0, -1, 3> >&, Eigen::PlainObjectBase<Eigen::Matrix<int, -1, 1, 0, -1, 1> >&, Eigen::PlainObjectBase<Eigen::Matrix<int, -1, 1, 0, -1, 1> >&, Eigen::PlainObjectBase<Eigen::Matrix<int, -1, 3, 0, -1, 3> >&);
+template void igl::remove_duplicate_vertices<Eigen::Matrix<double, -1, -1, 0, -1, -1>, Eigen::Matrix<int, -1, -1, 0, -1, -1>, Eigen::Matrix<double, -1, -1, 0, -1, -1>, Eigen::Matrix<int, -1, 1, 0, -1, 1>, Eigen::Matrix<int, -1, 1, 0, -1, 1>, Eigen::Matrix<int, -1, -1, 0, -1, -1> >(Eigen::PlainObjectBase<Eigen::Matrix<double, -1, -1, 0, -1, -1> > const&, Eigen::PlainObjectBase<Eigen::Matrix<int, -1, -1, 0, -1, -1> > const&, double, Eigen::PlainObjectBase<Eigen::Matrix<double, -1, -1, 0, -1, -1> >&, Eigen::PlainObjectBase<Eigen::Matrix<int, -1, 1, 0, -1, 1> >&, Eigen::PlainObjectBase<Eigen::Matrix<int, -1, 1, 0, -1, 1> >&, Eigen::PlainObjectBase<Eigen::Matrix<int, -1, -1, 0, -1, -1> >&);
 #endif

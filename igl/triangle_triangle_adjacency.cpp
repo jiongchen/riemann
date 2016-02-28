@@ -11,11 +11,42 @@
 #include "unique_simplices.h"
 #include "unique_edge_map.h"
 #include <algorithm>
+#include <iostream>
 
-template <typename Scalar, typename Index>
-IGL_INLINE void igl::triangle_triangle_adjacency_preprocess(const Eigen::PlainObjectBase<Scalar>& /*V*/,
-                                   const Eigen::PlainObjectBase<Index>& F,
-                                   std::vector<std::vector<int> >& TTT)
+// Extract the face adjacencies
+template <typename DerivedF, typename TTT_type, typename DerivedTT>
+IGL_INLINE void igl::triangle_triangle_adjacency_extractTT(
+  const Eigen::PlainObjectBase<DerivedF>& F,
+  std::vector<std::vector<TTT_type> >& TTT,
+  Eigen::PlainObjectBase<DerivedTT>& TT)
+{
+  TT.setConstant((int)(F.rows()),F.cols(),-1);
+
+  for(int i=1;i<(int)TTT.size();++i)
+  {
+    std::vector<int>& r1 = TTT[i-1];
+    std::vector<int>& r2 = TTT[i];
+    if ((r1[0] == r2[0]) && (r1[1] == r2[1]))
+    {
+      TT(r1[2],r1[3]) = r2[2];
+      TT(r2[2],r2[3]) = r1[2];
+    }
+  }
+}
+
+template <typename DerivedF, typename DerivedTT>
+IGL_INLINE void igl::triangle_triangle_adjacency(
+  const Eigen::PlainObjectBase<DerivedF>& F,
+  Eigen::PlainObjectBase<DerivedTT>& TT)
+{
+  DerivedTT TTi;
+  return triangle_triangle_adjacency(F,TT,TTi);
+}
+
+template <typename DerivedF, typename TTT_type>
+IGL_INLINE void igl::triangle_triangle_adjacency_preprocess(
+  const Eigen::PlainObjectBase<DerivedF>& F,
+  std::vector<std::vector<TTT_type> >& TTT)
 {
   for(int f=0;f<F.rows();++f)
     for (int i=0;i<F.cols();++i)
@@ -32,33 +63,14 @@ IGL_INLINE void igl::triangle_triangle_adjacency_preprocess(const Eigen::PlainOb
   std::sort(TTT.begin(),TTT.end());
 }
 
-// Extract the face adjacencies
-template <typename Index>
-IGL_INLINE void igl::triangle_triangle_adjacency_extractTT(const Eigen::PlainObjectBase<Index>& F,
-                                  std::vector<std::vector<int> >& TTT,
-                                  Eigen::PlainObjectBase<Index>& TT)
-{
-  TT = Eigen::PlainObjectBase<Index>::Constant((int)(F.rows()),F.cols(),-1);
-
-  for(int i=1;i<(int)TTT.size();++i)
-  {
-    std::vector<int>& r1 = TTT[i-1];
-    std::vector<int>& r2 = TTT[i];
-    if ((r1[0] == r2[0]) && (r1[1] == r2[1]))
-    {
-      TT(r1[2],r1[3]) = r2[2];
-      TT(r2[2],r2[3]) = r1[2];
-    }
-  }
-}
-
 // Extract the face adjacencies indices (needed for fast traversal)
-template <typename Index>
-IGL_INLINE void igl::triangle_triangle_adjacency_extractTTi(const Eigen::PlainObjectBase<Index>& F,
-                                   std::vector<std::vector<int> >& TTT,
-                                   Eigen::PlainObjectBase<Index>& TTi)
+template <typename DerivedF, typename TTT_type, typename DerivedTTi>
+IGL_INLINE void igl::triangle_triangle_adjacency_extractTTi(
+  const Eigen::PlainObjectBase<DerivedF>& F,
+  std::vector<std::vector<TTT_type> >& TTT,
+  Eigen::PlainObjectBase<DerivedTTi>& TTi)
 {
-  TTi = Eigen::PlainObjectBase<Index>::Constant((int)(F.rows()),F.cols(),-1);
+  TTi.setConstant((int)(F.rows()),F.cols(),-1);
 
   for(int i=1;i<(int)TTT.size();++i)
   {
@@ -72,37 +84,22 @@ IGL_INLINE void igl::triangle_triangle_adjacency_extractTTi(const Eigen::PlainOb
   }
 }
 
-// Compute triangle-triangle adjacency
-template <typename Scalar, typename Index>
-IGL_INLINE void igl::triangle_triangle_adjacency(const Eigen::PlainObjectBase<Scalar>& V,
-                        const Eigen::PlainObjectBase<Index>& F,
-                        Eigen::PlainObjectBase<Index>& TT)
-{
-  //assert(igl::is_edge_manifold(V,F));
-  std::vector<std::vector<int> > TTT;
-
-  triangle_triangle_adjacency_preprocess(V,F,TTT);
-  triangle_triangle_adjacency_extractTT(F,TTT,TT);
-}
-
 // Compute triangle-triangle adjacency with indices
-template <typename Scalar, typename Index>
-IGL_INLINE void igl::triangle_triangle_adjacency(const Eigen::PlainObjectBase<Scalar>& V,
-                        const Eigen::PlainObjectBase<Index>& F,
-                        Eigen::PlainObjectBase<Index>& TT,
-                        Eigen::PlainObjectBase<Index>& TTi)
+template <typename DerivedF, typename DerivedTT, typename DerivedTTi>
+IGL_INLINE void igl::triangle_triangle_adjacency(
+  const Eigen::PlainObjectBase<DerivedF>& F,
+  Eigen::PlainObjectBase<DerivedTT>& TT,
+  Eigen::PlainObjectBase<DerivedTTi>& TTi)
 {
-  //assert(igl::is_edge_manifold(V,F));
   std::vector<std::vector<int> > TTT;
-
-  triangle_triangle_adjacency_preprocess(V,F,TTT);
+  triangle_triangle_adjacency_preprocess(F,TTT);
   triangle_triangle_adjacency_extractTT(F,TTT,TT);
   triangle_triangle_adjacency_extractTTi(F,TTT,TTi);
 }
 
 template <
-  typename DerivedF, 
-  typename TTIndex, 
+  typename DerivedF,
+  typename TTIndex,
   typename TTiIndex>
   IGL_INLINE void igl::triangle_triangle_adjacency(
     const Eigen::PlainObjectBase<DerivedF> & F,
@@ -113,7 +110,7 @@ template <
 }
 
 template <
-  typename DerivedF, 
+  typename DerivedF,
   typename TTIndex>
   IGL_INLINE void igl::triangle_triangle_adjacency(
     const Eigen::PlainObjectBase<DerivedF> & F,
@@ -124,8 +121,8 @@ template <
 }
 
 template <
-  typename DerivedF, 
-  typename TTIndex, 
+  typename DerivedF,
+  typename TTIndex,
   typename TTiIndex>
   IGL_INLINE void igl::triangle_triangle_adjacency(
     const Eigen::PlainObjectBase<DerivedF> & F,
@@ -148,10 +145,10 @@ template <
 }
 
 template <
-  typename DerivedE, 
+  typename DerivedE,
   typename DerivedEMAP,
   typename uE2EType,
-  typename TTIndex, 
+  typename TTIndex,
   typename TTiIndex>
   IGL_INLINE void igl::triangle_triangle_adjacency(
     const Eigen::PlainObjectBase<DerivedE> & E,
@@ -188,15 +185,19 @@ template <
     {
       const Index e = f + m*c;
       //const Index c = e/m;
-      const vector<Index> & N = uE2E[EMAP(e)];
+      const vector<uE2EType> & N = uE2E[EMAP(e)];
       for(const auto & ne : N)
       {
         const Index nf = ne%m;
-        TT[f][c].push_back(nf);
-        if(construct_TTi)
+        // don't add self
+        if(nf != f)
         {
-          const Index nc = ne/m;
-          TTi[f][c].push_back(nc);
+          TT[f][c].push_back(nf);
+          if(construct_TTi)
+          {
+            const Index nc = ne/m;
+            TTi[f][c].push_back(nc);
+          }
         }
       }
     }
@@ -205,6 +206,11 @@ template <
 
 #ifdef IGL_STATIC_LIBRARY
 // Explicit template specialization
+// generated by autoexplicit.sh
+template void igl::triangle_triangle_adjacency<Eigen::Matrix<int, -1, -1, 0, -1, -1>, Eigen::Matrix<int, -1, -1, 0, -1, -1> >(Eigen::PlainObjectBase<Eigen::Matrix<int, -1, -1, 0, -1, -1> > const&, Eigen::PlainObjectBase<Eigen::Matrix<int, -1, -1, 0, -1, -1> >&);
+// generated by autoexplicit.sh
+template void igl::triangle_triangle_adjacency<Eigen::Matrix<int, -1, 3, 0, -1, 3>, Eigen::Matrix<int, -1, 3, 0, -1, 3> >(Eigen::PlainObjectBase<Eigen::Matrix<int, -1, 3, 0, -1, 3> > const&, Eigen::PlainObjectBase<Eigen::Matrix<int, -1, 3, 0, -1, 3> >&);
+template void igl::triangle_triangle_adjacency<Eigen::Matrix<int, -1, -1, 0, -1, -1>, Eigen::Matrix<int, -1, -1, 0, -1, -1>, Eigen::Matrix<int, -1, -1, 0, -1, -1> >(Eigen::PlainObjectBase<Eigen::Matrix<int, -1, -1, 0, -1, -1> > const&, Eigen::PlainObjectBase<Eigen::Matrix<int, -1, -1, 0, -1, -1> >&, Eigen::PlainObjectBase<Eigen::Matrix<int, -1, -1, 0, -1, -1> >&);
 template void igl::triangle_triangle_adjacency<Eigen::Matrix<int, -1, 2, 0, -1, 2>, Eigen::Matrix<long, -1, 1, 0, -1, 1>, long, long, long>(Eigen::PlainObjectBase<Eigen::Matrix<int, -1, 2, 0, -1, 2> > const&, Eigen::PlainObjectBase<Eigen::Matrix<long, -1, 1, 0, -1, 1> > const&, std::vector<std::vector<long, std::allocator<long> >, std::allocator<std::vector<long, std::allocator<long> > > > const&, bool, std::vector<std::vector<std::vector<long, std::allocator<long> >, std::allocator<std::vector<long, std::allocator<long> > > >, std::allocator<std::vector<std::vector<long, std::allocator<long> >, std::allocator<std::vector<long, std::allocator<long> > > > > >&, std::vector<std::vector<std::vector<long, std::allocator<long> >, std::allocator<std::vector<long, std::allocator<long> > > >, std::allocator<std::vector<std::vector<long, std::allocator<long> >, std::allocator<std::vector<long, std::allocator<long> > > > > >&);
-template void igl::triangle_triangle_adjacency<Eigen::Matrix<double, -1, -1, 0, -1, -1>, Eigen::Matrix<int, -1, -1, 0, -1, -1> >(Eigen::PlainObjectBase<Eigen::Matrix<double, -1, -1, 0, -1, -1> > const&, Eigen::PlainObjectBase<Eigen::Matrix<int, -1, -1, 0, -1, -1> > const&, Eigen::PlainObjectBase<Eigen::Matrix<int, -1, -1, 0, -1, -1> >&, Eigen::PlainObjectBase<Eigen::Matrix<int, -1, -1, 0, -1, -1> >&);
+template void igl::triangle_triangle_adjacency<Eigen::Matrix<int, -1, -1, 0, -1, -1>, Eigen::Matrix<int, -1, 1, 0, -1, 1>, unsigned long, int, int>(Eigen::PlainObjectBase<Eigen::Matrix<int, -1, -1, 0, -1, -1> > const&, Eigen::PlainObjectBase<Eigen::Matrix<int, -1, 1, 0, -1, 1> > const&, std::vector<std::vector<unsigned long, std::allocator<unsigned long> >, std::allocator<std::vector<unsigned long, std::allocator<unsigned long> > > > const&, bool, std::vector<std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > >, std::allocator<std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > > > >&, std::vector<std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > >, std::allocator<std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > > > >&);
 #endif

@@ -13,13 +13,14 @@
 #include <fstream>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <unistd.h>
 #include <iostream>
+
+#if !defined(_WIN32)
+#include <unistd.h>
 
 IGL_INLINE bool igl::dated_copy(const std::string & src_path, const std::string & dir)
 {
   using namespace std;
-  using namespace igl;
   // Get time and date as string
   char buffer[80];
   time_t rawtime;
@@ -86,3 +87,5 @@ IGL_INLINE bool igl::dated_copy(const std::string & src_path)
 {
   return dated_copy(src_path,dirname(src_path));
 }
+
+#endif

@@ -36,6 +36,8 @@ IGL_INLINE void igl::cat(
     return;
   }
 
+  // This **must** be DynamicSparseMatrix, otherwise this implementation is
+  // insanely slow
   DynamicSparseMatrix<Scalar, RowMajor> dyn_C;
   if(dim == 1)
   {
@@ -123,9 +125,8 @@ IGL_INLINE Mat igl::cat(const int dim, const Mat & A, const Mat & B)
 }
 
 template <class Mat>
-IGL_INLINE void cat(const std::vector<std::vector< Mat > > & A, Mat & C)
+IGL_INLINE void igl::cat(const std::vector<std::vector< Mat > > & A, Mat & C)
 {
-  using namespace igl;
   using namespace std;
   // Start with empty matrix
   C.resize(0,0);

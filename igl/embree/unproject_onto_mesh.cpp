@@ -7,43 +7,53 @@
 // obtain one at http://mozilla.org/MPL/2.0/.
 #include "unproject_onto_mesh.h"
 #include "EmbreeIntersector.h"
-#include <igl/unproject.h>
-#include <igl/embree/unproject_in_mesh.h>
+#include "../unproject_onto_mesh.h"
 #include <vector>
 
-IGL_INLINE bool igl::unproject_onto_mesh(
+IGL_INLINE bool igl::embree::unproject_onto_mesh(
   const Eigen::Vector2f& pos,
   const Eigen::MatrixXi& F,
   const Eigen::Matrix4f& model,
   const Eigen::Matrix4f& proj,
   const Eigen::Vector4f& viewport,
-  const igl::EmbreeIntersector & ei,
+  const EmbreeIntersector & ei,
   int& fid,
-  int& vid)
+  Eigen::Vector3f& bc)
 {
   using namespace std;
   using namespace Eigen;
-  MatrixXd obj;
-  vector<igl::Hit> hits;
-
-  // This is lazy, it will find more than just the first hit
-  unproject_in_mesh(pos,model,proj,viewport,ei,obj,hits);
-
-  if (hits.size()> 0)
+  const auto & shoot_ray = [&ei](
+    const Eigen::Vector3f& s,
+    const Eigen::Vector3f& dir,
+    igl::Hit & hit)->bool
   {
-    Vector3d bc(1.0-hits[0].u-hits[0].v, hits[0].u, hits[0].v);
-    int i;
-    bc.maxCoeff(&i);
+    return ei.intersectRay(s,dir,hit);
+  };
+  return igl::unproject_onto_mesh(pos,model,proj,viewport,shoot_ray,fid,bc);
+}
 
-    fid = hits[0].id;
-    vid = F(fid,i);
-    return true;
+IGL_INLINE bool igl::embree::unproject_onto_mesh(
+  const Eigen::Vector2f& pos,
+  const Eigen::MatrixXi& F,
+  const Eigen::Matrix4f& model,
+  const Eigen::Matrix4f& proj,
+  const Eigen::Vector4f& viewport,
+  const EmbreeIntersector & ei,
+  int& fid,
+  int& vid)
+{
+  Eigen::Vector3f bc;
+  if(!igl::embree::unproject_onto_mesh(pos,F,model,proj,viewport,ei,fid,bc))
+  {
+    return false;
   }
-
-  return false;
+  int i;
+  bc.maxCoeff(&i);
+  vid = F(fid,i);
+  return true;
 }
 
 
 #ifdef IGL_STATIC_LIBRARY
-// Explicit template instanciation
+// Explicit template specialization
 #endif

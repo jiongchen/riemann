@@ -25,7 +25,7 @@ int main(int argc, char *argv[])
     igl::readOFF(argv[1], V, F);
 
     VectorXi bnd;
-    igl::boundary_loop(V, F, bnd);
+    igl::boundary_loop(F, bnd);
 
     MatrixXd bnd_uv;
     igl::map_vertices_to_circle(V, bnd, bnd_uv);

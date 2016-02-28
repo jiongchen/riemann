@@ -1,6 +1,7 @@
 // This file is part of libigl, a simple c++ geometry processing library.
 //
 // Copyright (C) 2014 Daniele Panozzo <daniele.panozzo@gmail.com>
+//               2015 Alec Jacobson
 //
 // This Source Code Form is subject to the terms of the Mozilla Public License
 // v. 2.0. If a copy of the MPL was not distributed with this file, You can
@@ -12,11 +13,17 @@
 #include <Eigen/Dense>
 #include <Eigen/Sparse>
 
-namespace igl
+namespace igl 
 {
-  // Compute a Least-squares conformal map parametrization following the algorithm
-  // presented in: Spectral Conformal Parameterization,
-  //               Patrick Mullen, Yiying Tong, Pierre Alliez and Mathieu Desbrun
+  // Compute a Least-squares conformal map parametrization (equivalently
+  // derived in "Intrinsic Parameterizations of Surface Meshes" [Desbrun et al.
+  // 2002] and "Least Squares Conformal Maps for Automatic Texture Atlas
+  // Generation" [Lévy et al. 2002]), though this implementation follows the
+  // derivation in: "Spectral Conformal Parameterization" [Mullen et al. 2008]
+  // (note, this does **not** implement the Eigen-decomposition based method in
+  // [Mullen et al. 2008], which is not equivalent). Input should be a manifold
+  // mesh (also no unreferenced vertices) and "boundary" (fixed vertices) `b`
+  // should contain at least two vertices per connected component.
   //
   // Inputs:
   //   V  #V by 3 list of mesh vertex positions
@@ -25,20 +32,14 @@ namespace igl
   //   bc #b by 3 list of boundary values
   // Outputs:
   //   UV #V by 2 list of 2D mesh vertex positions in UV space
+  // Returns true only on solver success.
   //
-  // X  Note: if b and bc are empty, lscm automatically removes the null space
-  // X        by fixing two farthest points on the boundary
-  // Boundary conditions are part of the api. It would be strange to secretly
-  // use other boundary conditions. This is also weird if there's more than one
-  // boundary loop.
-  // X  Note: (V,F) must be a genus-0 mesh, with a single boundary
-  // No longer the case. Should probably just be manifold.
-  IGL_INLINE void lscm(
-    const Eigen::MatrixXd& V,
-    const Eigen::MatrixXi& F,
-    const Eigen::VectorXi& b,
-    const Eigen::MatrixXd& bc,
-    Eigen::MatrixXd& V_uv);
+  IGL_INLINE bool lscm( 
+      const Eigen::MatrixXd& V, 
+      const Eigen::MatrixXi& F,
+      const Eigen::VectorXi& b, 
+      const Eigen::MatrixXd& bc, 
+      Eigen::MatrixXd& V_uv);
 }
 
 #ifndef IGL_STATIC_LIBRARY

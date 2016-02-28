@@ -1,9 +1,9 @@
 // This file is part of libigl, a simple c++ geometry processing library.
-// 
+//
 // Copyright (C) 2013 Alec Jacobson <alecjacobson@gmail.com>
-// 
-// This Source Code Form is subject to the terms of the Mozilla Public License 
-// v. 2.0. If a copy of the MPL was not distributed with this file, You can 
+//
+// This Source Code Form is subject to the terms of the Mozilla Public License
+// v. 2.0. If a copy of the MPL was not distributed with this file, You can
 // obtain one at http://mozilla.org/MPL/2.0/.
 #include "jet.h"
 #include "colon.h"
@@ -12,7 +12,6 @@
 //void igl::jet(const int m, Eigen::MatrixXd & J)
 //{
 //  using namespace Eigen;
-//  using namespace igl;
 //  // Applications/MATLAB_R2012b.app/toolbox/matlab/graph3d/jet.m
 //  const int n = ceil(m/4);
 //  // resize output
@@ -56,7 +55,7 @@
 template <typename T>
 IGL_INLINE void igl::jet(const T x, T * rgb)
 {
-  igl::jet(x,rgb[0],rgb[1],rgb[2]);
+  return jet(x,rgb[0],rgb[1],rgb[2]);
 }
 
 template <typename T>
@@ -81,7 +80,7 @@ IGL_INLINE void igl::jet(const T x_in, T & r, T & g, T & b)
   {
     r = 0;
     g = gone*(x-1./8.)/(3./8.-1./8.);
-    b = bone; 
+    b = bone;
   }else if(x<5./8.)
   {
     r = rone*(x-3./8.)/(5./8.-3./8.);
@@ -134,4 +133,7 @@ template void igl::jet<double>(double, double&, double&, double&);
 template void igl::jet<float>(float, float*);
 template void igl::jet<Eigen::Array<double, -1, 1, 0, -1, 1>, Eigen::Matrix<double, -1, -1, 0, -1, -1> >(Eigen::PlainObjectBase<Eigen::Array<double, -1, 1, 0, -1, 1> > const&, bool, Eigen::PlainObjectBase<Eigen::Matrix<double, -1, -1, 0, -1, -1> >&);
 template void igl::jet<Eigen::Matrix<int, -1, 1, 0, -1, 1>, Eigen::Matrix<double, -1, -1, 0, -1, -1> >(Eigen::PlainObjectBase<Eigen::Matrix<int, -1, 1, 0, -1, 1> > const&, bool, Eigen::PlainObjectBase<Eigen::Matrix<double, -1, -1, 0, -1, -1> >&);
+template void igl::jet<Eigen::Matrix<double, -1, -1, 0, -1, -1>, Eigen::Matrix<double, -1, -1, 0, -1, -1> >(Eigen::PlainObjectBase<Eigen::Matrix<double, -1, -1, 0, -1, -1> > const&, bool, Eigen::PlainObjectBase<Eigen::Matrix<double, -1, -1, 0, -1, -1> >&);
+template void igl::jet<float>(float, float&, float&, float&);
+template void igl::jet<Eigen::Matrix<float, -1, 1, 0, -1, 1>, Eigen::Matrix<double, -1, -1, 0, -1, -1> >(Eigen::PlainObjectBase<Eigen::Matrix<float, -1, 1, 0, -1, 1> > const&, double, double, Eigen::PlainObjectBase<Eigen::Matrix<double, -1, -1, 0, -1, -1> >&);
 #endif

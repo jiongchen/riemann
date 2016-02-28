@@ -149,3 +149,9 @@ target_link_libraries(test_arap_param
     riemann
     ${Boost_LIBRARIES}
 )
+
+add_executable(test_hole_filling test_hole_filling.cc)
+target_link_libraries(test_hole_filling
+    riemann
+    ${Boost_LIBRARIES}
+)

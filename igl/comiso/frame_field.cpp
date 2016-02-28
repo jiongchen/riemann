@@ -1,3 +1,10 @@
+// This file is part of libigl, a simple c++ geometry processing library.
+//
+// Copyright (C) 2015 Daniele Panozzo <daniele.panozzo@gmail.com>
+//
+// This Source Code Form is subject to the terms of the Mozilla Public License
+// v. 2.0. If a copy of the MPL was not distributed with this file, You can
+// obtain one at http://mozilla.org/MPL/2.0/.
 #include "frame_field.h"
 
 #include <igl/triangle_triangle_adjacency.h>
@@ -7,6 +14,8 @@
 #include <iostream>
 
 namespace igl
+{
+namespace comiso
 {
 
 class FrameInterpolator
@@ -93,9 +102,6 @@ private:
 
 };
 
-
-
-
 FrameInterpolator::FrameInterpolator(const Eigen::MatrixXd& _V, const Eigen::MatrixXi& _F)
 {
   using namespace std;
@@ -109,7 +115,7 @@ FrameInterpolator::FrameInterpolator(const Eigen::MatrixXd& _V, const Eigen::Mat
 
 
   // Generate topological relations
-  igl::triangle_triangle_adjacency(V,F,TT,TTi);
+  igl::triangle_triangle_adjacency(F,TT,TTi);
   igl::edge_topology(V,F, EV, FE, EF);
 
   // Flag border edges
@@ -199,15 +205,32 @@ void FrameInterpolator::interpolateCross()
   using namespace std;
   using namespace Eigen;
 
-  NRosyField nrosy(V,F);
+  //olga: was
+  // NRosyField nrosy(V,F);
+  // for (unsigned i=0; i<F.rows(); ++i)
+    // if(thetas_c[i])
+      // nrosy.setConstraintHard(i,theta2vector(TPs[i],thetas(i)));
+  // nrosy.solve(4);
+  // MatrixXd R = nrosy.getFieldPerFace();
 
+  //olga: is
+  Eigen::MatrixXd R;
+  Eigen::VectorXd S;
+  Eigen::VectorXi b; b.resize(F.rows(),1);
+  Eigen::MatrixXd bc; bc.resize(F.rows(),3);
+  int num = 0;
   for (unsigned i=0; i<F.rows(); ++i)
     if(thetas_c[i])
-      nrosy.setConstraintHard(i,theta2vector(TPs[i],thetas(i)));
+      {
+        b[num] = i;
+        bc.row(num) = theta2vector(TPs[i],thetas(i));
+        num++;
+      }
+  b.conservativeResize(num,Eigen::NoChange);
+  bc.conservativeResize(num,Eigen::NoChange);
 
-  nrosy.solve(4);
-
-  MatrixXd R = nrosy.getFieldPerFace();
+  igl::comiso::nrosy(V, F, b, bc, 4, R, S);
+  //olga:end
   assert(R.rows() == F.rows());
 
   for (unsigned i=0; i<F.rows(); ++i)
@@ -625,9 +648,9 @@ Eigen::MatrixXd FrameInterpolator::getFieldPerFace()
 }
 
 }
+}
 
-
-IGL_INLINE void igl::frame_field(
+IGL_INLINE void igl::comiso::frame_field(
                                  const Eigen::MatrixXd& V,
                                  const Eigen::MatrixXi& F,
                                  const Eigen::VectorXi& b,
