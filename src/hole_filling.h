@@ -21,7 +21,7 @@ struct boundary_loop {
 void get_boundary_loop(const mati &tris, const matd &nods, boundary_loop &loop);
 void calc_bnd_local_frame(const mati &tris, const matd &nods, boundary_loop &loop);
 void calc_dl(boundary_loop &loop);
-void init_bnd_scalar_field(boundary_loop &loop);
+void init_bnd_indicator(boundary_loop &loop);
 
 double indicator_value(const vecd &x, const boundary_loop &loop);
 void uniform_sampling(const matd &box, const int num, matd &pts);
