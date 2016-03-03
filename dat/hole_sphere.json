@@ -1,0 +1,8 @@
+{
+	"mesh": "dat/hole_sphere.obj",
+	"center": [0, 0.9, 0],
+	"dx": 0.5,
+	"resolution": 32,
+	"method": 0,
+	"outdir": "build/bin/hole_filling/sphere"
+}
