@@ -15,6 +15,29 @@ using namespace std;
 using namespace Eigen;
 using namespace riemann;
 
+// for data field, the index should be x+dim*y+dim*dim*z
+template <typename OS, typename FLOAT, typename INT>
+void grid2vtk(OS &os, const FLOAT *bbox, const INT res) {
+  os << "# vtk DataFile Version 2.0\nSample rectilinear grid\nASCII\nDATASET RECTILINEAR_GRID\n";
+  os << "DIMENSIONS" << " " << res+1 << " " << res+1 << " " << res+1 << endl;
+  double xmin = bbox[0], xmax = bbox[3];
+  double ymin = bbox[1], ymax = bbox[4];
+  double zmin = bbox[2], zmax = bbox[5];
+  double dx = (xmax-xmin)/res, dy = (ymax-ymin)/res, dz = (zmax-zmin)/res;
+  os << "X_COORDINATES " << res+1 << " float\n";
+  for (INT i = 0; i <= res; ++i) {
+    os << xmin+i*dx << endl;
+  }
+  os << "Y_COORDINATES " << res+1 << " float\n";
+  for (INT i = 0; i <= res; ++i) {
+    os << ymin+i*dy << endl;
+  }
+  os << "Z_COORDINATES " << res+1 << " float\n";
+  for (INT i = 0; i <= res; ++i) {
+    os << zmin+i*dz << endl;
+  }
+}
+
 int main(int argc, char *argv[])
 {
   if ( argc != 2 ) {
@@ -49,7 +72,7 @@ int main(int argc, char *argv[])
   calc_bnd_local_frame(tris, nods, loop);
   calc_infinitesimal_elem(loop);
   calc_bnd_indicator(loop);
-  cout << loop.sf << endl;
+  cout << "[INFO] scalar value on boundary:\n" << loop.sf << endl;
 
   eigen_vecd_t center(3);
   center << json["center"][0].asDouble(), json["center"][1].asDouble(), json["center"][2].asDouble();
@@ -60,16 +83,14 @@ int main(int argc, char *argv[])
   cout << "[INFO] sampling bounding box:\n" << bbox << endl;
   structured_grid_sampling(bbox, json["resolution"].asInt(), pts);
 
-  eigen_veci_t p = eigen_veci_t::Zero(pts.rows());
-  int count = 0;
-  std::generate(p.data(), p.data()+p.size(), [&count]()->int {return count++;});
-  sprintf(outfile, "%s/grid.m%d.vtk", json["outdir"].asString().c_str(), json["method"].asInt());
+  sprintf(outfile, "%s/struct_grid.m%d.vtk", json["outdir"].asString().c_str(), json["method"].asInt());
   ofstream os(outfile);
-  point2vtk(os, pts.data(), pts.rows(), p.data(), p.size());
+  grid2vtk(os, bbox.data(), json["resolution"].asInt());
 
   eigen_vecd_t sf;
   calc_scalar_field(loop, pts, sf);
   point_data(os, sf.data(), sf.size(), "sf");
+  os.close();
 
   loop.T *= 0.1; loop.B *= 0.1; loop.N *= 0.1;
   string outx = json["outdir"].asString()+string("/T.vtk");

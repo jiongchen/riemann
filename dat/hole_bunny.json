@@ -3,6 +3,6 @@
 	"center": [-1.803690, 1.648500, 0.644488],
 	"dx": 0.4,
 	"resolution": 32,
-	"method": 0,
+	"method": 1,
 	"outdir": "build/bin/hole_filling/bunny"
 }

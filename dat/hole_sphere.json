@@ -3,6 +3,6 @@
 	"center": [0, 0.9, 0],
 	"dx": 0.5,
 	"resolution": 32,
-	"method": 0,
+	"method": 1,
 	"outdir": "build/bin/hole_filling/sphere"
 }

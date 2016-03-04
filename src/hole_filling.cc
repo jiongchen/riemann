@@ -66,20 +66,37 @@ void calc_bnd_indicator(boundary_loop &loop) {
       loop.sf(i) = -integral;
     }
   } else {
-    MatrixXd A(bnd_size, bnd_size); VectorXd b(bnd_size);
-    b.setZero();
+    MatrixXd L = MatrixXd::Zero(bnd_size, bnd_size);
+    for (int i = 0; i < bnd_size; ++i) {
+      L(i, i) = 2.0;
+      L(i, (i+1)%bnd_size) = -1.0;
+      L(i, (i-1+bnd_size)%bnd_size) = -1.0;
+    }
+    MatrixXd LtL = L.transpose()*L;
+    MatrixXd A = MatrixXd::Zero(bnd_size, bnd_size);
     for (int i = 0; i < bnd_size; ++i) {
       for (int j = 0; j < bnd_size; ++j) {
         A(i, j) = (loop.pos.row(i)-loop.pos.row(j)).dot(loop.B.row(j))*loop.dl(j);
       }
     }
-    cout << A.rows() << endl;
+
+    const int lhs_size = bnd_size+bnd_size+1;
+    MatrixXd LHS = MatrixXd::Zero(lhs_size, lhs_size);
+    LHS.block(0, 0, bnd_size, bnd_size) = LtL;
+    LHS.block(bnd_size, 0, bnd_size, bnd_size) = A;
+    LHS(bnd_size+bnd_size, 0) = 1.0;
+    LHS.block(0, bnd_size, bnd_size, bnd_size) = A.transpose();
+    LHS(0, bnd_size+bnd_size) = 1.0;
+    ASSERT((LHS.transpose()-LHS).norm() < 1e-16);
+
+    VectorXd rhs = VectorXd::Zero(bnd_size+bnd_size+1);
+    rhs(rhs.size()-1) = 1.0;
+
     FullPivLU<MatrixXd> solver;
-    solver.compute(A);
-    cout << solver.rank() << endl;
-    getchar();
-    VectorXd x = solver.solve(b);
-    std::copy(x.data(), x.data()+x.size(), loop.sf.data());
+    solver.compute(LHS);
+    cout << "size: " << LHS.rows() << " rank: " << solver.rank() << endl;
+    VectorXd x = solver.solve(rhs);
+    std::copy(x.data(), x.data()+bnd_size, loop.sf.data());
   }
 }
 
@@ -130,9 +147,9 @@ void structured_grid_sampling(const eigen_matd_t &box, const int res, eigen_matd
   double zmin = box(0, 2), zmax = box(1, 2);
   vector<double> buffer;
   double dx = (xmax-xmin)/res, dy = (ymax-ymin)/res, dz = (zmax-zmin)/res;
-  for (int i = 0; i <= res; ++i) {
+  for (int k = 0; k <= res; ++k) {
     for (int j = 0; j <= res; ++j) {
-      for (int k = 0; k <= res; ++k) {
+      for (int i = 0; i <= res; ++i) {
         buffer.push_back(xmin+i*dx);
         buffer.push_back(ymin+j*dy);
         buffer.push_back(zmin+k*dz);
