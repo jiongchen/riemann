@@ -160,3 +160,9 @@ add_executable(test_jsoncpp test_jsoncpp.cc)
 target_link_libraries(test_jsoncpp
     riemann
 )
+
+add_executable(test_local_edit test_local_edit.cc)
+target_link_libraries(test_local_edit
+    riemann
+    ${Boost_LIBRARIES}
+)

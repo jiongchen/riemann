@@ -1,0 +1,14 @@
+{
+	"mesh": "dat/siggraph_plane.obj",
+	"handles": [
+		{
+			"vid": 0,
+			"disp": [0, 0.5, 0]
+		},
+		{
+			"vid": 1,
+			"disp": [0, -0.5, 0]
+		}
+	],
+	"outdir": "build/bin/le"
+}
