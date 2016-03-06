@@ -44,7 +44,7 @@ int main(int argc, char *argv[])
   constrained_mesh_editor editor(quad, nods);
   editor.set_handles(json["handles"]);
 
-  editor.deform(&delta[0]);
+  editor.deform(&delta[0], json);
 
   matd_t nods_new = nods+delta;
   ofstream os(json["outdir"].asString()+string("/deform.vtk"));
