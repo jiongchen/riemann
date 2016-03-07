@@ -82,6 +82,7 @@ int draw_face_direct_field(const char *filename,
     pts(colon(), i+face_num) = pts(colon(), i)+df(colon(), i);
   }
   line2vtk(os, pts.begin(), pts.size(2), line.begin(), line.size(2));
+  os.close();
   return 0;
 }
 
@@ -107,6 +108,7 @@ int draw_edge_direct_field(const char *filename,
     pts(colon(), i+edge_num) = pts(colon(), i)+df(colon(), i);
   }
   line2vtk(os, pts.begin(), pts.size(2), line.begin(), line.size(2));
+  os.close();
   return 0;
 }
 

@@ -22,6 +22,7 @@ static int read_fixed_vert(const char *filename, vector<size_t> &vert) {
     vert.push_back(id);
   }
   cout << "[INFO] constrained verts: " << vert.size() << endl;
+  ifs.close();
   return 0;
 }
 

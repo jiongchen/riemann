@@ -290,6 +290,7 @@ int frame_field_deform::visualize_local_bases(const char *file, const double len
   }
   ofstream os(file);
   line2vtk(os, &verts[0], verts.size(2), &lines[0], lines.size(2));
+  os.close();
   return 0;
 }
 
@@ -316,6 +317,7 @@ int frame_field_deform::load_constraints(const char *file) {
     ffc_.insert(3*fid+1);
     ffc_.insert(3*fid+2);
   }
+  is.close();
 #pragma omp parallel for
   for (size_t i = 0; i < cons_face_.size(); ++i) {
     const size_t fid = cons_face_[i];
@@ -360,6 +362,7 @@ int frame_field_deform::visualize_init_frames(const char *file, const double sca
   }
   ofstream os(file);
   line2vtk(os, &verts[0], verts.size(2), &lines[0], lines.size(2));
+  os.close();
   return 0;
 }
 
@@ -382,6 +385,7 @@ int frame_field_deform::visualize_frame_fields(const char *file, const double sc
   }
   ofstream os(file);
   line2vtk(os, &verts[0], verts.size(2), &lines[0], lines.size(2));
+  os.close();
   return 0;
 }
 
@@ -484,6 +488,7 @@ int frame_field_deform::visualize_tensor_fields(const char *file) {
   cell_data(os, &cell_dat(0, 0), cell_dat.rows(), dat_name[0].c_str(),dat_name[0].c_str());
   for (size_t j = 1; j < cell_dat.cols(); ++j)
     vtk_data(os, &cell_dat(0, j), cell_dat.rows(), dat_name[j].c_str(), dat_name[j].c_str());
+  os.close();
   return 0;
 }
 
@@ -627,6 +632,7 @@ int frame_field_deform::visualize_cross_fields(const char *file, const double sc
   }
   ofstream os(file);
   line2vtk(os, &verts[0], verts.size(2), &lines[0], lines.size(2));
+  os.close();
   return 0;
 }
 

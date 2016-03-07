@@ -36,6 +36,7 @@ static int read_fixed_verts(const char *path, unordered_map<size_t, Vector3d> &f
     fv[id] = Vector3d(x, y, z);
   }
   cout << "[info] constrained verts: " << fv.size() << endl;
+  ifs.close();
   return 0;
 }
 
@@ -94,6 +95,7 @@ int main(int argc, char *argv[])
     ofstream os(outfile);
     tet2vtk(os, &nods0[0], nods0.size(2), &tets[0], tets.size(2));
     cell_data(os, &cond_num[0], cond_num.size(), "cond_num", "cond_num");
+    os.close();
   }
 
   solver.prefactorize();
@@ -108,6 +110,7 @@ int main(int argc, char *argv[])
     ofstream os(outfile);
     tet2vtk(os, &nods0[0], nods0.size(2), &tets[0], tets.size(2));
     cell_data(os, &cond_num[0], cond_num.size(), "cond_num", "cond_num");
+    os.close();
   }
 
   cout << "[info] done\n";

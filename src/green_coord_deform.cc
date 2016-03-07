@@ -55,6 +55,7 @@ int green_deform_2d::load_cage(const char *file) {
   cage_nods_.resize(2, nods_num);
   for (size_t i = 0; i < nods_num; ++i)
     is >> cage_nods_(0, i) >> cage_nods_(1, i);
+  is.close();
 
   // get rest segment element length
   rest_len_.resize(cage_cell_.cols());
@@ -152,6 +153,7 @@ int green_deform_2d::dump(const char *file) {
   }
   ofstream os(file);
   tri2vtk(os, nods_3d.data(), nods_3d.cols(), cell_.data(), cell_.cols());
+  os.close();
   return 0;
 }
 
@@ -165,6 +167,7 @@ int green_deform_2d::dump_cage(const char *file) {
   }
   ofstream os(file);
   line2vtk(os, cage_nods_3d.data(), cage_nods_3d.cols(), cage_cell_.data(), cage_cell_.cols());
+  os.close();
   return 0;
 }
 
@@ -185,6 +188,7 @@ int green_deform_2d::dump_normal(const char *file) {
   }
   ofstream os(file);
   line2vtk(os, normal_nods.data(), normal_nods.cols(), normal_cell.begin(), normal_cell.size(2));
+  os.close();
   return 0;
 }
 //==============================================================================
@@ -251,12 +255,14 @@ int green_deform_3d::calc_outward_normal() {
 int green_deform_3d::dump(const char *file) {
   ofstream os(file);
   tri2vtk(os, &nods_[0], nods_.size(2), &cell_[0], cell_.size(2));
+  os.close();
   return 0;
 }
 
 int green_deform_3d::dump_cage(const char *file) {
   ofstream os(file);
   tri2vtk(os, &cage_nods_[0], cage_nods_.size(2), &cage_cell_[0], cage_cell_.size(2));
+  os.close();
   return 0;
 }
 
@@ -272,6 +278,7 @@ int green_deform_3d::dump_normal(const char *file) {
   }
   ofstream os(file);
   line2vtk(os, &normal_nods[0], normal_nods.size(2), &normal_cell[0], normal_cell.size(2));
+  os.close();
   return 0;
 }
 //==============================================================================

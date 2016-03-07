@@ -32,6 +32,7 @@ static int read_fix_vert(const char *filename, unordered_set<size_t> &fix_vert) 
   while ( is >> vid )
     fix_vert.insert(vid);
   cout << "[info] number of fixed vertices: " << fix_vert.size() << endl;
+  is.close();
   return 0;
 }
 
@@ -99,6 +100,7 @@ int main(int argc, char *argv[])
     _nods0(xz, colon()) = nods0;
     tri2vtk(os, &_nods0[0], _nods0.size(2), &tris[0], tris.size(2));
   }
+  os.close();
   cout << "[info] done\n";
   return 0;
 }

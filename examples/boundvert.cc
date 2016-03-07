@@ -30,6 +30,7 @@ int main(int argc, char *argv[])
   for (auto &vid : vert) {
     os << vid << endl;
   }
+  os.close();
   cout << "[info] done\n";
   return 0;
 }

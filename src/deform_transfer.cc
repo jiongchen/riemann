@@ -549,6 +549,7 @@ int deform_transfer::see_source_markers(const char *filename) const {
     nods(colon(), i) = src_ref_nods_(colon(), std::get<0>(vert_map_[i]));
   ofstream os(filename);
   point2vtk(os, nods.begin(), nods.size(2), point.begin(), point.size());
+  os.close();
   return 0;
 }
 
@@ -561,6 +562,7 @@ int deform_transfer::see_target_markers(const char *filename) const {
     nods(colon(), i) = tar_ref_nods_(colon(), std::get<1>(vert_map_[i]));
   ofstream os(filename);
   point2vtk(os, nods.begin(), nods.size(2), point.begin(), point.size());
+  os.close();
   return 0;
 }
 
@@ -598,8 +600,11 @@ int deform_transfer::see_ghost_tet_mesh(const char *filename, const string &whic
     tet2vtk(os, &src_ref_nods_[0], src_ref_nods_.size(2), &src_tris_[0], src_tris_.size(2));
   else if ( which == "target_ref" )
     tet2vtk(os, &tar_ref_nods_[0], tar_ref_nods_.size(2), &tar_tris_[0], tar_tris_.size(2));
-  else
+  else {
+    os.close();
     return __LINE__;
+  }
+  os.close();
   return 0;
 }
 

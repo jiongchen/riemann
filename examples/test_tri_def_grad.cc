@@ -27,6 +27,7 @@ int main(int argc, char *argv[])
     line_nods(colon(), 1) = line_nods(colon(), 0)+normal;
     ofstream os("./tri_def_grad/normal.vtk");
     line2vtk(os, line_nods.begin(), line_nods.size(2), line.begin(), line.size(2));
+    os.close();
 
     matrix<double> G(3, 3);
     G(colon(), colon(0, 1)) = nods(colon(), colon(1, 2))-nods(colon(), 0)*ones<double>(1, 2);
@@ -52,6 +53,7 @@ int main(int argc, char *argv[])
     edge(colon(), 2) = dir1;
     ofstream ose("./tri_def_grad/edge.vtk");
     line2vtk(ose, edge.begin(), edge.size(2), edge_ele.begin(), edge_ele.size(2));
+    ose.close();
 
     cout << "done\n";
     return 0;

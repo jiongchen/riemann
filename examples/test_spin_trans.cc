@@ -33,6 +33,7 @@ static int read_curvature_change(const char *filename, matd_t &delta) {
     cout << "\tface: " << fid << " delta: " << dv << endl;
     delta[fid] = dv;
   }
+  ifs.close();
   return 0;
 }
 

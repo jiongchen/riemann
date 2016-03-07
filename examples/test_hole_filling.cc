@@ -56,6 +56,7 @@ int main(int argc, char *argv[])
     cerr << "[ERROR] " << reader.getFormattedErrorMessages() << endl;
     return __LINE__;
   }
+  ifs.close();
 
   boost::filesystem::create_directories(json["outdir"].asString());
   char outfile[256];

@@ -49,6 +49,7 @@ int main(int argc, char *argv[])
   matd_t nods_new = nods+delta;
   ofstream os(json["outdir"].asString()+string("/deform.vtk"));
   quad2vtk(os, &nods_new[0], nods_new.size(2), &quad[0], quad.size(2));
+  os.close();
 
   cout << "[INFO] done\n";
   return 0;

@@ -205,6 +205,7 @@ int test_height_vector(ptree &pt) {
   {
     ofstream os("./unitest/triangle.vtk");
     tri2vtk(os, nods.begin(), nods.size(2), cell.begin(), cell.size(2));
+    os.close();
   }
   matrix<double> H(3, 3);
   riemann::calc_tri_height_vector<3>(&nods[0], &H[0]);
@@ -219,6 +220,7 @@ int test_height_vector(ptree &pt) {
   {
     ofstream os("./unitest/height.vtk");
     line2vtk(os, &vert[0], vert.size(2), &line[0], line.size(2));
+    os.close();
   }
   for (size_t j = 0; j < 3; ++j) {
     double len = dot(H(colon(), j), H(colon(), j));
@@ -252,6 +254,7 @@ int test_grad_operator(ptree &pt) {
   jtf::mesh::save_obj("./unitest/test_model.obj", tris, nods);
   ofstream os("./unitest/grad.vtk");
   line2vtk(os, &vert[0], vert.size(2), &line[0], line.size(2));
+  os.close();
   cout << "done\n";
   return 0;
 }
