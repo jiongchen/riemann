@@ -23,7 +23,7 @@ void get_boundary_loop(const eigen_mati_t &tris, const eigen_matd_t &nods, bound
 
 void select_method(boundary_loop &loop, boundary_loop::type t) {
   loop.method = static_cast<int>(t);
-  if ( loop.method != 0 && loop.method != 1 ) {
+  if ( loop.method < 0 && loop.method > 2 ) {
     cerr << "[ERROR] method not supported!\n";
     exit(EXIT_FAILURE);
   }
@@ -65,7 +65,7 @@ void calc_bnd_indicator(boundary_loop &loop) {
       }
       loop.sf(i) = -integral;
     }
-  } else {
+  } else if ( loop.method == 1 ) {
     MatrixXd L = MatrixXd::Zero(bnd_size, bnd_size);
     for (int i = 0; i < bnd_size; ++i) {
       L(i, i) = 2.0;
@@ -97,6 +97,11 @@ void calc_bnd_indicator(boundary_loop &loop) {
     cout << "size: " << LHS.rows() << " rank: " << solver.rank() << endl;
     VectorXd x = solver.solve(rhs);
     std::copy(x.data(), x.data()+bnd_size, loop.sf.data());
+  } else if ( loop.method == 2 ) {
+    ;
+  } else {
+    cerr << "[Error] no such method\n";
+    exit(EXIT_FAILURE);
   }
 }
 
@@ -119,9 +124,16 @@ double indicator_value(const eigen_vecd_t &x, const boundary_loop &loop) {
       sum += rbf*loop.dl(i);
     }
     rtn = integral+correction/sum;
-  } else {
+  } else if ( loop.method == 1 ) {
     for (int i = 0; i < loop.bnd.size(); ++i)
       rtn += ((x-loop.pos.row(i)).dot(loop.sf(i)*loop.B.row(i)))*loop.dl(i);
+  } else if ( loop.method == 2 ) {
+    for (int i = 0; i < loop.bnd.size(); ++i) {
+      rtn += 1.0/(4*M_PI*(x-loop.pos.row(i)).norm())*loop.N.row(i).squaredNorm()*loop.dl(i);
+    }
+  } else {
+    cerr << "[Error] no such method\n";
+    exit(EXIT_FAILURE);
   }
   return rtn;
 }
