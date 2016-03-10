@@ -4,6 +4,7 @@
 #include "igl/readOBJ.h"
 #include "igl/writeOBJ.h"
 #include "igl/boundary_loop.h"
+#include "igl/doublearea.h"
 
 #include "src/json.h"
 #include "src/vtk.h"
@@ -38,6 +39,57 @@ void grid2vtk(OS &os, const FLOAT *bbox, const INT res) {
   }
 }
 
+#define VERIFY_GREEN_IDENTITY
+#ifdef VERIFY_GREEN_IDENTITY
+void integrate_on_sphere(const eigen_mati_t &tris, const eigen_matd_t &nods, const eigen_matd_t &pts, eigen_vecd_t &sf) {
+  sf.setZero(pts.rows());
+  VectorXd area;
+  igl::doublearea(nods, tris, area);
+#pragma omp parallel for
+  for (int i = 0; i < pts.rows(); ++i) {
+    eigen_matd_t p = pts.row(i);
+    for (int j = 0; j < tris.rows(); ++j) {
+      eigen_matd_t center = (nods.row(tris(j, 0))+nods.row(tris(j, 1))+nods.row(tris(j, 2)))/3.0;
+      double da = area[j]/2.0;
+      sf[i] += 0.25*da/(M_PI*(center-p).norm());
+    }
+  }
+}
+
+int main(int argc, char *argv[])
+{
+  if ( argc != 2 ) {
+    cerr << "# usage: prog model.obj\n";
+    return __LINE__;
+  }
+  boost::filesystem::create_directories("./green_function");
+
+  eigen_mati_t tris; eigen_matd_t nods;
+  igl::readOBJ(argv[1], nods, tris);
+  cout << "[INFO] number of points: " << nods.rows() << endl;
+  cout << "[INFO] number of cells: " << tris.rows() << endl;
+
+  eigen_vecd_t center(3);
+  center.setZero();
+  double dx = 1.2;
+  eigen_matd_t bbox(2, 3), pts;
+  bbox << center(0)-dx, center(1)-dx, center(2)-dx,
+          center(0)+dx, center(1)+dx, center(2)+dx;
+  int res = 32;
+  structured_grid_sampling(bbox, res, pts);
+
+  eigen_vecd_t sf;
+  integrate_on_sphere(tris, nods, pts, sf);
+
+  ofstream os("./green_function/field.vtk");
+  grid2vtk(os, bbox.data(), res);
+  point_data(os, sf.data(), sf.size(), "sf");
+  os.close();
+
+  cout << "[INFO] done\n";
+  return 0;
+}
+#else
 int main(int argc, char *argv[])
 {
   if ( argc != 2 ) {
@@ -104,3 +156,4 @@ int main(int argc, char *argv[])
   cout << "[INFO] done\n";
   return 0;
 }
+#endif
