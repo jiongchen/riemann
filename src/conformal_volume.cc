@@ -94,6 +94,24 @@ conformal_volume::conformal_volume(const mati_t &tets, const matd_t &verts)
   u_.setZero(verts_.size(2));
   gradu_.resize(NoChange, tets_.size(2));
   gradu_.setZero();
+  vol_ = zeros<double>(tets_.size(2));
+#pragma omp parallel for
+  for (size_t i = 0; i < tets_.size(2); ++i) {
+    matd_t e = verts_(colon(1, 3), tets_(colon(1, 3), i))-verts_(colon(1, 3), tets_(0, i))*ones<double>(1, 3);
+    vol_[i] = fabs(det(e))/6.0;
+  }
+  I_ << 0, -1, 0, 0,
+      1, 0, 0, 0,
+      0, 0, 0, -1,
+      0, 0, 1, 0;
+  J_ << 0, 0, -1, 0,
+      0, 0, 0, 1,
+      1, 0, 0, 0,
+      0, -1, 0, 0;
+  K_ << 0, 0, 0, -1,
+      0, 0, -1, 0,
+      0, 1, 0, 0,
+      1, 0, 0, 0;
 }
 
 void conformal_volume::set_charge(const double *pos, const double intensity) {
@@ -133,20 +151,49 @@ void conformal_volume::solve_eigen_prob() {
   laplacian_matrix<4>(tets_, verts_(colon(1, 3), colon()), &L_);
   // get sqrM
   VectorXd sqrinvM(4*verts_.size(2)); {
-    for (size_t i = 0; i < tets_.size(2); ++i) {
-
-    }
+    for (size_t i = 0; i < tets_.size(2); ++i)
+      for (size_t j = 0; j < 4; ++j)
+        sqrinvM.segment<4>(4*tets_(j, i)) += vol_[i]/4.0*Vector4d::Ones();
     sqrinvM.cwiseSqrt().cwiseInverse();
   }
   // assemble B
   SparseMatrix<double> B; {
-
+    vector<Triplet<double>> trips;
+    for (size_t i = 0; i < tets_.size(2); ++i) {
+      matd_t v = verts_(colon(1, 3), tets_(colon(), i));
+      Matrix<double, 3, 4> g = Matrix<double, 3, 4>::Zero();
+      calc_tet_linear_basis_grad(&v[0], g.data());
+      for (size_t p = 0; p < 4; ++p) {
+        for (size_t q = 0; q < 4; ++q) {
+          Vector4d XG = 1.0/12*(I_*gradu_.col(i)*3*vol_[i]*g.col(q).dot(Vector3d(1, 0, 0))
+                                +J_*gradu_.col(i)*3*vol_[i]*g.col(q).dot(Vector3d(0, 1, 0))
+                                +K_*gradu_.col(i)*3*vol_[i]*g.col(q).dot(Vector3d(0, 0, 1)));
+          Matrix4d mat;
+          conv_quat_to_mat(XG.data(), mat.data());
+          insert_block(4*tets_(p, i), 4*tets_(q, i), mat.data(), 4, 4, &trips);
+        }
+      }
+    }
+    B.resize(4*verts_.size(2), 4*verts_.size(2));
+    B.setFromTriplets(trips.begin(), trips.end());
   }
   // assemble weighted M
   SparseMatrix<double> gM; {
-
+    vector<Triplet<double>> trips;
+    for (size_t i = 0; i < tets_.size(2); ++i) {
+      double w = 0.75*gradu_.col(i).squaredNorm();
+      for (size_t p = 0; p < 4; ++p) {
+        for (size_t q = 0; q < 4; ++q) {
+          double m = (p == q) ? vol_[i]/10 : vol_[i]/20;
+          add_diag_block(tets_(p, i), tets_(q, i), w*m, &trips);
+        }
+      }
+    }
+    gM.resize(4*verts_.size(2), 4*verts_.size(2));
+    gM.setFromTriplets(trips.begin(), trips.end());
   }
-  E = L_+0.5*(B)+gM;
+  SparseMatrix<double> BT = B.transpose();
+  E = L_+0.5*(B+BT)+gM;
   SparseMatrix<double> LHS = sqrinvM.asDiagonal()*E*sqrinvM.asDiagonal();
 
   // inverse power iteration

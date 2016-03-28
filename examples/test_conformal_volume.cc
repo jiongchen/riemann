@@ -46,7 +46,7 @@ int main(int argc, char *argv[])
     printf("# charge %u: (%lf, %lf, %lf), %lf\n", i, pos[0], pos[1], pos[2], intensity);
     cv.set_charge(pos, intensity);
   }
-  cv.debug_laplacian();
+  cv.solve_eigen_prob();
 
   char outfile[256];
   sprintf(outfile, "%s/orig.vtk", json["output_dir"].asString().c_str());
@@ -55,8 +55,8 @@ int main(int argc, char *argv[])
   point_data(os, cv.u_.data(), cv.u_.size(), "charge");
   os.close();
 
-  sprintf(outfile, "%s/grad.vtk", json["output_dir"].asString().c_str());
-  cv.draw_gradient(outfile);
+//  sprintf(outfile, "%s/grad.vtk", json["output_dir"].asString().c_str());
+//  cv.draw_gradient(outfile);
 
   cout << "[Info] done\n";
   return 0;
