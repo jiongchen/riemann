@@ -9,6 +9,7 @@
 #include <igl/readOFF.h>
 #include <igl/readDMAT.h>
 #include <igl/grad.h>
+#include <igl/cotmatrix.h>
 #include <hjlib/math/blas_lapack.h>
 #include <zjucad/matrix/lapack.h>
 
@@ -498,6 +499,55 @@ int test_cwise_oper(ptree &pt) {
   return 0;
 }
 
+int test_volume_lap(ptree &pt) {
+  matrix<size_t> tets;
+  matrix<double> nods;
+  jtf::mesh::tet_mesh_read_from_zjumat("../../dat/ball.tet", &nods, &tets);
+  MatrixXi T(tets.size(2), 4);
+  MatrixXd X(nods.size(2), 3);
+  for (int i = 0; i < T.rows(); ++i) {
+    for (int j = 0; j < 4; ++j)
+      T(i, j) = tets(j, i);
+  }
+  for (int i = 0; i < X.rows(); ++i) {
+    for (int j = 0; j < 3; ++j)
+      X(i, j) = nods(j, i);
+  }
+  SparseMatrix<double> L;
+  igl::cotmatrix(X, T, L);
+
+  VectorXd u = VectorXd::Zero(nods.size(2));
+  u(6) = 100.0;
+  u(608) = -100.0;
+  vector<size_t> g2l(u.size());
+  size_t cnt = 0;
+  for (size_t i = 0; i < g2l.size(); ++i) {
+    if ( i == 608 || i == 6 )
+      g2l[i] = -1;
+    else
+      g2l[i] = cnt++;
+  }
+  VectorXd rhs = VectorXd::Zero(u.size())-L*u;
+  rm_spmat_col_row(L, g2l);
+  rm_vector_row(rhs, g2l);
+  SimplicialCholesky<SparseMatrix<double>> solver;
+  solver.compute(L);
+  ASSERT(solver.info() == Eigen::Success);
+  VectorXd du = solver.solve(rhs);
+  ASSERT(solver.info() == Eigen::Success);
+  VectorXd DU(u.size());
+  rc_vector_row(du, g2l, DU);
+  u += DU;
+
+  ofstream os("./ball.vtk");
+  tet2vtk(os, &nods[0], nods.size(2), &tets[0], tets.size(2));
+  point_data(os, u.data(), u.size(), "charge");
+  os.close();
+
+  cout << "done\n";
+  return 0;
+}
+
 int main(int argc, char *argv[])
 {
   ptree pt;
@@ -522,6 +572,7 @@ int main(int argc, char *argv[])
     CALL_SUB_PROG(test_defo_grad_third);
     CALL_SUB_PROG(test_insert_block);
     CALL_SUB_PROG(test_cwise_oper);
+    CALL_SUB_PROG(test_volume_lap);
   } catch (const boost::property_tree::ptree_error &e) {
     cerr << "Usage: " << endl;
     zjucad::show_usage_info(std::cerr, pt);

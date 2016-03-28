@@ -166,3 +166,9 @@ target_link_libraries(test_local_edit
     riemann
     ${Boost_LIBRARIES}
 )
+
+add_executable(test_conformal_volume test_conformal_volume.cc)
+target_link_libraries(test_conformal_volume
+    riemann
+    ${Boost_LIBRARIES}
+)
