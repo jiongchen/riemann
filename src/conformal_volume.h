@@ -30,7 +30,6 @@ public:
   Eigen::VectorXd u_;
   Eigen::Matrix4Xd gradu_;
 
-  Eigen::Matrix4d I_, J_, K_;
   Eigen::SparseMatrix<double> L_, M_, B_;
 };
 

@@ -100,31 +100,18 @@ conformal_volume::conformal_volume(const mati_t &tets, const matd_t &verts)
     matd_t e = verts_(colon(1, 3), tets_(colon(1, 3), i))-verts_(colon(1, 3), tets_(0, i))*ones<double>(1, 3);
     vol_[i] = fabs(det(e))/6.0;
   }
-  I_ << 0, -1, 0, 0,
-      1, 0, 0, 0,
-      0, 0, 0, -1,
-      0, 0, 1, 0;
-  J_ << 0, 0, -1, 0,
-      0, 0, 0, 1,
-      1, 0, 0, 0,
-      0, -1, 0, 0;
-  K_ << 0, 0, 0, -1,
-      0, 0, -1, 0,
-      0, 1, 0, 0,
-      1, 0, 0, 0;
 }
 
 void conformal_volume::set_charge(const double *pos, const double intensity) {
   ASSERT(intensity > 0.0);
-  Vector3d a(pos);
+  itr_matrix<const double *> a(3, 1, pos);
   // ->FOR SCALAR
   VectorXd psi(verts_.size(2));
 #pragma omp parallel for
   for (size_t i = 0; i < psi.size(); ++i) {
-    Vector3d f(verts_(1, i), verts_(2, i), verts_(3, i));
-    psi(i) = intensity/(f-a).norm();
+    psi(i) = intensity/norm(verts_(colon(1, 3), i)-a);
   }
-//  psi.cwise().log()/2;
+  for_each(psi.data(), psi.data()+psi.size(), [](double &x) { x = 2*log(x); });
   // ->FOR GRADIENT
   Matrix3Xd gu;
   calc_grad_u(psi, gu);
@@ -150,14 +137,14 @@ void conformal_volume::solve_eigen_prob() {
   SparseMatrix<double> E;
   laplacian_matrix<4>(tets_, verts_(colon(1, 3), colon()), &L_);
   // get sqrM
-  VectorXd sqrinvM(4*verts_.size(2)); {
+  VectorXd sqrinvM = VectorXd::Zero(4*verts_.size(2)); {
     for (size_t i = 0; i < tets_.size(2); ++i)
       for (size_t j = 0; j < 4; ++j)
         sqrinvM.segment<4>(4*tets_(j, i)) += vol_[i]/4.0*Vector4d::Ones();
-    sqrinvM.cwiseSqrt().cwiseInverse();
+    sqrinvM = (sqrinvM.cwiseSqrt().cwiseInverse()).eval();
   }
   // assemble B
-  SparseMatrix<double> B; {
+  SparseMatrix<double> B(4*verts_.size(2), 4*verts_.size(2)); {
     vector<Triplet<double>> trips;
     for (size_t i = 0; i < tets_.size(2); ++i) {
       matd_t v = verts_(colon(1, 3), tets_(colon(), i));
@@ -165,20 +152,19 @@ void conformal_volume::solve_eigen_prob() {
       calc_tet_linear_basis_grad(&v[0], g.data());
       for (size_t p = 0; p < 4; ++p) {
         for (size_t q = 0; q < 4; ++q) {
-          Vector4d XG = 1.0/12*(I_*gradu_.col(i)*3*vol_[i]*g.col(q).dot(Vector3d(1, 0, 0))
-                                +J_*gradu_.col(i)*3*vol_[i]*g.col(q).dot(Vector3d(0, 1, 0))
-                                +K_*gradu_.col(i)*3*vol_[i]*g.col(q).dot(Vector3d(0, 0, 1)));
+          Vector4d XG = 1.0/12*(quat_prod(Vector4d(0, 1, 0, 0), gradu_.col(i))*3*vol_[i]*g.col(q).dot(Vector3d(1, 0, 0))
+                                +quat_prod(Vector4d(0, 0, 1, 0), gradu_.col(i))*3*vol_[i]*g.col(q).dot(Vector3d(0, 1, 0))
+                                +quat_prod(Vector4d(0, 0, 0, 1), gradu_.col(i))*3*vol_[i]*g.col(q).dot(Vector3d(0, 0, 1)));
           Matrix4d mat;
           conv_quat_to_mat(XG.data(), mat.data());
           insert_block(4*tets_(p, i), 4*tets_(q, i), mat.data(), 4, 4, &trips);
         }
       }
     }
-    B.resize(4*verts_.size(2), 4*verts_.size(2));
     B.setFromTriplets(trips.begin(), trips.end());
   }
   // assemble weighted M
-  SparseMatrix<double> gM; {
+  SparseMatrix<double> gM(4*verts_.size(2), 4*verts_.size(2)); {
     vector<Triplet<double>> trips;
     for (size_t i = 0; i < tets_.size(2); ++i) {
       double w = 0.75*gradu_.col(i).squaredNorm();
@@ -189,7 +175,6 @@ void conformal_volume::solve_eigen_prob() {
         }
       }
     }
-    gM.resize(4*verts_.size(2), 4*verts_.size(2));
     gM.setFromTriplets(trips.begin(), trips.end());
   }
   SparseMatrix<double> BT = B.transpose();
@@ -212,14 +197,54 @@ void conformal_volume::solve_eigen_prob() {
 
 void conformal_volume::solve_poisson_prob(double *x) {
   Map<VectorXd> X(x, 4*verts_.size(2));
-  VectorXd rhs; { // calculate the divergence
-
+  VectorXd rhs = VectorXd::Zero(4*verts_.size(2)); { // calculate the divergence
+    Matrix4Xd q;
+    q.resize(NoChange, verts_.size(2));
+    q.setZero();
+    for (size_t i = 0; i < q.cols(); ++i) {
+      q.col(i) = exp(0.5*u_(i))*lambda_.segment<4>(4*i)/lambda_.segment<4>(4*i).squaredNorm();
+    }
+    for (size_t i = 0; i < tets_.size(2); ++i) {
+      matd_t v = verts_(colon(1, 3), tets_(colon(), i));
+      Matrix<double, 3, 4> g = Matrix<double, 3, 4>::Zero();
+      calc_tet_linear_basis_grad(&v[0], g.data());
+      Vector4d qiqm, qjqm, qkqm;
+      qiqm = qjqm = qkqm = Vector4d::Zero();
+      for (size_t m = 0; m < 4; ++m) {
+        for (size_t n = 0; n < 4; ++n) {
+          double fac = (m == n) ? vol_[i]/10.0 : vol_[i]/20.0;
+          qiqm += fac*quat_prod(quat_prod(conjugate(q.col(tets_(m, i))), Vector4d(0, 1, 0, 0)), q.col(tets_(n, i)));
+          qjqm += fac*quat_prod(quat_prod(conjugate(q.col(tets_(m, i))), Vector4d(0, 0, 1, 0)), q.col(tets_(n, i)));
+          qkqm += fac*quat_prod(quat_prod(conjugate(q.col(tets_(m, i))), Vector4d(0, 0, 0, 1)), q.col(tets_(n, i)));
+        }
+      }
+      for (size_t j = 0; j < 4; ++j) {
+        rhs.segment<4>(4*tets_(j, i)) +=
+            g.col(j).dot(Vector3d(1, 0, 0))*qiqm+g.col(j).dot(Vector3d(0, 1, 0))*qjqm+g.col(j).dot(Vector3d(0, 0, 1))*qkqm;
+      }
+    }
   }
   SimplicialCholesky<SparseMatrix<double>> solver;
+  solver.setMode(SimplicialCholeskyLLT);
+  vector<size_t> g2l(L_.cols());
+  size_t cnt = 0;
+  for (size_t i = 0; i < g2l.size(); ++i) {
+    if ( i >= 0 && i < 4 )
+      g2l[i] = -1;
+    else
+      g2l[i] = cnt++;
+  }
+  rhs = rhs-L_*X;
+  rm_spmat_col_row(L_, g2l);
+  rm_vector_row(rhs, g2l);
   solver.compute(L_);
   ASSERT(solver.info() == Success);
-  X = solver.solve(rhs);
+  VectorXd dx = solver.solve(rhs);
   ASSERT(solver.info() == Success);
+  VectorXd DX = VectorXd::Zero(4*verts_.size(2));
+  rc_vector_row(dx, g2l, DX);
+  X += DX;
+  X /= X.lpNorm<Infinity>();
 }
 
 //==============================================================================

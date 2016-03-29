@@ -2,6 +2,7 @@
 #include <fstream>
 #include <jtflib/mesh/io.h>
 #include <boost/filesystem.hpp>
+#include <zjucad/matrix/io.h>
 
 #include "src/json.h"
 #include "src/conformal_volume.h"
@@ -47,13 +48,24 @@ int main(int argc, char *argv[])
     cv.set_charge(pos, intensity);
   }
   cv.solve_eigen_prob();
+  matd_t xnew = verts;
+  cv.solve_poisson_prob(&xnew[0]);
 
   char outfile[256];
-  sprintf(outfile, "%s/orig.vtk", json["output_dir"].asString().c_str());
-  ofstream os(outfile);
-  tet2vtk(os, &nods[0], nods.size(2), &tets[0], tets.size(2));
-  point_data(os, cv.u_.data(), cv.u_.size(), "charge");
-  os.close();
+  {
+    sprintf(outfile, "%s/orig.vtk", json["output_dir"].asString().c_str());
+    ofstream os(outfile);
+    tet2vtk(os, &nods[0], nods.size(2), &tets[0], tets.size(2));
+    point_data(os, cv.u_.data(), cv.u_.size(), "charge");
+    os.close();
+  }
+  {
+    sprintf(outfile, "%s/deform.vtk", json["output_dir"].asString().c_str());
+    matd_t nodes = xnew(colon(1, 3), colon());
+    ofstream os(outfile);
+    tet2vtk(os, &nodes[0], nodes.size(2), &tets[0], tets.size(2));
+    os.close();
+  }
 
 //  sprintf(outfile, "%s/grad.vtk", json["output_dir"].asString().c_str());
 //  cv.draw_gradient(outfile);

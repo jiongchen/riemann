@@ -45,3 +45,5 @@ It's just a spare-time project of my own, consisting of full/partial implementat
 [2016-02-18] Implement ARAP parameterization [[Liu08]](http://www.cs.harvard.edu/~sjg/papers/arap.pdf).
 
 ![image] (/img/half_size/arap_param.png)
+
+[2016-03-29] Implement close-to-conformal deformations of volumes with charges as the conformal factor design tools [[Chern15]](http://dl.acm.org/citation.cfm?id=2766916).
