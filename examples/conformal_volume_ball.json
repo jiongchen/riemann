@@ -2,16 +2,16 @@
 	"mesh": "../../dat/ball.tet",
 	"charges": [
 	{
-		"pos": [2, 0, 0],
+		"pos": [1.25, 0, 0],
 		"intensity": 1000.0
 	},
 	{
-		"pos": [-2, 0, 0],
+		"pos": [-1.25, 0, 0],
 		"intensity": 1000.0
 	},
 	{
 		"pos": [0, 0, 2],
-		"intensity": 100.0
+		"intensity": 500.0
 	}
 	],
 	"output_dir": "./conformal_volume" 

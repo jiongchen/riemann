@@ -171,7 +171,7 @@ void conformal_volume::solve_eigen_prob() {
       for (size_t p = 0; p < 4; ++p) {
         for (size_t q = 0; q < 4; ++q) {
           double m = (p == q) ? vol_[i]/10 : vol_[i]/20;
-          add_diag_block(tets_(p, i), tets_(q, i), w*m, &trips);
+          add_diag_block<double, 4>(tets_(p, i), tets_(q, i), w*m, &trips);
         }
       }
     }
