@@ -47,3 +47,5 @@ It's just a spare-time project of my own, consisting of full/partial implementat
 ![image] (/img/half_size/arap_param.png)
 
 [2016-03-29] Implement close-to-conformal deformations of volumes with charges as the conformal factor design tools [[Chern15]](http://dl.acm.org/citation.cfm?id=2766916).
+
+![image] (/img/half_size/conformal_volume.png)

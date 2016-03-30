@@ -155,7 +155,7 @@ void conformal_volume::solve_eigen_prob() {
           Vector4d XG = 1.0/12*(quat_prod(Vector4d(0, 1, 0, 0), gradu_.col(i))*3*vol_[i]*g.col(q).dot(Vector3d(1, 0, 0))
                                 +quat_prod(Vector4d(0, 0, 1, 0), gradu_.col(i))*3*vol_[i]*g.col(q).dot(Vector3d(0, 1, 0))
                                 +quat_prod(Vector4d(0, 0, 0, 1), gradu_.col(i))*3*vol_[i]*g.col(q).dot(Vector3d(0, 0, 1)));
-          Matrix4d mat;
+          Matrix4d mat = Matrix4d::Zero();
           conv_quat_to_mat(XG.data(), mat.data());
           insert_block(4*tets_(p, i), 4*tets_(q, i), mat.data(), 4, 4, &trips);
         }
