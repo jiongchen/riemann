@@ -1,0 +1,7 @@
+// assume the working directory is build/bin
+{
+	"mesh_prev": "../../dat/flag_prev.obj",
+	"mesh_curr": "../../dat/flag_curr.obj"
+	"scale": 0.1,
+	"outdir": "./ani_compr"
+}

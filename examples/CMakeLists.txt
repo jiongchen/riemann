@@ -172,3 +172,9 @@ target_link_libraries(test_conformal_volume
     riemann
     ${Boost_LIBRARIES}
 )
+
+add_executable(test_ani_compression test_ani_compression.cc)
+target_link_libraries(test_ani_compression
+    riemann
+    ${Boost_LIBRARIES}
+)

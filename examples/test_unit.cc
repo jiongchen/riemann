@@ -10,6 +10,8 @@
 #include <igl/readDMAT.h>
 #include <igl/grad.h>
 #include <igl/cotmatrix.h>
+#include <igl/readOBJ.h>
+#include <igl/boundary_loop.h>
 #include <hjlib/math/blas_lapack.h>
 #include <zjucad/matrix/lapack.h>
 
@@ -24,6 +26,7 @@
 #include "src/write_vtk.h"
 #include "src/timer.h"
 #include "src/util.h"
+#include "src/dual_graph.h"
 
 using namespace std;
 using namespace Eigen;
@@ -548,6 +551,35 @@ int test_volume_lap(ptree &pt) {
   return 0;
 }
 
+int test_boundary_loop(ptree &pt) {
+  MatrixXd V; MatrixXi F;
+  string file = pt.get<string>("file.value");
+  igl::readOBJ(file, V, F);
+  vector<vector<int>> loop;
+  igl::boundary_loop(F, loop);
+  for (size_t i = 0; i < loop.size(); ++i) {
+    cout << "loop " << i << endl;
+    for (size_t j = 0; j < loop[i].size(); ++j) {
+      cout << loop[i][j] << ",";
+      if ( j % 10 == 0 )
+        cout << endl;
+    }
+    cout << endl;
+  }
+  cout << "done\n";
+  return 0;
+}
+
+int test_dual_graph(ptree &pt) {
+  mati_t tris; matd_t nods;
+  jtf::mesh::load_obj(pt.get<string>("mesh.value").c_str(), tris, nods);
+  shared_ptr<edge2cell_adjacent> ec;
+  shared_ptr<Graph> g;
+  build_tri_mesh_dual_graph(tris.size(2), &tris[0], ec, g, pt.get<string>("dotfile.value").c_str());
+  cout << "done\n";
+  return 0;
+}
+
 int main(int argc, char *argv[])
 {
   ptree pt;
@@ -573,6 +605,8 @@ int main(int argc, char *argv[])
     CALL_SUB_PROG(test_insert_block);
     CALL_SUB_PROG(test_cwise_oper);
     CALL_SUB_PROG(test_volume_lap);
+    CALL_SUB_PROG(test_boundary_loop);
+    CALL_SUB_PROG(test_dual_graph);
   } catch (const boost::property_tree::ptree_error &e) {
     cerr << "Usage: " << endl;
     zjucad::show_usage_info(std::cerr, pt);
