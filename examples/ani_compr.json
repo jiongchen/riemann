@@ -1,15 +1,13 @@
 // assume the working directory is build/bin
 {
-	"mesh_prev": "../../dat/flag_prev.obj",
-	"mesh_curr": "../../dat/flag_curr.obj",
+	"mesh_rest": "/home/jerry/usr/workspace/arcsim/build/wind_flag_jacket_strain_limits/rest.obj",
+	"mesh_prev": "/home/jerry/usr/workspace/arcsim/build/wind_flag_jacket_strain_limits/rest.obj",
+	"mesh_curr": "/home/jerry/usr/workspace/arcsim/build/wind_flag_jacket_strain_limits/0152_00.obj",
 	"scale": 0.1,
 	"root_face": 0,
 	"handles":[
 	{
 		"id": 0
-	},
-	{
-		"id": 2
 	}
 	],
 	"outdir": "./ani_compr"

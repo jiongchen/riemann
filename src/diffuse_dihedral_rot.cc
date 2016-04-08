@@ -65,65 +65,83 @@ static inline Matrix3d axis_angle_rot_mat(const double *axis, const double angle
   return AngleAxisd(angle, Vector3d(axis).normalized()).toRotationMatrix();
 }
 
-void diffuse_rotation(const mati_t &tris, const matd_t &vrest, const matd_t &vcurr,
-                      const size_t root_face, const tree_t &g,
-                      vector<Matrix3d> &rot) {
-  if ( rot.size() != tris.size(2) )
-    rot.resize(tris.size(2));
-  matd_t v_rest_root = vrest(colon(), tris(colon(), root_face));
-  matd_t v_curr_root = vcurr(colon(), tris(colon(), root_face));
-  rot[root_face] = compute_tri_rot(&v_rest_root[0], &v_curr_root[0]);
+//void diffuse_rotation(const mati_t &tris, const matd_t &vrest, const matd_t &vcurr,
+//                      const size_t root_face, const tree_t &g,
+//                      vector<Matrix3d> &rot) {
+//  if ( rot.size() != tris.size(2) )
+//    rot.resize(tris.size(2));
+//  matd_t v_rest_root = vrest(colon(), tris(colon(), root_face));
+//  matd_t v_curr_root = vcurr(colon(), tris(colon(), root_face));
+//  rot[root_face] = compute_tri_rot(&v_rest_root[0], &v_curr_root[0]);
 
-  queue<size_t> q;
-  unordered_set<size_t> vis;
-  q.push(root_face);
-  while ( !q.empty() ) {
-    const size_t curr_face = q.front();
-    q.pop();
-    if ( vis.find(curr_face) != vis.end() )
-      continue;
-    vis.insert(curr_face);
-    for (size_t e = g.first[curr_face]; e != -1; e = g.next[e]) {
-      const size_t next_face = g.v[e];
-      if ( vis.find(next_face) != vis.end() )
-        continue;
-      mati_t diam;
-      get_edge_diam_elem(curr_face, next_face, tris, diam);
-      matd_t x0 = vrest(colon(), diam), x1 = vcurr(colon(), diam);
-      double theta0 = 0, theta1 = 0;
-      calc_dihedral_angle_(&theta0, &x0[0]);
-      calc_dihedral_angle_(&theta1, &x1[0]);
-      bool need_swap = false;
-      for (size_t k = 0; k < 3; ++k) {
-        if ( diam[1] == tris(k, curr_face) ) {
-          if ( diam[2] == tris((k+1)%3, curr_face) ) {
-            need_swap = true;
-            break;
-          }
-        }
-      }
-      matd_t axis = vcurr(colon(), diam[1])-vcurr(colon(), diam[2]);
-      axis *= need_swap ? -1 : 1;
-      rot[next_face] = axis_angle_rot_mat(&axis[0], theta1-theta0)*rot[curr_face];
-      q.push(next_face);
-    }
+//  queue<size_t> q;
+//  unordered_set<size_t> vis;
+//  q.push(root_face);
+//  while ( !q.empty() ) {
+//    const size_t curr_face = q.front();
+//    q.pop();
+//    if ( vis.find(curr_face) != vis.end() )
+//      continue;
+//    vis.insert(curr_face);
+//    for (size_t e = g.first[curr_face]; e != -1; e = g.next[e]) {
+//      const size_t next_face = g.v[e];
+//      if ( vis.find(next_face) != vis.end() )
+//        continue;
+//      mati_t diam;
+//      get_edge_diam_elem(curr_face, next_face, tris, diam);
+//      matd_t x0 = vrest(colon(), diam), x1 = vcurr(colon(), diam);
+//      double theta0 = 0, theta1 = 0;
+//      calc_dihedral_angle_(&theta0, &x0[0]);
+//      calc_dihedral_angle_(&theta1, &x1[0]);
+//      bool need_swap = false;
+//      for (size_t k = 0; k < 3; ++k) {
+//        if ( diam[1] == tris(k, curr_face) ) {
+//          if ( diam[2] == tris((k+1)%3, curr_face) ) {
+//            need_swap = true;
+//            break;
+//          }
+//        }
+//      }
+//      matd_t axis = vcurr(colon(), diam[1])-vcurr(colon(), diam[2]);
+//      axis *= need_swap ? -1 : 1;
+//      rot[next_face] = axis_angle_rot_mat(&axis[0], theta1-theta0)*rot[curr_face];
+//      q.push(next_face);
+//    }
+//  }
+//  ASSERT(vis.size() == tris.size(2));
+//}
+
+static void tri2tet(const mati_t &tris, const matd_t &v_tri, mati_t &tets, matd_t &v_tet) {
+  tets.resize(4, tris.size(2));
+  v_tet.resize(3, v_tri.size(2)+tris.size(2));
+  tets(colon(0, 2), colon()) = tris;
+  tets(3, colon()) = colon(v_tri.size(2), v_tet.size(2)-1);
+  v_tet(colon(), colon(0, v_tri.size(2)-1)) = v_tri;
+#pragma omp parallel for
+  for (size_t i = 0; i < tris.size(2); ++i) {
+    matd_t vert = v_tri(colon(), tris(colon(), i));
+    matd_t n = cross(vert(colon(), 1)-vert(colon(), 0), vert(colon(), 2)-vert(colon(), 0));
+    v_tet(colon(), i+v_tri.size(2)) = vert(colon(), 0)+n/norm(n);
   }
-  ASSERT(vis.size() == tris.size(2));
 }
 
 class diffuse_arap_energy : public Functional<double>
 {
 public:
-  diffuse_arap_energy(const mati_t &tets, const matd_t &nods, const vector<Matrix3d> &R, const double w=1.0)
-    : tets_(tets), nods_(nods), dim_(nods.size()), R_(R), w_(w) {
+  diffuse_arap_energy(const mati_t &tris, const matd_t &nods, const double w=1.0)
+    : w_(w) {
+    tri2tet(tris, nods, tets_, nods_);
+    dim_ = nods_.size();
     vol_.resize(tets_.size(2));
     D_.resize(tets_.size(2));
+    R_.resize(tets_.size(2));
 #pragma omp parallel for
     for (size_t i = 0; i < tets_.size(2); ++i) {
       matd_t basis = nods_(colon(), tets_(colon(1, 3), i))-nods_(colon(), tets_(0, i))*ones<double>(1, 3);
       Map<Matrix3d> ba(&basis[0]);
       vol_[i] = fabs(ba.determinant())/6.0;
       D_[i] = ba.inverse();
+      R_[i] = Matrix3d::Identity();
     }
   }
   size_t Nx() const {
@@ -164,32 +182,113 @@ public:
     }
     return 0;
   }
+  void SetRotation(const vector<Matrix3d> &R) {
+#pragma omp parallel for
+    for (size_t i = 0; i < R.size(); ++i)
+      R_[i] = R[i];
+  }
 private:
-  const mati_t &tets_;
-  const matd_t &nods_;
-  const size_t dim_;
-  double w_;
+  mati_t tets_;
+  matd_t nods_;
+  size_t dim_;
+  const double w_;
   vector<double> vol_;
-  const vector<Matrix3d> &R_;
+  vector<Matrix3d> R_;
   vector<Matrix3d> D_;
 };
 //==============================================================================
-diffuse_arap_solver::diffuse_arap_solver(const mati_t &tets, const matd_t &nods, const vector<Matrix3d> &R)
-  : dim_(nods.size()) {
-  energy_ = make_shared<diffuse_arap_energy>(tets, nods, R);
+void diffuse_arap_encoder::calc_delta_angle(const mati_t &tris, const matd_t &prev, const matd_t &curr,
+                                            const tree_t &g, const size_t root_face, vector<double> &da) {
+  queue<size_t> q;
+  unordered_set<size_t> vis;
+  q.push(root_face);
+  while ( !q.empty() ) {
+    const size_t curr_face = q.front();
+    q.pop();
+    if ( vis.find(curr_face) != vis.end() ) {
+      cout << "[Error] not a tree\n";
+      ASSERT(0);
+    }
+    vis.insert(curr_face);
+    for (size_t e = g.first[curr_face]; e != -1; e = g.next[e]) {
+      const size_t next_face = g.v[e];
+      if ( vis.find(next_face) != vis.end() )
+        continue;
+      mati_t diam;
+      get_edge_diam_elem(curr_face, next_face, tris, diam);
+      matd_t x0 = prev(colon(), diam), x1 = curr(colon(), diam);
+      double theta0 = 0, theta1 = 0;
+      calc_dihedral_angle_(&theta0, &x0[0]);
+      calc_dihedral_angle_(&theta1, &x1[0]);
+      da.push_back(theta1-theta0);
+      q.push(next_face);
+    }
+  }
+  ASSERT(da.size() == tris.size(2)-1);
 }
 
-int diffuse_arap_solver::pin_down_vert(const size_t id, const double *pos, double *x) {
+diffuse_arap_decoder::diffuse_arap_decoder(const mati_t &tris, const matd_t &nods)
+  : tris_(tris), nods_(nods) {
+  energy_ = make_shared<diffuse_arap_energy>(tris, nods);
+  dim_ = energy_->Nx();
+  X_ = VectorXd::Zero(dim_);
+  R_.resize(tris.size(2));
+}
+
+int diffuse_arap_decoder::estimate_rotation(const matd_t &prev, const tree_t &g,
+                                            const size_t root_face, const vector<double> &da) {
+  matd_t root_rest = nods_(colon(), tris_(colon(), root_face));
+  matd_t root_prev = prev(colon(), tris_(colon(), root_face));
+  R_[root_face] = compute_tri_rot(&root_rest[0], &root_prev[0]);
+
+  queue<size_t> q;
+  unordered_set<size_t> vis;
+  q.push(root_face);
+  size_t cnt = 0;
+  while ( !q.empty() ) {
+    const size_t curr_face = q.front();
+    q.pop();
+    if ( vis.find(curr_face) != vis.end() ) {
+      cerr << "[Error] not a tree\n";
+      ASSERT(0);
+    }
+    vis.insert(curr_face);
+    for (size_t e = g.first[curr_face]; e != -1; e = g.next[e]) {
+      const size_t next_face = g.v[e];
+      if ( vis.find(next_face) != vis.end() )
+        continue;
+      mati_t diam;
+      get_edge_diam_elem(curr_face, next_face, tris_, diam);
+      bool need_swap = false;
+      for (size_t k = 0; k < 3; ++k) {
+        if ( diam[1] == tris_(k, curr_face) ) {
+          if ( diam[2] == tris_((k+1)%3, curr_face) ) {
+            need_swap = true;
+            break;
+          }
+        }
+      }
+      matd_t axis = itr_matrix<const double *>(3, 3, R_[curr_face].data())*(prev(colon(), diam[1])-prev(colon(), diam[2]));
+      axis *= need_swap ? -1 : 1;
+      R_[next_face] = axis_angle_rot_mat(&axis[0], da[cnt++])*R_[curr_face];
+      q.push(next_face);
+    }
+  }
+  ASSERT(vis.size() == tris_.size(2));
+  energy_->SetRotation(R_);
+  return 0;
+}
+
+int diffuse_arap_decoder::pin_down_vert(const size_t id, const double *pos) {
   fixDoF_.insert(3*id+0);
   fixDoF_.insert(3*id+1);
   fixDoF_.insert(3*id+2);
-  std::copy(pos, pos+3, x+3*id);
+  std::copy(pos, pos+3, X_.data()+3*id);
 }
 
-int diffuse_arap_solver::solve(double *x) const {
-  Map<VectorXd> X(x, dim_);
+int diffuse_arap_decoder::solve(matd_t &curr) {
   VectorXd g = VectorXd::Zero(dim_); {
-    energy_->Gra(&x[0], g.data());
+    energy_->Gra(&X_[0], g.data());
     g *= -1;
   }
   SparseMatrix<double> H(dim_, dim_); {
@@ -214,7 +313,8 @@ int diffuse_arap_solver::solve(double *x) const {
   ASSERT(solver.info() == Success);
   VectorXd DX = VectorXd::Zero(dim_);
   rc_vector_row(dx, g2l, DX);
-  X += DX;
+  X_ += DX;
+  std::copy(X_.data(), X_.data()+nods_.size(), &curr[0]);
   return 0;
 }
 
