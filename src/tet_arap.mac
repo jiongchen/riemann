@@ -1,0 +1,24 @@
+load(hj_fortran2)$
+load(cj_function)$
+
+optimprefix : tt$
+
+f: openw("tet_arap.f90")$
+
+block(
+  X: genmatrix(X, 3, 4),
+  D: genmatrix(D, 3, 3),
+  R: genmatrix(R, 3, 3),
+  volume: genmatrix(volume, 1, 1),
+  tet_arap(X, D, R, volume) := block(
+    [DS, F],
+    DS: addcol(col(X,2)-col(X,1), col(X,3)-col(X,1), col(X,4)-col(X,1)),
+    F: DS.D,
+    volume*(mat_norm(F-R, frobenius)^2)
+  ),
+  with_stdout(f, val_jac_hes_to_f90(tet_arap, [X, D, R, volume])),
+  
+  return()
+)$
+
+close(f)$

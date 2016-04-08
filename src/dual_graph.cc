@@ -9,18 +9,14 @@ using namespace zjucad::matrix;
 
 namespace riemann {
 
-int build_tri_mesh_dual_graph(const size_t cell_num, const size_t *tris, shared_ptr<edge2cell_adjacent> &ec, shared_ptr<Graph> &g, const char *dotfile) {
-  if ( tris == nullptr ) {
-    cerr << "[Error] invalid pointer to cell info\n";
-    return EXIT_FAILURE;
-  }
-  itr_matrix<const size_t *> cell(3, cell_num, tris);
-  ec.reset(edge2cell_adjacent::create(cell));
+int build_tri_mesh_dual_graph(const mati_t &tris, shared_ptr<edge2cell_adjacent> &ec,
+                              shared_ptr<Graph> &g, const char *dotfile) {
+  ec.reset(edge2cell_adjacent::create(tris));
   if ( ec.get() == nullptr ) {
     cerr << "[Error] can not create edge2cell\n";
     return EXIT_FAILURE;
   }
-  g.reset(new Graph(cell_num));
+  g.reset(new Graph(tris.size(2)));
   if ( g.get() == nullptr ) {
     cerr << "[Error] new graph fail\n";
     return EXIT_FAILURE;
@@ -30,8 +26,7 @@ int build_tri_mesh_dual_graph(const size_t cell_num, const size_t *tris, shared_
     pair<size_t, size_t> faces = ec->query(ec->edges_[i].first, ec->edges_[i].second);
     if ( ec->is_boundary_edge(faces) )
       continue;
-    boost::graph_traits<Graph>::edge_descriptor e;
-    bool inserted;
+    boost::graph_traits<Graph>::edge_descriptor e; bool inserted;
     tie(e, inserted) = boost::add_edge(faces.first, faces.second, *g);
     weight[e] = 1;
   }
@@ -43,7 +38,7 @@ int build_tri_mesh_dual_graph(const size_t cell_num, const size_t *tris, shared_
   return EXIT_SUCCESS;
 }
 
-int get_spanning_tree(const shared_ptr<const Graph> &g, graph_t &mst) {
+int get_minimum_spanning_tree(const shared_ptr<const Graph> &g, graph_t &mst, const char *dotfile) {
   if ( g.get() == nullptr ) {
     cerr << "[Error] graph object dosen't exist\n";
     return EXIT_FAILURE;
@@ -56,7 +51,8 @@ int get_spanning_tree(const shared_ptr<const Graph> &g, graph_t &mst) {
   mst.v.resize(2*spanning_tree.size());
   mst.first.resize(boost::num_vertices(*g));
   mst.next.resize(2*spanning_tree.size());
-  fill(mst.next.begin(), mst.next.end(), -1);
+  std::fill(mst.first.begin(), mst.first.end(), -1);
+  std::fill(mst.next.begin(), mst.next.end(), -1);
 
   size_t k = 0;
   for (vector<Edge>::iterator ei = spanning_tree.begin(); ei != spanning_tree.end(); ++ei) {
@@ -70,6 +66,15 @@ int get_spanning_tree(const shared_ptr<const Graph> &g, graph_t &mst) {
     mst.next[k] = mst.first[mst.u[k]];
     mst.first[mst.u[k]] = k;
     ++k;
+  }
+  if ( dotfile != nullptr ) {
+    Graph tree(boost::num_vertices(*g));
+    for (vector<Edge>::iterator ei = spanning_tree.begin(); ei != spanning_tree.end(); ++ei) {
+      boost::add_edge(source(*ei, *g), target(*ei, *g), tree);
+    }
+    ofstream ofs(dotfile);
+    write_graphviz(ofs, tree);
+    ofs.close();
   }
   return EXIT_SUCCESS;
 }

@@ -575,7 +575,9 @@ int test_dual_graph(ptree &pt) {
   jtf::mesh::load_obj(pt.get<string>("mesh.value").c_str(), tris, nods);
   shared_ptr<edge2cell_adjacent> ec;
   shared_ptr<Graph> g;
-  build_tri_mesh_dual_graph(tris.size(2), &tris[0], ec, g, pt.get<string>("dotfile.value").c_str());
+  build_tri_mesh_dual_graph(tris, ec, g, pt.get<string>("graph.value").c_str());
+  graph_t mst;
+  get_minimum_spanning_tree(g, mst, pt.get<string>("tree.value").c_str());
   cout << "done\n";
   return 0;
 }

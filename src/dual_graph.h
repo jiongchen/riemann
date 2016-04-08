@@ -4,6 +4,8 @@
 #include <boost/graph/adjacency_list.hpp>
 #include <jtflib/mesh/mesh.h>
 
+namespace riemann {
+
 using jtf::mesh::edge2cell_adjacent;
 using boost::adjacency_list;
 using boost::vecS;
@@ -13,8 +15,7 @@ using boost::edge_weight_t;
 using boost::property;
 using boost::property_map;
 using Graph=adjacency_list<vecS, vecS, undirectedS, property<edge_index_t, size_t>, property<edge_weight_t, int>>;
-
-namespace riemann {
+using mati_t=zjucad::matrix::matrix<size_t>;
 
 struct graph_t {
   size_t vert_num;
@@ -24,9 +25,8 @@ struct graph_t {
   std::vector<size_t> next;
 };
 
-int build_tri_mesh_dual_graph(const size_t cell_num, const size_t *tris, std::shared_ptr<edge2cell_adjacent> &ec, std::shared_ptr<Graph> &g, const char *dotfile=nullptr);
-int get_spanning_tree(const std::shared_ptr<const Graph> &g, graph_t &mst);
-void dfs(const graph_t &graph, const size_t root);
+int build_tri_mesh_dual_graph(const mati_t &tris, std::shared_ptr<edge2cell_adjacent> &ec, std::shared_ptr<Graph> &g, const char *dotfile=nullptr);
+int get_minimum_spanning_tree(const std::shared_ptr<const Graph> &g, graph_t &mst, const char *dotfile=nullptr);
 
 }
 #endif
