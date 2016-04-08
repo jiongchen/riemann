@@ -93,7 +93,17 @@ void diffuse_rotation(const mati_t &tris, const matd_t &vrest, const matd_t &vcu
       double theta0 = 0, theta1 = 0;
       calc_dihedral_angle_(&theta0, &x0[0]);
       calc_dihedral_angle_(&theta1, &x1[0]);
+      bool need_swap = false;
+      for (size_t k = 0; k < 3; ++k) {
+        if ( diam[1] == tris(k, curr_face) ) {
+          if ( diam[2] == tris((k+1)%3, curr_face) ) {
+            need_swap = true;
+            break;
+          }
+        }
+      }
       matd_t axis = vcurr(colon(), diam[1])-vcurr(colon(), diam[2]);
+      axis *= need_swap ? -1 : 1;
       rot[next_face] = axis_angle_rot_mat(&axis[0], theta1-theta0)*rot[curr_face];
       q.push(next_face);
     }

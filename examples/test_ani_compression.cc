@@ -30,8 +30,36 @@ void tri2tet(const mati_t &tris, const matd_t &v_tri, mati_t &tets, matd_t &v_te
   }
 }
 
+extern "C" {
+void calc_dihedral_angle_(double *value, const double *x);
+}
+
+void simple_test() {
+  {
+  Matrix<double, 3, 4> x;
+  x << 1, 0, 0, 0,
+      0, 0, 1, 0,
+      0, 0, 0, -1;
+  cout << x << endl;
+  double val = 1.0;
+  calc_dihedral_angle_(&val, x.data());
+  cout << val << endl;
+  }
+
+  {Matrix<double, 3, 4> x;
+    x << 1, 0, 0, -1,
+        0, 0, 1, 0,
+        0, 0, 0, 0;
+    cout << x << endl;
+    double val = 1.0;
+    calc_dihedral_angle_(&val, x.data());
+    cout << val << endl;
+    }
+}
+
 int main(int argc, char *argv[])
 {
+//  simple_test();
   if ( argc != 2 ) {
     cerr << "#usage: ./test_ani_compression config.json\n";
     return __LINE__;
@@ -90,6 +118,11 @@ int main(int argc, char *argv[])
   {
     ofstream ofs(json["outdir"].asString()+"/tet_recover.vtk");
     tet2vtk(ofs, &tetv_curr[0], tetv_curr.size(2), &tets[0], tets.size(2));
+    ofs.close();
+  }
+  {
+    ofstream ofs(json["outdir"].asString()+"/tri_recover.vtk");
+    tri2vtk(ofs, &tetv_curr[0], nods_curr.size(2), &tris[0], tris.size(2));
     ofs.close();
   }
 

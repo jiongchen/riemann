@@ -1,11 +1,15 @@
 // assume the working directory is build/bin
 {
 	"mesh_prev": "../../dat/flag_prev.obj",
-	"mesh_curr": "../../dat/flag_prev.obj",
+	"mesh_curr": "../../dat/flag_curr.obj",
 	"scale": 0.1,
 	"root_face": 0,
-	"handles":[{
+	"handles":[
+	{
 		"id": 0
+	},
+	{
+		"id": 2
 	}
 	],
 	"outdir": "./ani_compr"
