@@ -25,7 +25,7 @@ class diffuse_arap_decoder
 {
 public:
   diffuse_arap_decoder(const mati_t &tris, const matd_t &nods);
-  int estimate_rotation(const matd_t &prev, const tree_t &g, const size_t root_face, const std::vector<double> &da);
+  int estimate_rotation(const matd_t &prev, const tree_t &g, const size_t root_face, const matd_t &root_nods, const std::vector<double> &da);
   int pin_down_vert(const size_t id, const double *pos);
   int solve(matd_t &curr);
 private:

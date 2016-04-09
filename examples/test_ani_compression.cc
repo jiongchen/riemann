@@ -10,52 +10,33 @@
 #include "src/write_vtk.h"
 #include "src/diffuse_dihedral_rot.h"
 #include "src/dual_graph.h"
+#include "src/config.h"
 
 using namespace std;
 using namespace Eigen;
 using namespace riemann;
 using namespace zjucad::matrix;
 
-static void zip(const vector<double> &dat, const int bound_min, const int bound_max, vector<int> &cpr_dat) {
-  if ( cpr_dat.size() != dat.size() )
-    cpr_dat.resize(dat.size());
-  for (size_t i = 0; i < cpr_dat.size(); ++i)
-    cpr_dat[i] = floor(bound_min+(bound_max-bound_min)/M_PI*(dat[i]+M_PI/2)+0.5);
-}
-
-static void unzip(const vector<int> &cpr_dat, const int bound_min, const int bound_max, vector<double> &dat) {
-  if ( dat.size() != cpr_dat.size() )
-    dat.resize(cpr_dat.size());
-  for (size_t i = 0; i < dat.size(); ++i) {
-    dat[i] = -M_PI/2+M_PI/(bound_max-bound_min)*(cpr_dat[i]-bound_min);
+static void quantize(const vector<double> &dat, const pair<double, double> range,
+                     const pair<short, short> bound, vector<short> &qdat) {
+  if ( qdat.size() != dat.size() )
+    qdat.resize(dat.size());
+  for (size_t i = 0; i < qdat.size(); ++i) {
+    qdat[i] = floor(bound.first+(bound.second-bound.first)/(range.second-range.first)*(dat[i]-range.first)+0.5);
   }
 }
 
-extern "C" {
-void calc_dihedral_angle_(double *val, const double *x);
-}
-
-void simple_test() {
-  Matrix<double, 3, 4> x, y;
-  x << 1, 0, 0, 0,
-      0, 0, 1, 0,
-      0, 0, 0, 1;
-  y << 1, 0, 0, -1,
-      0, 0, 1, 0,
-      0, 0, 0, 0;
-  double value = 0;
-  calc_dihedral_angle_(&value, x.data());
-  cout << value << endl;
-  Matrix3d rot = AngleAxisd(value, Vector3d(0, -1, 0)).toRotationMatrix();
-  calc_dihedral_angle_(&value, y.data());
-  cout << value << endl;
-  y.col(3) = rot*y.col(3);
-  cout << y << endl;
+static void dequantize(const vector<short> &qdat, const pair<double, double> range,
+                       const pair<short, short> bound, vector<double> &dat) {
+  if ( dat.size() != qdat.size() )
+    dat.resize(qdat.size());
+  for (size_t i = 0; i < dat.size(); ++i) {
+    dat[i] = range.first+(range.second-range.first)/(bound.second-bound.first)*(qdat[i]-bound.first);
+  }
 }
 
 int main(int argc, char *argv[])
 {
-  simple_test();
   if ( argc != 2 ) {
     cerr << "#usage: ./test_ani_compression config.json\n";
     return __LINE__;
@@ -85,28 +66,27 @@ int main(int argc, char *argv[])
   build_tri_mesh_dual_graph(tris, ec, g);
   tree_t mst;
   get_minimum_spanning_tree(g, mst);
-  const size_t root_face = json["root_face"].asUInt();
 
+  const size_t root_face = json["root_face"].asUInt();
   // ENCODE
   diffuse_arap_encoder encoder;
   vector<double> da;
   encoder.calc_delta_angle(tris, nods_prev, nods_curr, mst, root_face, da);
+  const double min_da = *std::min_element(da.begin(), da.end()),
+      max_da = *std::max_element(da.begin(), da.end());
+  cout << "[Info] max delta: " << min_da << endl;
+  cout << "[Info] min delta: " << max_da << endl;
 
-  // ZIP & UNZIP
-  vector<int> cda;
-  int bound = json["bound"].asInt();
-  zip(da, -bound, bound, cda);
-  for (int i = 0; i < cda.size(); ++i)
-    cout << cda[i] << endl;
-  unzip(cda, -bound, bound, da);
+  // QUANTIZE
+  vector<short> cda;
+  const short bound = json["bound"].asInt();
+  quantize(da, make_pair(min_da, max_da), make_pair(-bound, bound), cda);
+  dequantize(cda, make_pair(min_da, max_da), make_pair(-bound, bound), da);
 
   // DECODE
   diffuse_arap_decoder decoder(tris, nods);
-  decoder.estimate_rotation(nods_prev, mst, root_face, da);
-//  for (int i = 0; i < json["handles"].size(); ++i) {
-//    const size_t id = json["handles"][i]["id"].asUInt();
-//    decoder.pin_down_vert(id, &nods_curr(0, id));
-//  }
+  matd_t root_curr = nods_curr(colon(), tris(colon(), root_face));
+  decoder.estimate_rotation(nods_prev, mst, root_face, root_curr, da);
   for (size_t i = 0; i < 3; ++i) {
     const size_t id = tris(i, root_face);
     decoder.pin_down_vert(id, &nods_curr(0, id));

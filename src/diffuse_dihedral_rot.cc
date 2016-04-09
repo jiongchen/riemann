@@ -239,10 +239,9 @@ diffuse_arap_decoder::diffuse_arap_decoder(const mati_t &tris, const matd_t &nod
 }
 
 int diffuse_arap_decoder::estimate_rotation(const matd_t &prev, const tree_t &g,
-                                            const size_t root_face, const vector<double> &da) {
+                                            const size_t root_face, const matd_t &root_curr, const vector<double> &da) {
   matd_t root_rest = nods_(colon(), tris_(colon(), root_face));
-  matd_t root_prev = prev(colon(), tris_(colon(), root_face));
-  R_[root_face] = compute_tri_rot(&root_rest[0], &root_prev[0]);
+  R_[root_face] = compute_tri_rot(&root_rest[0], &root_curr[0]);
 
   queue<size_t> q;
   unordered_set<size_t> vis;
@@ -262,6 +261,9 @@ int diffuse_arap_decoder::estimate_rotation(const matd_t &prev, const tree_t &g,
         continue;
       mati_t diam;
       get_edge_diam_elem(curr_face, next_face, tris_, diam);
+      double prev_angle = 0;
+      matd_t prev_diam = prev(colon(), diam);
+      calc_dihedral_angle_(&prev_angle, &prev_diam[0]);
       // make sure that the current face is on the left of the axis
       bool need_swap = false;
       for (size_t k = 0; k < 3; ++k) {
@@ -272,9 +274,9 @@ int diffuse_arap_decoder::estimate_rotation(const matd_t &prev, const tree_t &g,
           }
         }
       }
-      matd_t axis = itr_matrix<const double *>(3, 3, R_[curr_face].data())*(prev(colon(), diam[1])-prev(colon(), diam[2]));
+      matd_t axis = itr_matrix<const double *>(3, 3, R_[curr_face].data())*(nods_(colon(), diam[1])-nods_(colon(), diam[2]));
       axis *= need_swap ? -1 : 1;
-      R_[next_face] = axis_angle_rot_mat(&axis[0], da[cnt++])*R_[curr_face];
+      R_[next_face] = axis_angle_rot_mat(&axis[0], prev_angle+da[cnt++])*R_[curr_face];
       q.push(next_face);
     }
   }
