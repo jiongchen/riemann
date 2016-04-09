@@ -16,8 +16,46 @@ using namespace Eigen;
 using namespace riemann;
 using namespace zjucad::matrix;
 
+static void zip(const vector<double> &dat, const int bound_min, const int bound_max, vector<int> &cpr_dat) {
+  if ( cpr_dat.size() != dat.size() )
+    cpr_dat.resize(dat.size());
+  for (size_t i = 0; i < cpr_dat.size(); ++i)
+    cpr_dat[i] = floor(bound_min+(bound_max-bound_min)/M_PI*(dat[i]+M_PI/2)+0.5);
+}
+
+static void unzip(const vector<int> &cpr_dat, const int bound_min, const int bound_max, vector<double> &dat) {
+  if ( dat.size() != cpr_dat.size() )
+    dat.resize(cpr_dat.size());
+  for (size_t i = 0; i < dat.size(); ++i) {
+    dat[i] = -M_PI/2+M_PI/(bound_max-bound_min)*(cpr_dat[i]-bound_min);
+  }
+}
+
+extern "C" {
+void calc_dihedral_angle_(double *val, const double *x);
+}
+
+void simple_test() {
+  Matrix<double, 3, 4> x, y;
+  x << 1, 0, 0, 0,
+      0, 0, 1, 0,
+      0, 0, 0, 1;
+  y << 1, 0, 0, -1,
+      0, 0, 1, 0,
+      0, 0, 0, 0;
+  double value = 0;
+  calc_dihedral_angle_(&value, x.data());
+  cout << value << endl;
+  Matrix3d rot = AngleAxisd(value, Vector3d(0, -1, 0)).toRotationMatrix();
+  calc_dihedral_angle_(&value, y.data());
+  cout << value << endl;
+  y.col(3) = rot*y.col(3);
+  cout << y << endl;
+}
+
 int main(int argc, char *argv[])
 {
+  simple_test();
   if ( argc != 2 ) {
     cerr << "#usage: ./test_ani_compression config.json\n";
     return __LINE__;
@@ -54,6 +92,14 @@ int main(int argc, char *argv[])
   vector<double> da;
   encoder.calc_delta_angle(tris, nods_prev, nods_curr, mst, root_face, da);
 
+  // ZIP & UNZIP
+  vector<int> cda;
+  int bound = json["bound"].asInt();
+  zip(da, -bound, bound, cda);
+  for (int i = 0; i < cda.size(); ++i)
+    cout << cda[i] << endl;
+  unzip(cda, -bound, bound, da);
+
   // DECODE
   diffuse_arap_decoder decoder(tris, nods);
   decoder.estimate_rotation(nods_prev, mst, root_face, da);
@@ -68,6 +114,8 @@ int main(int argc, char *argv[])
   matd_t rec_curr(3, nods.size(2));
   decoder.solve(rec_curr);
 
+  string outdir = json["outdir"].asString();
+  boost::filesystem::create_directories(outdir);
   // OUTPUT
   {
     ofstream ofs(json["outdir"].asString()+"/tri_curr.vtk");
