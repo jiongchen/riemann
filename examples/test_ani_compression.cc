@@ -57,8 +57,12 @@ int main(int argc, char *argv[])
   // DECODE
   diffuse_arap_decoder decoder(tris, nods);
   decoder.estimate_rotation(nods_prev, mst, root_face, da);
-  for (int i = 0; i < json["handles"].size(); ++i) {
-    const size_t id = json["handles"][i]["id"].asUInt();
+//  for (int i = 0; i < json["handles"].size(); ++i) {
+//    const size_t id = json["handles"][i]["id"].asUInt();
+//    decoder.pin_down_vert(id, &nods_curr(0, id));
+//  }
+  for (size_t i = 0; i < 3; ++i) {
+    const size_t id = tris(i, root_face);
     decoder.pin_down_vert(id, &nods_curr(0, id));
   }
   matd_t rec_curr(3, nods.size(2));

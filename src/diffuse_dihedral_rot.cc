@@ -51,8 +51,10 @@ static void get_edge_diam_elem(const size_t f0, const size_t f1, const mati_t &t
   bool need_swap = true;
   for (size_t k = 0; k < 3; ++k) {
     if ( diam[1] == tris(k, f0) ) {
-      if ( diam[2] != tris((k+1)%3, f0) )
+      if ( diam[2] != tris((k+1)%3, f0) ) {
         need_swap = false;
+        break;
+      }
     }
   }
   if ( need_swap )
@@ -184,8 +186,9 @@ public:
   }
   void SetRotation(const vector<Matrix3d> &R) {
 #pragma omp parallel for
-    for (size_t i = 0; i < R.size(); ++i)
+    for (size_t i = 0; i < R.size(); ++i) {
       R_[i] = R[i];
+    }
   }
 private:
   mati_t tets_;
@@ -259,6 +262,7 @@ int diffuse_arap_decoder::estimate_rotation(const matd_t &prev, const tree_t &g,
         continue;
       mati_t diam;
       get_edge_diam_elem(curr_face, next_face, tris_, diam);
+      // make sure that the current face is on the left of the axis
       bool need_swap = false;
       for (size_t k = 0; k < 3; ++k) {
         if ( diam[1] == tris_(k, curr_face) ) {
@@ -305,6 +309,7 @@ int diffuse_arap_decoder::solve(matd_t &curr) {
       g2l[i] = cnt++;
   }
   SimplicialCholesky<SparseMatrix<double>> solver;
+  solver.setMode(SimplicialCholeskyLLT);
   rm_spmat_col_row(H, g2l);
   rm_vector_row(g, g2l);
   solver.compute(H);
