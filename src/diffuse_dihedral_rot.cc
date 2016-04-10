@@ -1,8 +1,6 @@
 #include "diffuse_dihedral_rot.h"
 
 #include <queue>
-#include <hjlib/math/blas_lapack.h>
-#include <zjucad/matrix/lapack.h>
 #include <Eigen/Dense>
 #include <Eigen/SVD>
 #include <Eigen/Geometry>
@@ -27,7 +25,7 @@ void tet_arap_hes_(double *hes, const double *x, const double *D, const double *
 
 }
 
-static Matrix3d compute_tri_rot(const double *rest, const double *defo) {
+static Matrix3d calc_triangle_rotation(const double *rest, const double *defo) {
   Map<const Matrix3d> X(rest), Y(defo);
   Matrix3d Dm, Ds;
   Dm.col(0) = X.col(1)-X.col(0); Dm.col(1) = X.col(2)-X.col(0); Dm.col(2) = Dm.col(0).cross(Dm.col(1)).normalized();
@@ -37,10 +35,10 @@ static Matrix3d compute_tri_rot(const double *rest, const double *defo) {
   return svd.matrixU()*svd.matrixV().transpose();
 }
 
-static void get_edge_diam_elem(const size_t f0, const size_t f1, const mati_t &tris, mati_t &diam) {
-  // f0 and f1 should be adjacent
+static void get_edge_diam_elem(const size_t left, const size_t right, const mati_t &tris, mati_t &diam) {
+  // left and right should be adjacent
   diam.resize(4, 1); {
-    mati_t tri0 = tris(colon(), f0), tri1 = tris(colon(), f1);
+    mati_t tri0 = tris(colon(), left), tri1 = tris(colon(), right);
     vector<size_t> buffer;
     if ( find(tri1.begin(), tri1.end(), tri0[0]) != tri1.end() ) buffer.push_back(tri0[0]);
     if ( find(tri1.begin(), tri1.end(), tri0[1]) != tri1.end() ) buffer.push_back(tri0[1]);
@@ -50,8 +48,8 @@ static void get_edge_diam_elem(const size_t f0, const size_t f1, const mati_t &t
   }
   bool need_swap = true;
   for (size_t k = 0; k < 3; ++k) {
-    if ( diam[1] == tris(k, f0) ) {
-      if ( diam[2] != tris((k+1)%3, f0) ) {
+    if ( diam[1] == tris(k, left) ) {
+      if ( diam[2] != tris((k+1)%3, left) ) {
         need_swap = false;
         break;
       }
@@ -59,8 +57,8 @@ static void get_edge_diam_elem(const size_t f0, const size_t f1, const mati_t &t
   }
   if ( need_swap )
     swap(diam[1], diam[2]);
-  diam[0] = sum(tris(colon(), f0))-sum(diam(colon(1, 2)));
-  diam[3] = sum(tris(colon(), f1))-sum(diam(colon(1, 2)));
+  diam[0] = sum(tris(colon(), left))-sum(diam(colon(1, 2)));
+  diam[3] = sum(tris(colon(), right))-sum(diam(colon(1, 2)));
 }
 
 static inline Matrix3d axis_angle_rot_mat(const double *axis, const double angle) {
@@ -113,17 +111,17 @@ static inline Matrix3d axis_angle_rot_mat(const double *axis, const double angle
 //  ASSERT(vis.size() == tris.size(2));
 //}
 
-static void tri2tet(const mati_t &tris, const matd_t &v_tri, mati_t &tets, matd_t &v_tet) {
+static void tri2tet(const mati_t &tris, const matd_t &tri_nods, mati_t &tets, matd_t &tet_nods) {
   tets.resize(4, tris.size(2));
-  v_tet.resize(3, v_tri.size(2)+tris.size(2));
+  tet_nods.resize(3, tri_nods.size(2)+tris.size(2));
   tets(colon(0, 2), colon()) = tris;
-  tets(3, colon()) = colon(v_tri.size(2), v_tet.size(2)-1);
-  v_tet(colon(), colon(0, v_tri.size(2)-1)) = v_tri;
+  tets(3, colon()) = colon(tri_nods.size(2), tet_nods.size(2)-1);
+  tet_nods(colon(), colon(0, tri_nods.size(2)-1)) = tri_nods;
 #pragma omp parallel for
   for (size_t i = 0; i < tris.size(2); ++i) {
-    matd_t vert = v_tri(colon(), tris(colon(), i));
+    matd_t vert = tri_nods(colon(), tris(colon(), i));
     matd_t n = cross(vert(colon(), 1)-vert(colon(), 0), vert(colon(), 2)-vert(colon(), 0));
-    v_tet(colon(), i+v_tri.size(2)) = vert(colon(), 0)+n/norm(n);
+    tet_nods(colon(), i+tri_nods.size(2)) = vert(colon(), 0)+n/norm(n);
   }
 }
 
@@ -219,11 +217,11 @@ void diffuse_arap_encoder::calc_delta_angle(const mati_t &tris, const matd_t &pr
         continue;
       mati_t diam;
       get_edge_diam_elem(curr_face, next_face, tris, diam);
-      matd_t x0 = prev(colon(), diam), x1 = curr(colon(), diam);
-      double theta0 = 0, theta1 = 0;
-      calc_dihedral_angle_(&theta0, &x0[0]);
-      calc_dihedral_angle_(&theta1, &x1[0]);
-      da.push_back(theta1-theta0);
+      matd_t prev_diam = prev(colon(), diam), curr_diam = curr(colon(), diam);
+      double prev_theta = 0, curr_theta = 0;
+      calc_dihedral_angle_(&prev_theta, &prev_diam[0]);
+      calc_dihedral_angle_(&curr_theta, &curr_diam[0]);
+      da.push_back(curr_theta-prev_theta);
       q.push(next_face);
     }
   }
@@ -238,10 +236,10 @@ diffuse_arap_decoder::diffuse_arap_decoder(const mati_t &tris, const matd_t &nod
   R_.resize(tris.size(2));
 }
 
-int diffuse_arap_decoder::estimate_rotation(const matd_t &prev, const tree_t &g,
-                                            const size_t root_face, const matd_t &root_curr, const vector<double> &da) {
+int diffuse_arap_decoder::estimate_rotation(const matd_t &prev, const tree_t &g, const size_t root_face,
+                                            const matd_t &root_curr, const vector<double> &da) {
   matd_t root_rest = nods_(colon(), tris_(colon(), root_face));
-  R_[root_face] = compute_tri_rot(&root_rest[0], &root_curr[0]);
+  R_[root_face] = calc_triangle_rotation(&root_rest[0], &root_curr[0]);
 
   queue<size_t> q;
   unordered_set<size_t> vis;
@@ -261,8 +259,8 @@ int diffuse_arap_decoder::estimate_rotation(const matd_t &prev, const tree_t &g,
         continue;
       mati_t diam;
       get_edge_diam_elem(curr_face, next_face, tris_, diam);
-      double prev_angle = 0;
       matd_t prev_diam = prev(colon(), diam);
+      double prev_angle = 0;
       calc_dihedral_angle_(&prev_angle, &prev_diam[0]);
       // make sure that the current face is on the left of the axis
       bool need_swap = false;

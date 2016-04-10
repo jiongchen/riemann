@@ -1,9 +1,9 @@
 // assume the working directory is build/bin
 {
 	"mesh_rest": "/home/jerry/usr/workspace/arcsim/build/wind_flag_jacket_strain_limits/rest.obj",
-	"mesh_prev": "/home/jerry/usr/workspace/arcsim/build/wind_flag_jacket_strain_limits/0150_00.obj",
-	"mesh_curr": "/home/jerry/usr/workspace/arcsim/build/wind_flag_jacket_strain_limits/0151_00.obj",
+	"mesh_prev": "/home/jerry/usr/workspace/arcsim/build/wind_flag_jacket_strain_limits/0011_00.obj",
+	"mesh_curr": "/home/jerry/usr/workspace/arcsim/build/wind_flag_jacket_strain_limits/0012_00.obj",
 	"root_face": 0,
-	"bound": 31,
-	"outdir": "./ani_compr/delta/31/"
+	"bound": 1023,
+	"outdir": "./ani_compr/delta/1023_/"
 }
