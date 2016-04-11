@@ -291,6 +291,8 @@ int diffuse_arap_decoder::pin_down_vert(const size_t id, const double *pos) {
 }
 
 int diffuse_arap_decoder::solve(matd_t &curr) {
+  if ( curr.size(1) != nods_.size(1) || curr.size(2) != nods_.size(2) )
+    curr.resize(nods_.size(1), nods_.size(2));
   VectorXd g = VectorXd::Zero(dim_); {
     energy_->Gra(&X_[0], g.data());
     g *= -1;

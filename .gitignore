@@ -1,4 +1,5 @@
 build/
+doc/
 *.user
 *.user.*
 /.svn/

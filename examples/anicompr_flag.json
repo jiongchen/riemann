@@ -1,0 +1,9 @@
+// assume the working directory is build/bin
+{
+	"mesh_rest": "/home/jerry/usr/workspace/arcsim/build/wind_flag_jacket_strain_limits/rest.obj",
+	"mesh_prev": "/home/jerry/usr/workspace/arcsim/build/wind_flag_jacket_strain_limits/0069_00.obj",
+	"mesh_curr": "/home/jerry/usr/workspace/arcsim/build/wind_flag_jacket_strain_limits/0070_00.obj",
+	"root_face": 0,
+	"bits": 8, // [-128, 127]
+	"outdir": "./ani_compr/flag/delta/8bits/"
+}
