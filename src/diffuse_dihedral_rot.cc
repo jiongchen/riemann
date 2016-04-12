@@ -1,6 +1,6 @@
 #include "diffuse_dihedral_rot.h"
 
-#include <queue>
+#include <stack>
 #include <Eigen/Dense>
 #include <Eigen/SVD>
 #include <Eigen/Geometry>
@@ -121,7 +121,7 @@ static void tri2tet(const mati_t &tris, const matd_t &tri_nods, mati_t &tets, ma
   for (size_t i = 0; i < tris.size(2); ++i) {
     matd_t vert = tri_nods(colon(), tris(colon(), i));
     matd_t n = cross(vert(colon(), 1)-vert(colon(), 0), vert(colon(), 2)-vert(colon(), 0));
-    tet_nods(colon(), i+tri_nods.size(2)) = vert(colon(), 0)+n/norm(n);
+    tet_nods(colon(), i+tri_nods.size(2)) = vert(colon(), 0)+n/sqrt(norm(n));
   }
 }
 
@@ -200,11 +200,11 @@ private:
 //==============================================================================
 void diffuse_arap_encoder::calc_delta_angle(const mati_t &tris, const matd_t &prev, const matd_t &curr,
                                             const tree_t &g, const size_t root_face, vector<double> &da) {
-  queue<size_t> q;
+  stack<size_t> q;
   unordered_set<size_t> vis;
   q.push(root_face);
   while ( !q.empty() ) {
-    const size_t curr_face = q.front();
+    const size_t curr_face = q.top();
     q.pop();
     if ( vis.find(curr_face) != vis.end() ) {
       cout << "[Error] not a tree\n";
@@ -241,12 +241,12 @@ int diffuse_arap_decoder::estimate_rotation(const matd_t &prev, const tree_t &g,
   matd_t root_rest = nods_(colon(), tris_(colon(), root_face));
   R_[root_face] = calc_triangle_rotation(&root_rest[0], &root_curr[0]);
 
-  queue<size_t> q;
+  stack<size_t> q;
   unordered_set<size_t> vis;
   q.push(root_face);
   size_t cnt = 0;
   while ( !q.empty() ) {
-    const size_t curr_face = q.front();
+    const size_t curr_face = q.top();
     q.pop();
     if ( vis.find(curr_face) != vis.end() ) {
       cerr << "[Error] not a tree\n";
