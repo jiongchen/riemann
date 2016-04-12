@@ -178,3 +178,9 @@ target_link_libraries(test_ani_compression
     riemann
     ${Boost_LIBRARIES}
 )
+
+add_executable(test_ctm test_ctm.cc)
+target_link_libraries(test_ctm
+    jtf-mesh
+    openctm
+)
