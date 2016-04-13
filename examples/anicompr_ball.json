@@ -1,9 +1,9 @@
 // assume the working directory is build/bin
 {
 	"mesh_rest": "/home/jerry/usr/workspace/arcsim/build/ball_strain_limits_64/rest.obj",
-	"mesh_prev": "/home/jerry/usr/workspace/arcsim/build/ball_strain_limits_64/0077_00.obj",
+	"mesh_prev": "/home/jerry/usr/workspace/arcsim/build/ball_strain_limits_64/rest.obj",
 	"mesh_curr": "/home/jerry/usr/workspace/arcsim/build/ball_strain_limits_64/0078_00.obj",
 	"root_face": 0,
-	"bits": 8, // [-32, 31]
+	"bits": 8,
 	"outdir": "./ani_compr/ball64/delta/8bits/"
 }

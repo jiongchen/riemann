@@ -26,13 +26,14 @@ int main(int argc, char *argv[])
   indices = (CTMuint *)malloc(3*sizeof(CTMuint)*triCount);
   std::copy(tris.begin(), tris.end(), indices);
   std::copy(nods.begin(), nods.end(), vertices);
+  cout << "[Info] total memory cost: " << 3*sizeof(CTMfloat)*vertCount+3*sizeof(CTMuint)*triCount << endl;
 
   // Create a new context
   context = ctmNewContext(CTM_EXPORT);
 
   // Config compression method
   ctmCompressionMethod(context, CTM_METHOD_MG2);
-  ctmCompressionLevel(context, 9);
+  ctmCompressionLevel(context, 1);
 
   // Define our mesh representation to OpenCTM (store references to it in
   // the context)
