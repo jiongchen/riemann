@@ -105,6 +105,10 @@ int main(int argc, char *argv[])
   tree_t mst;
   get_minimum_spanning_tree(g, mst);
   const size_t root_face = json["root_face"].asUInt();
+  {
+    string outfile = json["outdir"].asString()+"/tree.vtk";
+    draw_minimum_spanning_tree(outfile.c_str(), tris, nods, mst);
+  }
   // Once we konw the root, the undirected tree could
   // be transformed to a directed version for reducing
   // the memory cost
@@ -142,11 +146,11 @@ int main(int argc, char *argv[])
   vector<byte> cda;
   quantize(da, make_pair(min_da, max_da), make_pair(-bound, bound), cda);
 
-  // WRITE FOR ZIP
+  // WRITE FOR COMPRESSION
   string quan_bin = outdir+string("/quant.dat");
   write_quant_res_bin(quan_bin.c_str(), cda);
 
-  // READ FROM UNZIP
+  // READ FROM DECOMPRESSION
   cda.clear();
   read_quant_res_bin(quan_bin.c_str(), cda);
   ASSERT(cda.size() == num_data);

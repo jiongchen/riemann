@@ -4,6 +4,8 @@
 #include <boost/graph/graphviz.hpp>
 #include <boost/graph/kruskal_min_spanning_tree.hpp>
 
+#include "vtk.h"
+
 using namespace std;
 using namespace zjucad::matrix;
 
@@ -79,4 +81,34 @@ int get_minimum_spanning_tree(const shared_ptr<const Graph> &g, graph_t &mst, co
   return EXIT_SUCCESS;
 }
 
+int draw_minimum_spanning_tree(const char *file, const mati_t &tris, const matd_t &nods, const graph_t &mst) {
+  mati_t tree(2, tris.size(2)-1);
+  matd_t vert(3, tris.size(2));
+  for (size_t i = 0; i < vert.size(2); ++i) {
+    vert(colon(), i) = nods(colon(), tris(colon(), i))*ones<double>(3, 1)/3.0;
+  }
+  set<pair<size_t, size_t>> vis;
+  size_t cnt = 0;
+  for (size_t i = 0; i < mst.u.size(); ++i) {
+    const size_t p = mst.u[i], q = mst.v[i];
+    if ( vis.find(make_pair(p, q)) != vis.end() || vis.find(make_pair(q, p)) != vis.end() )
+      continue;
+    vis.insert(make_pair(p, q));
+    tree(0, cnt) = p;
+    tree(1, cnt) = q;
+    ++cnt;
+  }
+  if ( cnt != tris.size(2)-1 ) {
+    cerr << "[Error] in output the tree\n";
+    return __LINE__;
+  }
+  ofstream ofs(file);
+  if ( ofs.fail() ) {
+    cerr << "[Error] cant open " << file << endl;
+    return __LINE__;
+  }
+  line2vtk(ofs, &vert[0], vert.size(2), &tree[0], tree.size(2));
+  ofs.close();
+  return 0;
+}
 }

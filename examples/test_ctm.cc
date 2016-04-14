@@ -33,7 +33,8 @@ int main(int argc, char *argv[])
 
   // Config compression method
   ctmCompressionMethod(context, CTM_METHOD_MG2);
-  ctmCompressionLevel(context, 1);
+  ctmCompressionLevel(context, 9);
+  ctmVertexPrecision(context, 0.1);
 
   // Define our mesh representation to OpenCTM (store references to it in
   // the context)
