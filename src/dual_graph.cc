@@ -40,6 +40,44 @@ int build_tri_mesh_dual_graph(const mati_t &tris, shared_ptr<edge2cell_adjacent>
   return EXIT_SUCCESS;
 }
 
+int build_tri_mesh_dual_graph_version2(const mati_t &tris, const matd_t &nods, std::shared_ptr<edge2cell_adjacent> &ec,
+                                       std::shared_ptr<Graph> &g, const char *dotfile) {
+  ec.reset(edge2cell_adjacent::create(tris));
+  if ( ec.get() == nullptr ) {
+    cerr << "[Error] can not create edge2cell\n";
+    return EXIT_FAILURE;
+  }
+  g.reset(new Graph(tris.size(2)));
+  if ( g.get() == nullptr ) {
+    cerr << "[Error] new graph fail\n";
+    return EXIT_FAILURE;
+  }
+  property_map<Graph, edge_weight_t>::type weight = get(boost::edge_weight, *g);
+  for (size_t i = 0; i < ec->edges_.size(); ++i) {
+    pair<size_t, size_t> faces = ec->query(ec->edges_[i].first, ec->edges_[i].second);
+    if ( ec->is_boundary_edge(faces) )
+      continue;
+    boost::graph_traits<Graph>::edge_descriptor e; bool inserted;
+    tie(e, inserted) = boost::add_edge(faces.first, faces.second, *g);
+    // adaptive edge weight according to the orientation
+    matd_t edge_vec = nods(colon(), ec->edges_[i].first)-nods(colon(), ec->edges_[i].second);
+    matd_t axis_y = zeros<double>(3, 1); axis_y[1] = 1.0;
+    matd_t axis_x = zeros<double>(3, 1); axis_x[0] = 1.0;
+    if ( dot(edge_vec, axis_y) < 1e-6 )
+      weight[e] = 0.1;
+    else if ( dot(edge_vec, axis_x) < 1e-6 )
+      weight[e] = 1000;
+    else
+      weight[e] = 0.1;
+  }
+  if ( dotfile != nullptr ) {
+    ofstream ofs(dotfile);
+    write_graphviz(ofs, *g);
+    ofs.close();
+  }
+  return EXIT_SUCCESS;
+}
+
 int get_minimum_spanning_tree(const shared_ptr<const Graph> &g, graph_t &mst, const char *dotfile) {
   if ( g.get() == nullptr ) {
     cerr << "[Error] graph object dosen't exist\n";

@@ -27,6 +27,8 @@ struct graph_t {
 };
 
 int build_tri_mesh_dual_graph(const mati_t &tris, std::shared_ptr<edge2cell_adjacent> &ec, std::shared_ptr<Graph> &g, const char *dotfile=nullptr);
+int build_tri_mesh_dual_graph_version2(const mati_t &tris, const matd_t &nods, std::shared_ptr<edge2cell_adjacent> &ec,
+                                       std::shared_ptr<Graph> &g, const char *dotfile=nullptr);
 int get_minimum_spanning_tree(const std::shared_ptr<const Graph> &g, graph_t &mst, const char *dotfile=nullptr);
 int draw_minimum_spanning_tree(const char *file, const mati_t &tris, const matd_t &nods, const graph_t &mst);
 

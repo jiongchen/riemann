@@ -4,6 +4,6 @@
 	"mesh_prev": "/home/jerry/usr/workspace/arcsim/build/ball_strain_limits_64/rest.obj",
 	"mesh_curr": "/home/jerry/usr/workspace/arcsim/build/ball_strain_limits_64/0078_00.obj",
 	"root_face": 0,
-	"bits": 8,
-	"outdir": "./ani_compr/ball64/delta/8bits/"
+	"bits": 7,
+	"outdir": "./ani_compr/ball64/delta/7bits/"
 }

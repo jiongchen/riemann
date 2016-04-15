@@ -64,6 +64,17 @@ static int read_quant_res_bin(const char *file, vector<byte> &qdat) {
   return 0;
 }
 
+static int write_data_text(const char *file, const vector<double> &data) {
+  ofstream ofs(file);
+  if ( ofs.fail() ) {
+    cerr << "[Error] cant open " << file << endl;
+    return __LINE__;
+  }
+  for (size_t i = 0; i < data.size(); ++i)
+    ofs << i << " " << data[i] << endl;
+  return 0;
+}
+
 int main(int argc, char *argv[])
 {
   if ( argc != 2 ) {
@@ -91,8 +102,6 @@ int main(int argc, char *argv[])
 
   string outdir = json["outdir"].asString();
   boost::filesystem::create_directories(outdir);
-
-  // OUTPUT REFERENCE
   {
     string outfile = json["outdir"].asString()+"/tri_groud_truth.obj";
     jtf::mesh::save_obj(outfile.c_str(), tris, nods_curr);
@@ -118,10 +127,13 @@ int main(int argc, char *argv[])
   diffuse_arap_encoder encoder;
   vector<double> da;
   encoder.calc_delta_angle(tris, nods_prev, nods_curr, mst, root_face, da);
-  const size_t num_data = da.size();
   const double min_da = *std::min_element(da.begin(), da.end()),
       max_da = *std::max_element(da.begin(), da.end());
   printf("[Info] min delta: %lf\n[Info] max delta: %lf\n", min_da, max_da);
+  {
+    string outfile = json["outdir"].asString()+"/data.txt";
+    write_data_text(outfile.c_str(), da);
+  }
 
   // DECODE UNQUANTIZED
   diffuse_arap_decoder decoder(tris, nods);
@@ -145,23 +157,23 @@ int main(int argc, char *argv[])
   printf("[Info] quantization bound: [%d, %d]\n", -bound, bound);
   vector<byte> cda;
   quantize(da, make_pair(min_da, max_da), make_pair(-bound, bound), cda);
-
-  // WRITE FOR COMPRESSION
-  string quan_bin = outdir+string("/quant.dat");
-  write_quant_res_bin(quan_bin.c_str(), cda);
-
-  // READ FROM DECOMPRESSION
-  cda.clear();
-  read_quant_res_bin(quan_bin.c_str(), cda);
-  ASSERT(cda.size() == num_data);
-  cout << "[Info] read quantized data size: " << cda.size() << endl;
+  {
+    string quan_bin = outdir+string("/quant.dat");
+    write_quant_res_bin(quan_bin.c_str(), cda);
+  }
 
   // DEQUANTIZE
-  da.clear();
-  dequantize(cda, make_pair(min_da, max_da), make_pair(-bound, bound), da);
+  vector<double> dq_data;
+  dequantize(cda, make_pair(min_da, max_da), make_pair(-bound, bound), dq_data);
+  {
+    string outfile = json["outdir"].asString()+"/error.txt";
+    vector<double> error;
+    std::transform(dq_data.begin(), dq_data.end(), da.begin(), std::back_inserter(error), std::minus<double>());
+    write_data_text(outfile.c_str(), error);
+  }
 
   // DECODE QUANTIZED
-  decoder.estimate_rotation(nods_prev, mst, root_face, root_curr, da);
+  decoder.estimate_rotation(nods_prev, mst, root_face, root_curr, dq_data);
   matd_t rec_curr_q(3, nods.size(2));
   decoder.solve(rec_curr_q);
   {
