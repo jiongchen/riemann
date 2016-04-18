@@ -72,6 +72,19 @@ static int write_data_text(const char *file, const vector<double> &data) {
   }
   for (size_t i = 0; i < data.size(); ++i)
     ofs << i << " " << data[i] << endl;
+  ofs.close();
+  return 0;
+}
+
+static int write_data_vector(const char *file, const vector<double> &data) {
+  ofstream ofs(file, ios::binary);
+  if ( ofs.fail() ) {
+    cerr << "[Error] cant open " << file << endl;
+    return __LINE__;
+  }
+  for (size_t i = 0; i < data.size(); ++i)
+    ofs.write((char *)&data[i], sizeof(double));
+  ofs.close();
   return 0;
 }
 
@@ -123,10 +136,11 @@ int main(int argc, char *argv[])
   // the memory cost
   // get_directed_tree(mst, root, dmst);
 
-  // ENCODE
+  // ENCODE: angles and anchors
   diffuse_arap_encoder encoder;
   vector<double> da;
-  encoder.calc_delta_angle(tris, nods_prev, nods_curr, mst, root_face, da);
+  matd_t root_curr;
+  encoder.calc_delta_angle(tris, nods_prev, nods_curr, mst, root_face, root_curr, da);
   const double min_da = *std::min_element(da.begin(), da.end()),
       max_da = *std::max_element(da.begin(), da.end());
   printf("[Info] min delta: %lf\n[Info] max delta: %lf\n", min_da, max_da);
@@ -137,7 +151,6 @@ int main(int argc, char *argv[])
 
   // DECODE UNQUANTIZED
   diffuse_arap_decoder decoder(tris, nods);
-  matd_t root_curr = nods_curr(colon(), tris(colon(), root_face));
   for (size_t i = 0; i < 3; ++i) {
     const size_t id = tris(i, root_face);
     decoder.pin_down_vert(id, &nods_curr(0, id));

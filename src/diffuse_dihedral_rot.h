@@ -18,7 +18,7 @@ class diffuse_arap_encoder
 {
 public:
   void calc_delta_angle(const mati_t &tris, const matd_t &prev, const matd_t &curr,
-                        const tree_t &g, const size_t root_face, std::vector<double> &da);
+                        const tree_t &g, const size_t root_face, matd_t &root_curr, std::vector<double> &da);
 };
 
 class diffuse_arap_decoder

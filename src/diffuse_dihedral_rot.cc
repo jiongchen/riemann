@@ -199,7 +199,7 @@ private:
 };
 //==============================================================================
 void diffuse_arap_encoder::calc_delta_angle(const mati_t &tris, const matd_t &prev, const matd_t &curr,
-                                            const tree_t &g, const size_t root_face, vector<double> &da) {
+                                            const tree_t &g, const size_t root_face, matd_t &root_curr, vector<double> &da) {
   stack<size_t> q;
   unordered_set<size_t> vis;
   q.push(root_face);
@@ -226,6 +226,7 @@ void diffuse_arap_encoder::calc_delta_angle(const mati_t &tris, const matd_t &pr
     }
   }
   ASSERT(da.size() == tris.size(2)-1);
+  root_curr = curr(colon(), tris(colon(), root_face));
 }
 
 diffuse_arap_decoder::diffuse_arap_decoder(const mati_t &tris, const matd_t &nods)
