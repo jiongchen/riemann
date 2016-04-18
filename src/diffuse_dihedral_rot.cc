@@ -65,52 +65,6 @@ static inline Matrix3d axis_angle_rot_mat(const double *axis, const double angle
   return AngleAxisd(angle, Vector3d(axis).normalized()).toRotationMatrix();
 }
 
-//void diffuse_rotation(const mati_t &tris, const matd_t &vrest, const matd_t &vcurr,
-//                      const size_t root_face, const tree_t &g,
-//                      vector<Matrix3d> &rot) {
-//  if ( rot.size() != tris.size(2) )
-//    rot.resize(tris.size(2));
-//  matd_t v_rest_root = vrest(colon(), tris(colon(), root_face));
-//  matd_t v_curr_root = vcurr(colon(), tris(colon(), root_face));
-//  rot[root_face] = compute_tri_rot(&v_rest_root[0], &v_curr_root[0]);
-
-//  queue<size_t> q;
-//  unordered_set<size_t> vis;
-//  q.push(root_face);
-//  while ( !q.empty() ) {
-//    const size_t curr_face = q.front();
-//    q.pop();
-//    if ( vis.find(curr_face) != vis.end() )
-//      continue;
-//    vis.insert(curr_face);
-//    for (size_t e = g.first[curr_face]; e != -1; e = g.next[e]) {
-//      const size_t next_face = g.v[e];
-//      if ( vis.find(next_face) != vis.end() )
-//        continue;
-//      mati_t diam;
-//      get_edge_diam_elem(curr_face, next_face, tris, diam);
-//      matd_t x0 = vrest(colon(), diam), x1 = vcurr(colon(), diam);
-//      double theta0 = 0, theta1 = 0;
-//      calc_dihedral_angle_(&theta0, &x0[0]);
-//      calc_dihedral_angle_(&theta1, &x1[0]);
-//      bool need_swap = false;
-//      for (size_t k = 0; k < 3; ++k) {
-//        if ( diam[1] == tris(k, curr_face) ) {
-//          if ( diam[2] == tris((k+1)%3, curr_face) ) {
-//            need_swap = true;
-//            break;
-//          }
-//        }
-//      }
-//      matd_t axis = vcurr(colon(), diam[1])-vcurr(colon(), diam[2]);
-//      axis *= need_swap ? -1 : 1;
-//      rot[next_face] = axis_angle_rot_mat(&axis[0], theta1-theta0)*rot[curr_face];
-//      q.push(next_face);
-//    }
-//  }
-//  ASSERT(vis.size() == tris.size(2));
-//}
-
 static void tri2tet(const mati_t &tris, const matd_t &tri_nods, mati_t &tets, matd_t &tet_nods) {
   tets.resize(4, tris.size(2));
   tet_nods.resize(3, tri_nods.size(2)+tris.size(2));
@@ -260,9 +214,10 @@ int diffuse_arap_decoder::estimate_rotation(const matd_t &prev, const tree_t &g,
         continue;
       mati_t diam;
       get_edge_diam_elem(curr_face, next_face, tris_, diam);
-      matd_t prev_diam = prev(colon(), diam);
-      double prev_angle = 0;
+      matd_t prev_diam = prev(colon(), diam), rest_diam = nods_(colon(), diam);
+      double prev_angle = 0, rest_angle = 0;
       calc_dihedral_angle_(&prev_angle, &prev_diam[0]);
+      calc_dihedral_angle_(&rest_angle, &rest_diam[0]);
       // make sure that the current face is on the left of the axis
       bool need_swap = false;
       for (size_t k = 0; k < 3; ++k) {
@@ -275,7 +230,8 @@ int diffuse_arap_decoder::estimate_rotation(const matd_t &prev, const tree_t &g,
       }
       matd_t axis = itr_matrix<const double *>(3, 3, R_[curr_face].data())*(nods_(colon(), diam[1])-nods_(colon(), diam[2]));
       axis *= need_swap ? -1 : 1;
-      R_[next_face] = axis_angle_rot_mat(&axis[0], prev_angle+da[cnt++])*R_[curr_face];
+      double curr_angle = prev_angle+da[cnt++];
+      R_[next_face] = axis_angle_rot_mat(&axis[0], curr_angle-rest_angle)*R_[curr_face];
       q.push(next_face);
     }
   }

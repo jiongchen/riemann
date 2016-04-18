@@ -76,7 +76,7 @@ static int write_data_text(const char *file, const vector<double> &data) {
   return 0;
 }
 
-static int write_data_vector(const char *file, const vector<double> &data) {
+static int write_data_binary(const char *file, const vector<double> &data) {
   ofstream ofs(file, ios::binary);
   if ( ofs.fail() ) {
     cerr << "[Error] cant open " << file << endl;
