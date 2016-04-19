@@ -2,7 +2,7 @@
 {
 	"mesh_rest": "/home/jerry/usr/workspace/arcsim/build/dress_26k/0000_00.obj",
 	"mesh_prev": "/home/jerry/usr/workspace/arcsim/build/dress_26k/0000_00.obj",
-	"mesh_curr": "/home/jerry/usr/workspace/arcsim/build/dress_26k/0046_00.obj",
+	"mesh_curr": "/home/jerry/usr/workspace/arcsim/build/dress_26k/0120_00.obj",
 	"root_face": 0,
 	"bits": 8,
 	"outdir": "./ani_compr/dress/8bits/"

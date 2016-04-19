@@ -88,6 +88,12 @@ static int write_data_binary(const char *file, const vector<double> &data) {
   return 0;
 }
 
+extern "C" {
+void calc_dihedral_angle_(double *value, const double *x);
+}
+
+#define WRITE_DATA_PROG 0
+#if WRITE_DATA_PROG == 0
 int main(int argc, char *argv[])
 {
   if ( argc != 2 ) {
@@ -197,3 +203,53 @@ int main(int argc, char *argv[])
   cout << "[Info] done\n";
   return 0;
 }
+#else
+int main(int argc, char *argv[])
+{
+  if ( argc != 2 ) {
+    cerr << "#usage: ./prog input_dir\n";
+    return __LINE__;
+  }
+  // INPUT
+  mati_t tris; matd_t nods, nods_curr;
+  char input[256];
+  sprintf(input, "%s/rest.obj", argv[1]);
+  if ( jtf::mesh::load_obj(input, tris, nods) ) {
+    cerr << "[Error] cant load rest configuration\n";
+    return __LINE__;
+  }
+
+  boost::filesystem::create_directories("./dress");
+
+  // BUILD SPANNING TREE OF DUAL GRAPH
+  shared_ptr<edge2cell_adjacent> ec;
+  shared_ptr<Graph> g;
+  build_tri_mesh_dual_graph(tris, ec, g);
+  tree_t mst;
+  get_minimum_spanning_tree(g, mst);
+
+  // ENCODE: angles and anchors
+  diffuse_arap_encoder encoder;
+  for (int i = 0; i < 1000; ++i) {
+    cout << "[Info] processing frame " << i << endl;
+    sprintf(input, "%s/%04d_00.obj", argv[1], i);
+    if ( jtf::mesh::load_obj(input, tris, nods_curr) ) {
+      cout << "[Info] no frame " << i << endl;
+      break;
+    }
+    vector<double> da;
+    matd_t root_curr;
+    encoder.calc_delta_angle(tris, nods, nods_curr, mst, 0, root_curr, da);
+    {
+      char output[256];
+      sprintf(output, "./dress/delta_angle_%04d.dat", i);
+      write_data_binary(output, da);
+      sprintf(output, "./dress/delta_angle_%04d.txt", i);
+      write_data_text(output, da);
+    }
+  }
+
+  cout << "[Info] done\n";
+  return 0;
+}
+#endif

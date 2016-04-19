@@ -191,6 +191,7 @@ diffuse_arap_decoder::diffuse_arap_decoder(const mati_t &tris, const matd_t &nod
   R_.resize(tris.size(2));
 }
 
+/// estimate rotation from rest pose
 int diffuse_arap_decoder::estimate_rotation(const matd_t &prev, const tree_t &g, const size_t root_face,
                                             const matd_t &root_curr, const vector<double> &da) {
   matd_t root_rest = nods_(colon(), tris_(colon(), root_face));
