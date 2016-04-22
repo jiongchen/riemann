@@ -14,7 +14,7 @@ using boost::edge_index_t;
 using boost::edge_weight_t;
 using boost::property;
 using boost::property_map;
-using Graph=adjacency_list<vecS, vecS, undirectedS, property<edge_index_t, size_t>, property<edge_weight_t, int>>;
+using Graph=adjacency_list<vecS, vecS, undirectedS, property<edge_index_t, size_t>, property<edge_weight_t, double>>;
 using mati_t=zjucad::matrix::matrix<size_t>;
 using matd_t=zjucad::matrix::matrix<double>;
 
@@ -31,6 +31,7 @@ int build_tri_mesh_dual_graph_version2(const mati_t &tris, const matd_t &nods, s
                                        std::shared_ptr<Graph> &g, const char *dotfile=nullptr);
 int get_minimum_spanning_tree(const std::shared_ptr<const Graph> &g, graph_t &mst, const char *dotfile=nullptr);
 int draw_minimum_spanning_tree(const char *file, const mati_t &tris, const matd_t &nods, const graph_t &mst);
+size_t get_farest_node(const std::shared_ptr<const Graph> &g, const size_t source);
 
 }
 #endif

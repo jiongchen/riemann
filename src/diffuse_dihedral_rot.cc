@@ -79,6 +79,19 @@ static void tri2tet(const mati_t &tris, const matd_t &tri_nods, mati_t &tets, ma
   }
 }
 
+static void apply_gs_iteration(const SparseMatrix<double, RowMajor> &LHS, const VectorXd &rhs, VectorXd &x) {
+  for (size_t i = 0; i < LHS.outerSize(); ++i) {
+    double temp = rhs[i], diag = 1.0;
+    for (SparseMatrix<double, RowMajor>::InnerIterator it(LHS, i); it; ++it) {
+      if ( i == it.col() )
+        diag = it.value();
+      else
+        temp -= it.value()*x[it.col()];
+    }
+    x[i] = temp/diag;
+  }
+}
+
 class diffuse_arap_energy : public Functional<double>
 {
 public:
@@ -153,7 +166,8 @@ private:
 };
 //==============================================================================
 void diffuse_arap_encoder::calc_delta_angle(const mati_t &tris, const matd_t &prev, const matd_t &curr,
-                                            const tree_t &g, const size_t root_face, matd_t &root_curr, vector<double> &da) {
+                                            const tree_t &g, const size_t root_face, const size_t leaf_face,
+                                            matd_t &root_curr, matd_t &leaf_curr, vector<double> &da) {
   stack<size_t> q;
   unordered_set<size_t> vis;
   q.push(root_face);
@@ -181,8 +195,9 @@ void diffuse_arap_encoder::calc_delta_angle(const mati_t &tris, const matd_t &pr
   }
   ASSERT(da.size() == tris.size(2)-1);
   root_curr = curr(colon(), tris(colon(), root_face));
+  leaf_curr = curr(colon(), tris(colon(), leaf_face));
 }
-
+//==============================================================================
 diffuse_arap_decoder::diffuse_arap_decoder(const mati_t &tris, const matd_t &nods)
   : tris_(tris), nods_(nods) {
   energy_ = make_shared<diffuse_arap_energy>(tris, nods);
@@ -248,7 +263,7 @@ int diffuse_arap_decoder::pin_down_vert(const size_t id, const double *pos) {
   std::copy(pos, pos+3, X_.data()+3*id);
 }
 
-int diffuse_arap_decoder::solve(matd_t &curr) {
+int diffuse_arap_decoder::solve(matd_t &curr, const string lin_solver) {
   if ( curr.size(1) != nods_.size(1) || curr.size(2) != nods_.size(2) )
     curr.resize(nods_.size(1), nods_.size(2));
   VectorXd g = VectorXd::Zero(dim_); {
@@ -268,14 +283,24 @@ int diffuse_arap_decoder::solve(matd_t &curr) {
     else
       g2l[i] = cnt++;
   }
-  SimplicialCholesky<SparseMatrix<double>> solver;
-  solver.setMode(SimplicialCholeskyLLT);
   rm_spmat_col_row(H, g2l);
   rm_vector_row(g, g2l);
-  solver.compute(H);
-  ASSERT(solver.info() == Success);
-  VectorXd dx = solver.solve(g);
-  ASSERT(solver.info() == Success);
+  VectorXd dx = VectorXd::Zero(H.cols());
+  if ( lin_solver == "direct" ) {
+    SimplicialCholesky<SparseMatrix<double>> solver;
+    solver.setMode(SimplicialCholeskyLLT);
+    solver.compute(H);
+    ASSERT(solver.info() == Success);
+    dx = solver.solve(g);
+    ASSERT(solver.info() == Success);
+  } else if ( lin_solver == "GS" ) {
+    int iter = 100;
+    while ( iter-- )
+      apply_gs_iteration(H, g, dx);
+  } else {
+    cerr << "[Error] unsupported linear solver\n";
+    return __LINE__;
+  }
   VectorXd DX = VectorXd::Zero(dim_);
   rc_vector_row(dx, g2l, DX);
   X_ += DX;

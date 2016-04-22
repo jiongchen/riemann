@@ -18,7 +18,8 @@ class diffuse_arap_encoder
 {
 public:
   void calc_delta_angle(const mati_t &tris, const matd_t &prev, const matd_t &curr,
-                        const tree_t &g, const size_t root_face, matd_t &root_curr, std::vector<double> &da);
+                        const tree_t &g, const size_t root_face, const size_t leaf_face,
+                        matd_t &root_curr, matd_t &leaf_curr, std::vector<double> &da);
 };
 
 class diffuse_arap_decoder
@@ -27,7 +28,7 @@ public:
   diffuse_arap_decoder(const mati_t &tris, const matd_t &nods);
   int estimate_rotation(const matd_t &prev, const tree_t &g, const size_t root_face, const matd_t &root_nods, const std::vector<double> &da);
   int pin_down_vert(const size_t id, const double *pos);
-  int solve(matd_t &curr);
+  int solve(matd_t &curr, const std::string lin_solver);
 private:
   const mati_t &tris_;
   const matd_t &nods_;

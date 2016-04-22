@@ -3,6 +3,7 @@
 #include <boost/graph/graph_traits.hpp>
 #include <boost/graph/graphviz.hpp>
 #include <boost/graph/kruskal_min_spanning_tree.hpp>
+#include <boost/graph/dijkstra_shortest_paths.hpp>
 
 #include "vtk.h"
 
@@ -30,7 +31,7 @@ int build_tri_mesh_dual_graph(const mati_t &tris, shared_ptr<edge2cell_adjacent>
       continue;
     boost::graph_traits<Graph>::edge_descriptor e; bool inserted;
     tie(e, inserted) = boost::add_edge(faces.first, faces.second, *g);
-    weight[e] = 1;
+    weight[e] = 1.0;
   }
   if ( dotfile != nullptr ) {
     ofstream ofs(dotfile);
@@ -40,43 +41,61 @@ int build_tri_mesh_dual_graph(const mati_t &tris, shared_ptr<edge2cell_adjacent>
   return EXIT_SUCCESS;
 }
 
-int build_tri_mesh_dual_graph_version2(const mati_t &tris, const matd_t &nods, std::shared_ptr<edge2cell_adjacent> &ec,
-                                       std::shared_ptr<Graph> &g, const char *dotfile) {
-  ec.reset(edge2cell_adjacent::create(tris));
-  if ( ec.get() == nullptr ) {
-    cerr << "[Error] can not create edge2cell\n";
-    return EXIT_FAILURE;
+size_t get_farest_node(const shared_ptr<const Graph> &g, const size_t source) {
+  typedef boost::graph_traits<Graph>::vertex_descriptor vertex_descriptor;
+  vector<double> d(num_vertices(*g));
+  vertex_descriptor s = vertex(source, *g);
+  dijkstra_shortest_paths(*g, s, boost::distance_map(boost::make_iterator_property_map(d.begin(), get(boost::vertex_index, *g))));
+
+  double max_dist = -1.0;
+  size_t rtn_face = -1;
+  for (size_t i = 0; i < d.size(); ++i) {
+    if ( d[i] > max_dist ) {
+      max_dist = d[i];
+      rtn_face = i;
+    }
   }
-  g.reset(new Graph(tris.size(2)));
-  if ( g.get() == nullptr ) {
-    cerr << "[Error] new graph fail\n";
-    return EXIT_FAILURE;
-  }
-  property_map<Graph, edge_weight_t>::type weight = get(boost::edge_weight, *g);
-  for (size_t i = 0; i < ec->edges_.size(); ++i) {
-    pair<size_t, size_t> faces = ec->query(ec->edges_[i].first, ec->edges_[i].second);
-    if ( ec->is_boundary_edge(faces) )
-      continue;
-    boost::graph_traits<Graph>::edge_descriptor e; bool inserted;
-    tie(e, inserted) = boost::add_edge(faces.first, faces.second, *g);
-    // adaptive edge weight according to the orientation
-    matd_t edge_vec = nods(colon(), ec->edges_[i].first)-nods(colon(), ec->edges_[i].second);
-    matd_t axis_y = zeros<double>(3, 1); axis_y[1] = 1.0;
-    matd_t axis_x = zeros<double>(3, 1); axis_x[0] = 1.0;
-    if ( dot(edge_vec, axis_y) < 1e-6 )
-      weight[e] = 0.1;
-    else if ( dot(edge_vec, axis_x) < 1e-6 )
-      weight[e] = 1000;
-    else
-      weight[e] = 0.1;
-  }
-  if ( dotfile != nullptr ) {
-    ofstream ofs(dotfile);
-    write_graphviz(ofs, *g);
-    ofs.close();
-  }
-  return EXIT_SUCCESS;
+  cout << "[Info] max dist from root: " << max_dist << endl;
+  return rtn_face;
 }
+
+//int build_tri_mesh_dual_graph_version2(const mati_t &tris, const matd_t &nods, std::shared_ptr<edge2cell_adjacent> &ec,
+//                                       std::shared_ptr<Graph> &g, const char *dotfile) {
+//  ec.reset(edge2cell_adjacent::create(tris));
+//  if ( ec.get() == nullptr ) {
+//    cerr << "[Error] can not create edge2cell\n";
+//    return EXIT_FAILURE;
+//  }
+//  g.reset(new Graph(tris.size(2)));
+//  if ( g.get() == nullptr ) {
+//    cerr << "[Error] new graph fail\n";
+//    return EXIT_FAILURE;
+//  }
+//  property_map<Graph, edge_weight_t>::type weight = get(boost::edge_weight, *g);
+//  for (size_t i = 0; i < ec->edges_.size(); ++i) {
+//    pair<size_t, size_t> faces = ec->query(ec->edges_[i].first, ec->edges_[i].second);
+//    if ( ec->is_boundary_edge(faces) )
+//      continue;
+//    boost::graph_traits<Graph>::edge_descriptor e; bool inserted;
+//    tie(e, inserted) = boost::add_edge(faces.first, faces.second, *g);
+//    // adaptive edge weight according to the orientation
+//    matd_t edge_vec = nods(colon(), ec->edges_[i].first)-nods(colon(), ec->edges_[i].second);
+//    matd_t axis_y = zeros<double>(3, 1); axis_y[1] = 1.0;
+//    matd_t axis_x = zeros<double>(3, 1); axis_x[0] = 1.0;
+//    if ( dot(edge_vec, axis_y) < 1e-6 )
+//      weight[e] = 0.1;
+//    else if ( dot(edge_vec, axis_x) < 1e-6 )
+//      weight[e] = 1000;
+//    else
+//      weight[e] = 0.1;
+//  }
+//  if ( dotfile != nullptr ) {
+//    ofstream ofs(dotfile);
+//    write_graphviz(ofs, *g);
+//    ofs.close();
+//  }
+//  return EXIT_SUCCESS;
+//}
 
 int get_minimum_spanning_tree(const shared_ptr<const Graph> &g, graph_t &mst, const char *dotfile) {
   if ( g.get() == nullptr ) {

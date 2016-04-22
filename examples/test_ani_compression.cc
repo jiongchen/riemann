@@ -128,11 +128,12 @@ int main(int argc, char *argv[])
 
   // BUILD SPANNING TREE OF DUAL GRAPH
   shared_ptr<edge2cell_adjacent> ec;
-  shared_ptr<Graph> g;
+  shared_ptr<Graph> g; tree_t mst;
   build_tri_mesh_dual_graph(tris, ec, g);
-  tree_t mst;
   get_minimum_spanning_tree(g, mst);
   const size_t root_face = json["root_face"].asUInt();
+  const size_t leaf_face = get_farest_node(g, root_face);
+  printf("[Info] root face: %zu\n[Info] leaf face: %zu\n", root_face, leaf_face);
   {
     string outfile = json["outdir"].asString()+"/tree.vtk";
     draw_minimum_spanning_tree(outfile.c_str(), tris, nods, mst);
@@ -145,8 +146,9 @@ int main(int argc, char *argv[])
   // ENCODE: angles and anchors
   diffuse_arap_encoder encoder;
   vector<double> da;
-  matd_t root_curr;
-  encoder.calc_delta_angle(tris, nods_prev, nods_curr, mst, root_face, root_curr, da);
+  matd_t root_curr, leaf_curr;
+  encoder.calc_delta_angle(tris, nods_prev, nods_curr, mst,
+                           root_face, leaf_face, root_curr, leaf_curr, da);
   const double min_da = *std::min_element(da.begin(), da.end()),
       max_da = *std::max_element(da.begin(), da.end());
   printf("[Info] min delta: %lf\n[Info] max delta: %lf\n", min_da, max_da);
@@ -158,12 +160,14 @@ int main(int argc, char *argv[])
   // DECODE UNQUANTIZED
   diffuse_arap_decoder decoder(tris, nods);
   for (size_t i = 0; i < 3; ++i) {
-    const size_t id = tris(i, root_face);
+    size_t id = tris(i, root_face);
     decoder.pin_down_vert(id, &nods_curr(0, id));
+//    id = tris(i, leaf_face);
+//    decoder.pin_down_vert(id, &nods_curr(0, id));
   }
   decoder.estimate_rotation(nods_prev, mst, root_face, root_curr, da);
   matd_t rec_curr_uq(3, nods.size(2));
-  decoder.solve(rec_curr_uq);
+  decoder.solve(rec_curr_uq, json["linear_solver"].asString());
   {
     string outfile = json["outdir"].asString()+"/tri_recover_unquantized.obj";
     jtf::mesh::save_obj(outfile.c_str(), tris, rec_curr_uq);
@@ -194,7 +198,7 @@ int main(int argc, char *argv[])
   // DECODE QUANTIZED
   decoder.estimate_rotation(nods_prev, mst, root_face, root_curr, dq_data);
   matd_t rec_curr_q(3, nods.size(2));
-  decoder.solve(rec_curr_q);
+  decoder.solve(rec_curr_q, json["linear_solver"].asString());
   {
     string outfile = json["outdir"].asString()+"/tri_recover_quantized.obj";
     jtf::mesh::save_obj(outfile.c_str(), tris, rec_curr_q);
