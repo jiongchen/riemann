@@ -1,0 +1,38 @@
+load(hj_fortran2)$
+
+optimprefix: tt$
+
+f: openw("aqp.f90")$
+
+block(
+  [X, Dm, R, area],
+  X: genmatrix(X, 2, 3),
+  Dm: genmatrix(Dm, 2, 2),
+  R: genmatrix(R, 2, 2),
+  area: genmatrix(area, 1, 1),
+  
+  two_dim_arap(X, Dm, R, area) := block(
+    [Ds, T],
+    Ds: addcol(col(X, 2)-col(X, 1), col(X, 3)-col(X, 1)),
+    T: Ds.Dm,
+    0.5*area*mat_norm(T-R, frobenius)^2
+  ),
+  with_stdout(f, val_jac_hes_to_f90(two_dim_arap, [X, Dm, R, area]))
+)$
+
+block(
+  [X, Dm, area],
+  X: genmatrix(X, 2, 3),
+  Dm: genmatrix(Dm, 2, 2),
+  area: genmatrix(area, 1, 1),
+  
+  two_dim_iso(X, Dm, area) := block(
+    [Ds, T],
+    Ds: addcol(col(X, 2)-col(X, 1), col(X, 3)-col(X, 1)),
+    T: Ds.Dm,
+    0.5*area*(mat_norm(T, frobenius)^2+mat_norm(ratsimp(invert(T)), frobenius)^2)
+  ),
+  with_stdout(f, val_jac_hes_to_f90(two_dim_iso, [X, Dm, area]))
+)$
+
+close(f)$

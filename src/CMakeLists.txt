@@ -34,9 +34,14 @@ add_custom_command(OUTPUT tet_arap.f90
     DEPENDS tet_arap.mac
 )
 
+add_custom_command(OUTPUT aqp.f90
+    COMMAND "maxima" ARGS --userdir=${SRC_DIR} -b aqp.mac
+    DEPENDS aqp.mac
+)
+
 add_library(riemann SHARED ${header} ${source}
                            quad_scalar_field.f90 dt_energy.f90
-                           wave_condition.f90 shell.f90 mips.f90 tet_arap.f90)
+                           wave_condition.f90 shell.f90 mips.f90 tet_arap.f90 aqp.f90)
 target_link_libraries(riemann
     jtf-mesh
     ${UMFPACK_LIBRARIES}

@@ -184,3 +184,9 @@ target_link_libraries(test_ctm
     jtf-mesh
     openctm
 )
+
+add_executable(test_aqp test_aqp.cc)
+target_link_libraries(test_aqp
+    riemann
+    ${Boost_LIBRARIES}
+)
