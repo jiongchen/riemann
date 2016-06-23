@@ -14,31 +14,37 @@ set(Boost_USE_STATIC_LIBS ON)
 set(Boost_USE_MULTITHREADED ON)
 set(Boost_USE_STATIC_RUNTIME OFF)
 find_package(Boost COMPONENTS filesystem system program_options REQUIRED)
+if(Boost_FOUND)
+  message("-- Boost @ ${Boost_INCLUDE_DIRS}")
+  include_directories(${Boost_INCLUDE_DIRS})
+endif(Boost_FOUND)
 
 # EIGEN3
 find_package(Eigen3 REQUIRED)
 if(EIGEN3_FOUND)
-    message("-- Eigen version: ${EIGEN3_VERSION}")
-    include_directories(${EIGEN3_INCLUDE_DIR})
+  message("-- Eigen @ ${EIGEN3_INCLUDE_DIR}")
+  message("-- Eigen version: ${EIGEN3_VERSION}")
+  include_directories(${EIGEN3_INCLUDE_DIR})
 endif(EIGEN3_FOUND)
 
 # UMFPACK
 find_package(UMFPACK REQUIRED)
 if(UMFPACK_FOUND)
-    include_directories(${UMFPACK_INCLUDES})
+  include_directories(${UMFPACK_INCLUDES})
 endif(UMFPACK_FOUND)
 
 # SUITESPARSE
 find_package(SuiteSparse REQUIRED)
 if(SuiteSparse_FOUND)
-    include_directories(${SuiteSparse_INCLUDE_DIRS})
+  message("-- SuiteSparse @ ${SuiteSparse_INCLUDE_DIRS}")
+  include_directories(${SuiteSparse_INCLUDE_DIRS})
 endif(SuiteSparse_FOUND)
 
 # IPOPT
 find_package(IPOPT REQUIRED)
 if(IPOPT_FOUND)
-    message("-- IPOPT found")
-    include_directories(${IPOPT_INCLUDE_DIRS})
+  message("-- IPOPT @ ${IPOPT_INCLUDE_DIRS}")
+  include_directories(${IPOPT_INCLUDE_DIRS})
 endif(IPOPT_FOUND)
 
 # ARPACK
@@ -47,11 +53,11 @@ find_package(Arpack REQUIRED)
 # ViennaCL
 find_package(CUDA)
 if(CUDA_FOUND)
-    find_package(ViennaCL)
-    if(VIENNACL_FOUND)
-        message("ViennaCL found @ ${VIENNACL_INCLUDE_DIRS}")
-        include_directories(${VIENNACL_INCLUDE_DIRS})
-    endif(VIENNACL_FOUND)
+  find_package(ViennaCL)
+  if(VIENNACL_FOUND)
+    message("-- ViennaCL found @ ${VIENNACL_INCLUDE_DIRS}")
+    include_directories(${VIENNACL_INCLUDE_DIRS})
+  endif(VIENNACL_FOUND)
 endif(CUDA_FOUND)
 
 add_subdirectory(src)
