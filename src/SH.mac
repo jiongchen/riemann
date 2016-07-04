@@ -1,0 +1,101 @@
+triginverses: all$
+assume(theta >= 0)$
+assume(theta <= %pi)$
+assume(sin(theta) >= 0)$
+
+ALP(l, m, x) := assoc_legendre_p(l, m, x)$
+
+K(l, m) := sqrt((2*l+1)/(4*%pi)*((l-abs(m))!/(l+abs(m))!))$
+
+SH(l, m, theta, phi) := 
+    if m > 0 then
+        sqrt(2)*K(l, m)*cos(m*phi)*subst(cos(theta), x, ALP(l, m, x))
+    else 
+        if m < 0 then
+            sqrt(2)*K(l, m)*sin(-m*phi)*subst(cos(theta), x, ALP(l, -m, x))
+        else
+            K(l, 0)*subst(cos(theta), x, ALP(l, 0, x))$
+
+/* factor(trigsimp(SH(3, 0, theta, phi))); */
+
+/* plot3d(SH(4, 0, theta, phi), [theta, 0, %pi], [phi, 0, 2*%pi], */
+/* [transform_xy, spherical_to_xyz], [grid, 100, 100]); */
+
+int_on_unit_sphere(f) := block(
+    [int_theta, int_phi],
+    assume(notequal(cos(theta), 0)),
+    assume(sin(theta)>0),
+    assume(sin(theta)<1),
+    f: trigsimp(trigexpand(f)),
+    int_phi: integrate(f, phi, 0, 2*%pi),
+    int_theta: integrate(int_phi*sin(theta), theta, 0, %pi)
+)$
+
+/* SH_projection(l, m, f) := int_on_unit_sphere(f*SH(l, m, theta, phi)); */
+/* h(theta, phi) := block( */
+/*     [x, y, z], */
+/*     x: sin(theta)*cos(phi), */
+/*     y: sin(theta)*sin(phi), */
+/*     z: cos(theta), */
+/*     trigsimp(trigexpand(x^2*y^2+y^2*z^2+z^2*x^2))     */
+/* ); */
+/* cubic_coef: zeromatrix(9, 1); */
+/* for i:-4 thru 4 do */
+/*     cubic_coef[i+5, 1]: SH_projection(4, i, h(theta, phi)); */
+/* display(cubic_coef); */
+/* radcan(cubic_coef[5, 1]/cubic_coef[9, 1]); */
+
+
+/* M_{ij} = \int_{S} Y_i(\mathbf{R}s)Y_j(s) ds, see [Robin Green 03] */
+rot_sh_z_alpha(alpha, l) := block(
+    [rtn],
+    rtn: zeromatrix(2*l+1, 2*l+1),
+    for i:-l thru l do
+        for j:-l thru l do
+            rtn[i+l+1, j+l+1]: trigsimp(int_on_unit_sphere(SH(l, i, theta, phi+alpha)*SH(l, j, theta, phi))),
+    rtn
+)$
+
+rot_spherical_x_alpha(alpha, theta, phi) := block(
+    [X, Y, R],
+    X: matrix([sin(theta)*cos(phi)], [sin(theta)*sin(phi)], [cos(theta)]),
+    R: zeromatrix(3, 3),
+    R[1, 1]: 1,
+    R[2, 2]: cos(alpha),
+    R[3, 3]: cos(alpha),
+    R[2, 3]: -sin(alpha),
+    R[3, 2]: sin(alpha),
+    /* display(R), */
+    Y: R.X,
+    matrix([acos(Y[3, 1])], [atan2(Y[2, 1], Y[1, 1])])
+)$
+
+rot_sh_x_alpha(alpha, l) := block(
+    [rot_sphere_coord, rtn],
+    rtn: zeromatrix(2*l+1, 2*l+1),
+    rot_sphere_coord: rot_spherical_x_alpha(alpha, theta, phi),
+    for i:-l thru l do
+        for j:-l thru l do block(
+                temp: trigexpand(trigsimp(SH(l, i, rot_sphere_coord[1, 1], rot_sphere_coord[2, 1]))),
+                temp: temp*SH(l, j, theta, phi),
+                temp: subst([(cos(phi)^2*sin(theta)^2+cos(theta)^2)=1-sin(phi)^2*sin(theta)^2], temp),
+                temp: trigexpand(temp),
+                /* display(temp), */
+                rtn[i+l+1, j+l+1]: radcan(int_on_unit_sphere(temp))
+        ),
+    rtn
+)$
+
+
+RZ4_ALPHA: rot_sh_z_alpha(alpha, 3);
+RX4_POS_HALF_PI: rot_sh_x_alpha(%pi/2, 3);
+RX4_NEG_HALF_PI: rot_sh_x_alpha(-%pi/2, 3);
+
+
+/* cubic_smooth_band4(abc) := block( */
+/*     [R], */
+/*     R: rot_sh_z_alpha()**, */
+/* ) */
+
+/* cubic_align(abc) := block( */
+/* ) */

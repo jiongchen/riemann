@@ -190,3 +190,9 @@ target_link_libraries(test_aqp
     riemann
     ${Boost_LIBRARIES}
 )
+
+add_executable(test_vol_frame test_vol_frame.cc)
+target_link_libraries(test_vol_frame
+  riemann
+  ${Boost_LIBRARIES}
+)
