@@ -8,13 +8,13 @@ ALP(l, m, x) := assoc_legendre_p(l, m, x)$
 K(l, m) := sqrt((2*l+1)/(4*%pi)*((l-abs(m))!/(l+abs(m))!))$
 
 SH(l, m, theta, phi) := 
-    if m > 0 then
-        sqrt(2)*K(l, m)*cos(m*phi)*subst(cos(theta), x, ALP(l, m, x))
-    else 
-        if m < 0 then
-            sqrt(2)*K(l, m)*sin(-m*phi)*subst(cos(theta), x, ALP(l, -m, x))
-        else
-            K(l, 0)*subst(cos(theta), x, ALP(l, 0, x))$
+  if m > 0 then
+    sqrt(2)*K(l, m)*cos(m*phi)*subst(cos(theta), x, ALP(l, m, x))
+  else 
+    if m < 0 then
+      sqrt(2)*K(l, m)*sin(-m*phi)*subst(cos(theta), x, ALP(l, -m, x))
+    else
+      K(l, 0)*subst(cos(theta), x, ALP(l, 0, x))$
 
 /* factor(trigsimp(SH(3, 0, theta, phi))); */
 
@@ -22,13 +22,13 @@ SH(l, m, theta, phi) :=
 /* [transform_xy, spherical_to_xyz], [grid, 100, 100]); */
 
 int_on_unit_sphere(f) := block(
-    [int_theta, int_phi],
-    assume(notequal(cos(theta), 0)),
-    assume(sin(theta)>0),
-    assume(sin(theta)<1),
-    f: trigsimp(trigexpand(f)),
-    int_phi: integrate(f, phi, 0, 2*%pi),
-    int_theta: integrate(int_phi*sin(theta), theta, 0, %pi)
+  [int_theta, int_phi],
+  assume(notequal(cos(theta), 0)),
+  assume(sin(theta)>0),
+  assume(sin(theta)<1),
+  f: trigsimp(trigexpand(f)),
+  int_phi: integrate(f, phi, 0, 2*%pi),
+  int_theta: integrate(int_phi*sin(theta), theta, 0, %pi)
 )$
 
 /* SH_projection(l, m, f) := int_on_unit_sphere(f*SH(l, m, theta, phi)); */
@@ -47,55 +47,105 @@ int_on_unit_sphere(f) := block(
 
 
 /* M_{ij} = \int_{S} Y_i(\mathbf{R}s)Y_j(s) ds, see [Robin Green 03] */
-rot_sh_z_alpha(alpha, l) := block(
-    [rtn],
-    rtn: zeromatrix(2*l+1, 2*l+1),
-    for i:-l thru l do
-        for j:-l thru l do
-            rtn[i+l+1, j+l+1]: trigsimp(int_on_unit_sphere(SH(l, i, theta, phi+alpha)*SH(l, j, theta, phi))),
-    rtn
+rot_sh_z(alpha, l) := block(
+  [rtn],
+  rtn: zeromatrix(2*l+1, 2*l+1),
+  for i:-l thru l do
+    for j:-l thru l do
+      rtn[i+l+1, j+l+1]: trigsimp(int_on_unit_sphere(SH(l, i, theta, phi+alpha)*SH(l, j, theta, phi))),
+  rtn
 )$
 
-rot_spherical_x_alpha(alpha, theta, phi) := block(
-    [X, Y, R],
-    X: matrix([sin(theta)*cos(phi)], [sin(theta)*sin(phi)], [cos(theta)]),
-    R: zeromatrix(3, 3),
-    R[1, 1]: 1,
-    R[2, 2]: cos(alpha),
-    R[3, 3]: cos(alpha),
-    R[2, 3]: -sin(alpha),
-    R[3, 2]: sin(alpha),
-    /* display(R), */
-    Y: R.X,
-    matrix([acos(Y[3, 1])], [atan2(Y[2, 1], Y[1, 1])])
+rot_sphere_coord_x(alpha, theta, phi) := block(
+  [X, Y, R],
+  X: matrix([sin(theta)*cos(phi)], [sin(theta)*sin(phi)], [cos(theta)]),
+  R: zeromatrix(3, 3),
+  R[1, 1]: 1,
+  R[2, 2]: cos(alpha),
+  R[3, 3]: cos(alpha),
+  R[2, 3]: -sin(alpha),
+  R[3, 2]: sin(alpha),
+  /* display(R), */
+  Y: R.X,
+  matrix([acos(Y[3, 1])], [atan2(Y[2, 1], Y[1, 1])])
 )$
 
-rot_sh_x_alpha(alpha, l) := block(
-    [rot_sphere_coord, rtn],
-    rtn: zeromatrix(2*l+1, 2*l+1),
-    rot_sphere_coord: rot_spherical_x_alpha(alpha, theta, phi),
-    for i:-l thru l do
-        for j:-l thru l do block(
-                temp: trigexpand(trigsimp(SH(l, i, rot_sphere_coord[1, 1], rot_sphere_coord[2, 1]))),
-                temp: temp*SH(l, j, theta, phi),
-                temp: subst([(cos(phi)^2*sin(theta)^2+cos(theta)^2)=1-sin(phi)^2*sin(theta)^2], temp),
-                temp: trigexpand(temp),
-                /* display(temp), */
-                rtn[i+l+1, j+l+1]: radcan(int_on_unit_sphere(temp))
-        ),
-    rtn
+rot_sh_x(alpha, l) := block(
+  [rot_sphere_coord, rtn],
+  rtn: zeromatrix(2*l+1, 2*l+1),
+  rot_sphere_coord: rot_sphere_coord_x(alpha, theta, phi),
+  for i:-l thru l do
+    for j:-l thru l do block(
+      temp: trigexpand(trigsimp(SH(l, i, rot_sphere_coord[1, 1], rot_sphere_coord[2, 1]))), /*!*/
+      temp: temp*SH(l, j, theta, phi),
+      temp: subst([(cos(phi)^2*sin(theta)^2+cos(theta)^2)=1-sin(phi)^2*sin(theta)^2], temp),
+      temp: trigexpand(temp),
+      /* display(temp), */
+      rtn[i+l+1, j+l+1]: radcan(int_on_unit_sphere(temp))
+    ),
+  rtn
 )$
 
+RZ4_ALPHA:       rot_sh_z(alpha, 4);
+RX4_POS_HALF_PI: rot_sh_x(%pi/2, 4);
+RX4_NEG_HALF_PI: rot_sh_x(-%pi/2, 4);
+CUB_SYM_H_COEF: transpose(matrix([0, 0, 0, 0, sqrt(7), 0, 0, 0, sqrt(5)]));
 
-RZ4_ALPHA: rot_sh_z_alpha(alpha, 3);
-RX4_POS_HALF_PI: rot_sh_x_alpha(%pi/2, 3);
-RX4_NEG_HALF_PI: rot_sh_x_alpha(-%pi/2, 3);
+load(cj_function)$
+load(hj_fortran2)$
 
+optimprefix: tt$
 
-/* cubic_smooth_band4(abc) := block( */
-/*     [R], */
-/*     R: rot_sh_z_alpha()**, */
-/* ) */
+f: openw("cubic_sym_sh.f90")$
 
-/* cubic_align(abc) := block( */
-/* ) */
+block(
+  [ABC, CR, vol],
+  ABC: genmatrix(ABC, 3, 4),
+  CR:  genmatrix(CR,  3, 4),
+  vol: genmatrix(vol, 1, 1),
+  cubic_sym_smooth(ABC, CR, vol) := block(
+    [coef, rtn],
+    coef: addcol(
+      rot_sh_z(ABC[3, 1], 4).RX4_NEG_HALF_PI.rot_sh_z(ABC[2, 1], 4).RX4_POS_HALF_PI.rot_sh_z(ABC[1, 1], 4).CUB_SYM_H_COEF,
+      rot_sh_z(ABC[3, 2], 4).RX4_NEG_HALF_PI.rot_sh_z(ABC[2, 2], 4).RX4_POS_HALF_PI.rot_sh_z(ABC[1, 2], 4).CUB_SYM_H_COEF,
+      rot_sh_z(ABC[3, 3], 4).RX4_NEG_HALF_PI.rot_sh_z(ABC[2, 3], 4).RX4_POS_HALF_PI.rot_sh_z(ABC[1, 3], 4).CUB_SYM_H_COEF,
+      rot_sh_z(ABC[3, 4], 4).RX4_NEG_HALF_PI.rot_sh_z(ABC[2, 4], 4).RX4_POS_HALF_PI.rot_sh_z(ABC[1, 4], 4).CUB_SYM_H_COEF
+    ),
+    rtn: 0,
+    for i:1 thru 9 do
+      rtn: rtn+NORM(CR . transpose(row(coef, i)))^2,
+    vol*rtn
+  ),
+  with_stdout(f, val_jac_hes_to_f90(cubic_sym_smooth, [ABC, CR, vol])),
+  return()
+)$
+
+block(
+  [ABC, Rnz, area],
+  ABC:  genmatrix(ABC,  3, 1),
+  Rnz:  genmatrix(Rnz,  3, 1),
+  area: genmatrix(area, 1, 1),
+  cubic_sym_align(ABC, Rnz, area) := block(
+    [coef],
+    coef: rot_sh_z(ABC[3, 1], 4).RX4_NEG_HALF_PI.rot_sh_z(ABC[2, 1], 4).RX4_POS_HALF_PI.rot_sh_z(ABC[1, 1], 4).CUB_SYM_H_COEF,
+    coef: rot_sh_z(Rnz[3, 1], 4).RX4_NEG_HALF_PI.rot_sh_z(Rnz[2, 1], 4).RX4_POS_HALF_PI.rot_sh_z(Rnz[1, 1], 4).coef,
+    area*(coef[5, 1]-sqrt(7))^2
+  ),
+  with_stdout(f, val_jac_hes_to_f90(cubic_sym_align, [ABC, Rnz, area])),
+  return()
+)$
+
+block(
+  [ABC, f0],
+  ABC: genmatrix(ABC, 3, 1),
+  f0:  genmatrix(f0, 9, 1),
+  sh_residual(ABC, f0) := block(
+    [coef],
+    coef: rot_sh_z(ABC[3, 1], 4).RX4_NEG_HALF_PI.rot_sh_z(ABC[2, 1], 4).RX4_POS_HALF_PI.rot_sh_z(ABC[1, 1], 4).CUB_SYM_H_COEF,
+    matrix([NORM(f0-coef)^2])
+  ),
+  with_stdout(f, val_jac_hes_to_f90(sh_residual, [ABC, f0])),
+  return()
+)$
+
+close(f)$
