@@ -2,6 +2,7 @@
 #define GEOMETRY_EXTEND_H
 
 #include <zjucad/matrix/matrix.h>
+#include <Eigen/Dense>
 
 namespace riemann {
 
@@ -36,6 +37,31 @@ void calc_face_local_frame(const mati_t &tris, const matd_t &nods, matd_t &origi
 void calc_local_uv(const mati_t &tris, const matd_t &nods, const matd_t &origin, const matd_t &axis, matd_t &uv);
 
 void calc_tris_cot_value(const mati_t &tris, const matd_t &nods, matd_t &cotv);
+
+inline Eigen::Matrix3d RX(const double alpha) {
+  Eigen::Matrix3d R = Eigen::Matrix3d::Zero();
+  R(0, 0) = 1;
+  R(1, 1) = R(2, 2) = cos(alpha);
+  R(2, 1) = sin(alpha);
+  R(1, 2) = -R(2, 1);
+  return R;
+}
+inline Eigen::Matrix3d RZ(const double alpha) {
+  Eigen::Matrix3d R = Eigen::Matrix3d::Zero();
+  R(2, 2) = 1;
+  R(0, 0) = R(1, 1) = cos(alpha);
+  R(1, 0) = sin(alpha);
+  R(0, 1) = -R(1, 0);
+  return R;
+}
+
+inline Eigen::Matrix3d RY(const double alpha) {
+  Eigen::Matrix3d R = Eigen::Matrix3d::Zero();
+  R(1, 1) = 1;
+  R(0, 0) = R(2, 2) = cos(alpha);
+  R(0, 2) = sin(alpha);
+  R(2, 0) = -R(0, 2);
+}
 
 }
 

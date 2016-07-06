@@ -9,6 +9,7 @@
 
 using namespace std;
 using namespace riemann;
+using namespace Eigen;
 namespace po=boost::program_options;
 
 int main(int argc, char *argv[])
@@ -31,11 +32,16 @@ int main(int argc, char *argv[])
   mati_t tets; matd_t nods;
   jtf::mesh::tet_mesh_read_from_zjumat(vm["mesh"].as<string>().c_str(), &nods, &tets);
 
-  string outfile = vm["output_folder"].as<string>()+string("/orig.vtk");
-  ofstream ofs(outfile);
-  tet2vtk(ofs, &nods[0], nods.size(2), &tets[0], tets.size(2));
-  ofs.close();
-  
+  shared_ptr<cross_frame_opt> frame_opt(cross_frame_opt::create(tets, nods));
+
+  VectorXd Fs = VectorXd::Zero(9*nods.size(2));
+  frame_opt->solve_smooth_sh_coeffs(Fs);
+
+  VectorXd abc = VectorXd::Zero(3*nods.size(2));
+  frame_opt->solve_initial_frames(abc);
+  frame_opt->optimize_frames(abc);
+
+
   cout << "[Info] done\n";
   return 0;
 }

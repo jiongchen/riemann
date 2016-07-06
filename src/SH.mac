@@ -86,10 +86,14 @@ rot_sh_x(alpha, l) := block(
   rtn
 )$
 
-RZ4_ALPHA:       rot_sh_z(alpha, 4);
-RX4_POS_HALF_PI: rot_sh_x(%pi/2, 4);
-RX4_NEG_HALF_PI: rot_sh_x(-%pi/2, 4);
-CUB_SYM_H_COEF: transpose(matrix([0, 0, 0, 0, sqrt(7), 0, 0, 0, sqrt(5)]));
+RZ4_ALPHA:       rot_sh_z(alpha, 4)$
+RX4_POS_HALF_PI: rot_sh_x(%pi/2, 4)$
+RX4_NEG_HALF_PI: rot_sh_x(-%pi/2, 4)$
+CUB_SYM_H_COEF: transpose(matrix([0, 0, 0, 0, sqrt(7), 0, 0, 0, sqrt(5)]))$
+
+/* verify the proof for lemma in [Huang11] */
+/* A: rot_sh_z(gamma, 4).RX4_NEG_HALF_PI.rot_sh_z(beta, 4).RX4_POS_HALF_PI.rot_sh_z(alpha, 4).CUB_SYM_H_COEF$ */
+/* radcan(128*sqrt(7)*trigsimp(trigreduce(trigsimp(trigexpand(A[5, 1]-sqrt(7)))))/70); */
 
 load(cj_function)$
 load(hj_fortran2)$
@@ -121,6 +125,22 @@ block(
 )$
 
 block(
+  [F, CR, vol],
+  F:   genmatrix(F, 9, 4),
+  CR:  genmatrix(CR, 3, 4),
+  vol: genmatrix(vol, 1, 1),
+  cubic_smooth_sh_coef(F, CR, vol) := block(
+    [rtn],
+    rtn: 0,
+    for i:1 thru 9 do
+      rtn: rtn+NORM(CR . transpose(row(F, i)))^2,
+    vol*rtn
+  ),
+  with_stdout(f, val_jac_hes_to_f90(cubic_smooth_sh_coef, [F, CR, vol])),
+  return()
+)$
+
+block(
   [ABC, Rnz, area],
   ABC:  genmatrix(ABC,  3, 1),
   Rnz:  genmatrix(Rnz,  3, 1),
@@ -132,6 +152,20 @@ block(
     area*(coef[5, 1]-sqrt(7))^2
   ),
   with_stdout(f, val_jac_hes_to_f90(cubic_sym_align, [ABC, Rnz, area])),
+  return()
+)$
+
+block(
+  [F, Rnz, area],
+  F:    genmatrix(F, 9, 1),
+  Rnz:  genmatrix(Rnz, 3, 1),
+  area: genmatrix(area, 1, 1),
+  cubic_align_sh_coef(F, Rnz, area) := block(
+    [RF],
+    RF: rot_sh_z(Rnz[3, 1], 4).RX4_NEG_HALF_PI.rot_sh_z(Rnz[2, 1], 4).RX4_POS_HALF_PI.rot_sh_z(Rnz[1, 1], 4).F,
+    area*(RF[5, 1]-sqrt(7))^2
+  ),
+  with_stdout(f, val_jac_hes_to_f90(cubic_align_sh_coef, [F, Rnz, area])),
   return()
 )$
 

@@ -45,13 +45,14 @@ public:
   int Val(const double *abc, double *val) const;
   int Gra(const double *abc, double *gra) const;
   int Hes(const double *abc, std::vector<Eigen::Triplet<double>> *hes) const { return __LINE__; }
+  int ValSH(const double *f, double *val) const;
+  int GraSH(const double *f, double *gra) const;
+  int HesSH(const double *f, std::vector<Eigen::Triplet<double>> *hes) const;
 private:
   double w_;
-  size_t dim_;
+  const size_t dim_;
   const mati_t &tets_;
-  const matd_t &nods_;
-  mati_t tet_face_;
-  matd_t CR_;
+  matd_t basis_;
   matd_t vol_;
 };
 
@@ -63,35 +64,34 @@ public:
   int Val(const double *abc, double *val) const;
   int Gra(const double *abc, double *gra) const;
   int Hes(const double *abc, std::vector<Eigen::Triplet<double>> *hes) const { return __LINE__; }
+  int ValSH(const double *f, double *val) const;
+  int GraSH(const double *f, double *gra) const;
+  int HesSH(const double *f, std::vector<Eigen::Triplet<double>> *hes) const;
 private:
   double w_;
-  size_t dim_;
+  const size_t dim_;
   const mati_t &tets_;
-  const matd_t &nods_;
-  mati_t bnd_face_;
+  mati_t surf_;
   matd_t zyz_;
   matd_t area_;
 };
 
-// class SH_project_energy
-// {
-// public:
-//   SH_project_energy(const matd_t &f);
-//   size_t Nx() const;
-//   int Val(const double *abc, double *val) const;
-//   int Gra(const double *abc, double *gra) const;
-//   int Hes(const double *abc, double *hes) const;
-// private:
-  
-// };
+class cross_frame_opt
+{
+public:
+  static cross_frame_opt* create(const mati_t &tets, const matd_t &nods);
+  int solve_smooth_sh_coeffs(Eigen::VectorXd &Fs) const;
+  int solve_initial_frames(Eigen::VectorXd &abc) const;
+  int optimize_frames(Eigen::VectorXd &abc) const;
+private:
+  int init(const mati_t &tets, const matd_t &nods);
+private:
+  size_t vert_num_;
+  std::vector<std::shared_ptr<Functional<double>>> buffer_;
+  std::shared_ptr<Functional<double>> energy_;
+};
 
-// class cross_frame_opt
-// {
-// public:
-//   void solve_smooth_sh_coef();
-//   void solve_initial_zyz();
-//   void optimize_cross_frame();
-// };
+int visualize_frames();
 
 }
 
