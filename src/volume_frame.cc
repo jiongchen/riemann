@@ -186,7 +186,7 @@ int SH_align_energy::Gra(const double *abc, double *gra) const {
   itr_matrix<double *> G(3, dim_/3, gra);
   matd_t abcs = zeros<double>(3, 1), g = zeros<double>(3, 1);
   for (size_t i = 0; i < surf_.size(2); ++i) {
-    for (size_t j = 0; j < 3; ++j) {
+    for (size_t j = 0; j < surf_.size(1); ++j) {
       const double idx = surf_(j, i);
       cubic_sym_align_jac_(&g[0], &ABC(0, idx), &zyz_(0, i), &area_[i]);
       G(colon(), idx) += w_*g;
@@ -314,6 +314,15 @@ int cross_frame_opt::solve_initial_frames(const VectorXd &Fs, VectorXd &abc) con
   ASSERT(abc.size() == 3*vert_num_);
 
   for (size_t i = 0; i < vert_num_; ++i) {
+    double prev_res = 0; 
+    sh_residual_(&prev_res, &abc[3*i], &Fs[9*i]);
+
+    reconstruct_zyz(&abc[3*i], &Fs[9*i], 2);
+
+    double post_res = 0;
+    sh_residual_(&post_res, &abc[3*i], &Fs[9*i]);
+
+    printf("\t# Node %04zu, prev: %lf, post: %lf\n", i, prev_res, post_res);
   }
   
   return 0;
@@ -322,7 +331,7 @@ int cross_frame_opt::solve_initial_frames(const VectorXd &Fs, VectorXd &abc) con
 int cross_frame_opt::optimize_frames(VectorXd &abc) const {
   const double epsf = 1e-5, epsx = 0;
   const size_t maxits = 1000;
-  lbfgs_solve(energy_, abc.data(), abc.size(), epsf, epsx, maxits);;
+  lbfgs_solve(energy_, abc.data(), abc.size(), epsf, epsx, maxits);
   return 0;
 }
 

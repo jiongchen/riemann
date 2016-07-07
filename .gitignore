@@ -1,6 +1,7 @@
 /build
 /doc
 /result
+/bin
 *~
 *.user
 *.user.*

@@ -68,13 +68,16 @@ int main(int argc, char *argv[])
 
   shared_ptr<cross_frame_opt> frame_opt(cross_frame_opt::create(tets, nods));
 
+  cout << "[INFO] solve laplacian\n";
   VectorXd Fs = VectorXd::Zero(9*nods.size(2));
   frame_opt->solve_smooth_sh_coeffs(Fs);
 
-  VectorXd abc = VectorXd::Zero(3*nods.size(2));
+  cout << "[INFO] solve for initial zyz angles\n";
+  VectorXd abc = VectorXd::Ones(3*nods.size(2));
   frame_opt->solve_initial_frames(Fs, abc);
-  frame_opt->optimize_frames(abc);
 
+  cout << "[INFO] optimize frames\n";
+  frame_opt->optimize_frames(abc);
 
   cout << "[Info] done\n";
   return 0;
