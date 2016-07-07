@@ -10,6 +10,7 @@
 
 #include "config.h"
 #include "grad_operator.h"
+#include "lbfgs_solve.h"
 
 using namespace std;
 using namespace zjucad::matrix;
@@ -239,21 +240,22 @@ int SH_align_energy::HesSH(const double *f, vector<Triplet<double>> *hes) const 
   return 0;
 }
 //===============================================================================
-// static void reconstruct_zyz(double *abc, const double *f, const size_t maxiter) {
-//   matd_t g = zeros<double>(3, 1);
-//   matd_t H = zeros<double>(3, 3);
-//   for (size_t i = 0; i < maxiter; ++i) {
-//     sh_residual_jac_(&g[0], abc, f);
-//     sh_residual_hes_(&H[0], abc, f);
-//     if ( inv(H) ) {
-//       cerr << "\t@fail to inverse" << endl;
-//       return;
-//     }
-//     itr_matrix<double *>(3, 1, abc) += -H*g;
-//   }
-// }
+static void reconstruct_zyz(double *abc, const double *f, const size_t maxiter) {
+  matd_t g = zeros<double>(3, 1);
+  matd_t H = zeros<double>(3, 3);
+  for (size_t i = 0; i < maxiter; ++i) {
+    sh_residual_jac_(&g[0], abc, f);
+    sh_residual_hes_(&H[0], abc, f);
+    if ( inv(H) ) {
+      cerr << "\t@fail to inverse" << endl;
+      return;
+    }
+    itr_matrix<double *>(3, 1, abc) += -H*g;
+  }
+}
 
 int cross_frame_opt::init(const mati_t &tets, const matd_t &nods) {
+  vert_num_ = nods.size(2);
   int success = 0;
   buffer_.push_back(make_shared<SH_smooth_energy>(tets, nods, 1e0));
   buffer_.push_back(make_shared<SH_align_energy>(tets, nods, 1e3));
@@ -307,11 +309,20 @@ int cross_frame_opt::solve_smooth_sh_coeffs(VectorXd &Fs) const {
   return 0;
 }
 
-int cross_frame_opt::solve_initial_frames(VectorXd &abc) const {
+int cross_frame_opt::solve_initial_frames(const VectorXd &Fs, VectorXd &abc) const {
+  ASSERT(Fs.size() == 9*vert_num_);
+  ASSERT(abc.size() == 3*vert_num_);
+
+  for (size_t i = 0; i < vert_num_; ++i) {
+  }
+  
   return 0;
 }
 
 int cross_frame_opt::optimize_frames(VectorXd &abc) const {
+  const double epsf = 1e-5, epsx = 0;
+  const size_t maxits = 1000;
+  lbfgs_solve(energy_, abc.data(), abc.size(), epsf, epsx, maxits);;
   return 0;
 }
 

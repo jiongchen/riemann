@@ -27,6 +27,13 @@ if(EIGEN3_FOUND)
   include_directories(${EIGEN3_INCLUDE_DIR})
 endif(EIGEN3_FOUND)
 
+# LBFGS
+find_package(LBFGS REQUIRED)
+if(LBFGS_FOUND)
+  message("-- LBFGS @ ${LBFGS_INCLUDE_DIRS}")
+  include_directories(${LBFGS_INCLUDE_DIRS})
+endif(LBFGS_FOUND)
+
 # UMFPACK
 find_package(UMFPACK REQUIRED)
 if(UMFPACK_FOUND)

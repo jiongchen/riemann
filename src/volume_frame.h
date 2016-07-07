@@ -81,7 +81,7 @@ class cross_frame_opt
 public:
   static cross_frame_opt* create(const mati_t &tets, const matd_t &nods);
   int solve_smooth_sh_coeffs(Eigen::VectorXd &Fs) const;
-  int solve_initial_frames(Eigen::VectorXd &abc) const;
+  int solve_initial_frames(const Eigen::VectorXd &Fs, Eigen::VectorXd &abc) const;
   int optimize_frames(Eigen::VectorXd &abc) const;
 private:
   int init(const mati_t &tets, const matd_t &nods);
