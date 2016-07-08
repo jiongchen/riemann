@@ -1,5 +1,5 @@
 file(GLOB header *.h *.hpp)
-file(GLOB source *.cc *.cpp)
+file(GLOB source *.cc *.cpp *.c)
 
 enable_language(Fortran)
 set(SRC_DIR "{${CMAKE_CURRENT_SOURCE_DIR}}")
@@ -52,4 +52,5 @@ target_link_libraries(riemann
     ${UMFPACK_LIBRARIES}
     ${ARPACK_LIBRARIES}
     alglib
+    minpack
 )

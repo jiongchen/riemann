@@ -11,6 +11,7 @@
 #include "config.h"
 #include "grad_operator.h"
 #include "lbfgs_solve.h"
+#include "sh_zyz_convert.h"
 
 using namespace std;
 using namespace zjucad::matrix;
@@ -34,11 +35,7 @@ extern "C" {
   void cubic_align_sh_coef_(double *val, const double *F, const double *Rnz, const double *area);
   void cubic_align_sh_coef_jac_(double *jac, const double *F, const double *Rnz, const double *area);
   void cubic_align_sh_coef_hes_(double *hes, const double *F, const double *Rnz, const double *area);
-                                
-  void sh_residual_(double *val, const double *abc, const double *f);
-  void sh_residual_jac_(double *jac, const double *abc, const double *f);
-  void sh_residual_hes_(double *hes, const double *abc, const double *f);
-
+  
 }
 
 //===============================================================================
@@ -121,7 +118,7 @@ int SH_smooth_energy::HesSH(const double *f, vector<Triplet<double>> *hes) const
     cubic_smooth_sh_coef_hes_(&H[0], nullptr, &basis_(0, i), &vol_[i]);
     for (size_t p = 0; p < 36; ++p) {
       for (size_t q = 0; q < 36; ++q) {
-        if ( fabs(H(p, q)) >= 1e-12 ) {
+        if ( H(p, q) != 0.0 ) {
           const size_t I = 9*tets_(p/9, i)+p%9;
           const size_t J = 9*tets_(q/9, i)+q%9;
           hes->push_back(Triplet<double>(I, J, w_*H(p, q)));
@@ -144,6 +141,7 @@ SH_align_energy::SH_align_energy(const mati_t &tets, const matd_t &nods, const d
   shared_ptr<face2tet_adjacent> f2t(face2tet_adjacent::create(tets));
   bool check_order = true;
   jtf::mesh::get_outside_face(*f2t, surf_, check_order, &nods);
+  cout << "[INFO] surface elements: " << surf_.size(2) << endl;
   
   area_.resize(1, surf_.size(2)); {
     #pragma omp parallel for
@@ -230,9 +228,11 @@ int SH_align_energy::HesSH(const double *f, vector<Triplet<double>> *hes) const 
       cubic_align_sh_coef_hes_(&H[0], nullptr, &zyz_(0, i), &area_[i]);
       for (size_t p = 0; p < 9; ++p) {
         for (size_t q = 0; q < 9; ++q) {
-          const size_t I = 9*idx+p;
-          const size_t J = 9*idx+q;
-          hes->push_back(Triplet<double>(I, J, w_*H(p, q)));
+          if ( H(p, q) != 0.0 ) {
+            const size_t I = 9*idx+p;
+            const size_t J = 9*idx+q;
+            hes->push_back(Triplet<double>(I, J, w_*H(p, q)));
+          }
         }
       }
     }
@@ -240,25 +240,11 @@ int SH_align_energy::HesSH(const double *f, vector<Triplet<double>> *hes) const 
   return 0;
 }
 //===============================================================================
-static void reconstruct_zyz(double *abc, const double *f, const size_t maxiter) {
-  matd_t g = zeros<double>(3, 1);
-  matd_t H = zeros<double>(3, 3);
-  for (size_t i = 0; i < maxiter; ++i) {
-    sh_residual_jac_(&g[0], abc, f);
-    sh_residual_hes_(&H[0], abc, f);
-    if ( inv(H) ) {
-      cerr << "\t@fail to inverse" << endl;
-      return;
-    }
-    itr_matrix<double *>(3, 1, abc) += -H*g;
-  }
-}
-
 int cross_frame_opt::init(const mati_t &tets, const matd_t &nods) {
   vert_num_ = nods.size(2);
   int success = 0;
   buffer_.push_back(make_shared<SH_smooth_energy>(tets, nods, 1e0));
-  buffer_.push_back(make_shared<SH_align_energy>(tets, nods, 1e3));
+  buffer_.push_back(make_shared<SH_align_energy>(tets, nods, 1e4));
   try {
     energy_ = make_shared<energy_t<double>>(buffer_);
   } catch ( exception &e ) {
@@ -277,35 +263,43 @@ cross_frame_opt* cross_frame_opt::create(const mati_t &tets, const matd_t &nods)
 
 int cross_frame_opt::solve_smooth_sh_coeffs(VectorXd &Fs) const {
   const size_t dim = Fs.size();
-  auto f1 = dynamic_pointer_cast<SH_smooth_energy>(buffer_[0]);
-  auto f2 = dynamic_pointer_cast<SH_align_energy>(buffer_[1]);
+  cout << "\t@dimension: " << dim << endl;
+
+  auto fs = dynamic_pointer_cast<SH_smooth_energy>(buffer_[0]);
+  auto fa = dynamic_pointer_cast<SH_align_energy>(buffer_[1]);
+
   double prev_value = 0; {
-    f1->ValSH(Fs.data(), &prev_value);
-    f2->ValSH(Fs.data(), &prev_value);
-    cout << "[Info] prev energy value: " << prev_value << endl;
+    fs->ValSH(Fs.data(), &prev_value);
+    fa->ValSH(Fs.data(), &prev_value);
+    cout << "\t@prev energy value: " << prev_value << endl;
   }
+
   VectorXd g = VectorXd::Zero(dim); {
-    f1->GraSH(Fs.data(), g.data());
-    f2->GraSH(Fs.data(), g.data());
+    fs->GraSH(Fs.data(), g.data());
+    fa->GraSH(Fs.data(), g.data());
+    cout << "\t@prev grad norm: " << g.norm() << endl;
   }
   SparseMatrix<double> H(dim, dim); {
     vector<Triplet<double>> trips;
-    f1->HesSH(Fs.data(), &trips);
-    f2->HesSH(Fs.data(), &trips);
-    H.reserve(trips.size());
+    fs->HesSH(nullptr, &trips);
+    fa->HesSH(nullptr, &trips);
     H.setFromTriplets(trips.begin(), trips.end());
   }
   CholmodSimplicialLDLT<SparseMatrix<double>> solver;
+  //SimplicialCholesky<SparseMatrix<double>> solver;
   solver.compute(H);
   ASSERT(solver.info() == Success);
   VectorXd dx = -solver.solve(g);
   ASSERT(solver.info() == Success);
   Fs += dx;
+  
   double post_value = 0; {
-    f1->ValSH(Fs.data(), &post_value);
-    f2->ValSH(Fs.data(), &post_value);
-    cout << "[Info] post value: " << post_value << endl;
+    fs->ValSH(Fs.data(), &post_value);
+    fa->ValSH(Fs.data(), &post_value);
+    cout << "\t@post energy value: " << post_value << endl;
   }
+
+  cout << "\t@solution norm: " << Fs.norm() << endl;
   return 0;
 }
 
@@ -316,22 +310,45 @@ int cross_frame_opt::solve_initial_frames(const VectorXd &Fs, VectorXd &abc) con
   for (size_t i = 0; i < vert_num_; ++i) {
     double prev_res = 0; 
     sh_residual_(&prev_res, &abc[3*i], &Fs[9*i]);
-
-    reconstruct_zyz(&abc[3*i], &Fs[9*i], 2);
+    
+    sh_to_zyz(&Fs[9*i], &abc[3*i], 1000);
 
     double post_res = 0;
     sh_residual_(&post_res, &abc[3*i], &Fs[9*i]);
-
-    printf("\t# Node %04zu, prev: %lf, post: %lf\n", i, prev_res, post_res);
   }
-  
+
   return 0;
 }
 
 int cross_frame_opt::optimize_frames(VectorXd &abc) const {
-  const double epsf = 1e-5, epsx = 0;
+  const double epsf = 1e-8, epsx = 0;
   const size_t maxits = 1000;
+
+  {
+    double vs = 0, va = 0;
+    buffer_[0]->Val(abc.data(), &vs);
+    buffer_[1]->Val(abc.data(), &va);
+    cout << "\t@prev smoothness energy: " << vs << endl;
+    cout << "\t@prev alignment energy: " << va << endl;
+    VectorXd g = VectorXd::Zero(energy_->Nx());
+    energy_->Gra(abc.data(), g.data());
+    cout << "\t@prev gradient norm: " << g.norm() << endl;
+  }
+  
   lbfgs_solve(energy_, abc.data(), abc.size(), epsf, epsx, maxits);
+
+  {
+    double vs = 0, va = 0;
+    buffer_[0]->Val(abc.data(), &vs);
+    buffer_[1]->Val(abc.data(), &va);
+    cout << "\t@post smoothness energy: " << vs << endl;
+    cout << "\t@post alignment energy: " << va << endl;
+    VectorXd g = VectorXd::Zero(energy_->Nx());
+    energy_->Gra(abc.data(), g.data());
+    cout << "\t@post gradient norm: " << g.norm() << endl;
+  }
+
+  cout << "\t@zyz angle norm: " << abc.norm() << endl;
   return 0;
 }
 

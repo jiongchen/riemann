@@ -68,7 +68,7 @@ static void function1_grad(const real_1d_array &x, double &func, real_1d_array &
   
   func = 0;
   g_func->Val(ptrx, &func);
-  cout << "\t@energy: " << func << endl;
+  //  cout << "\t@energy: " << func << endl;
 
   std::fill(ptrg, ptrg+dim, 0);
   g_func->Gra(ptrx, ptrg);
@@ -104,8 +104,9 @@ int lbfgs_solve(const shared_ptr<Functional<double>> &f,
 
   const double *ptrx = x.getcontent();
   std::copy(ptrx, ptrx+dim, X);
+
   
-  printf("[INFO] LBFGS return value: %d\n", int(rep.terminationtype));
+  printf("\t# LBFGS RETURN: %d, ITERATIONS: %d\n", int(rep.terminationtype), int(rep.iterationscount));
   return 0;
 }
 

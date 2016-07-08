@@ -8,14 +8,15 @@ if [ ! -d "$OUT_DIR" ]; then
     mkdir -p $OUT_DIR
 fi
 
-# $EXE -i $MESH -o $OUT_DIR
+$EXE -i $MESH -o $OUT_DIR | tee LOG.txt
 
 
-# Visualize sigularity of frame field
-cd ../bin
-FF_EXE=./frame_field 
-TET_FILE=../dat/sphere265k_tet.vtk
-ZYZ_FILE=../dat/sphere265k_f1e3_s1e5_n1000.zyz.txt
-OUT_FILE=$OUT_DIR/sing.vtk
+# # === Visualize sigularity of frame field === #
+# cd ../bin
 
-$FF_EXE prog=draw_3d_frame_sing tet=$TET_FILE zyz=$ZYZ_FILE out=$OUT_FILE
+# FF_EXE=./frame_field
+# MESH_FILE=$OUT_DIR/tet.vtk
+# ZYZ_FILE=$OUT_DIR/zyz.txt
+# SING_FILE=$OUT_DIR/sing.vtk
+
+# $FF_EXE prog=draw_3d_frame_sing tet=$MESH_FILE zyz=$ZYZ_FILE out=$SING_FILE

@@ -46,6 +46,7 @@ inline Eigen::Matrix3d RX(const double alpha) {
   R(1, 2) = -R(2, 1);
   return R;
 }
+
 inline Eigen::Matrix3d RZ(const double alpha) {
   Eigen::Matrix3d R = Eigen::Matrix3d::Zero();
   R(2, 2) = 1;
@@ -61,6 +62,7 @@ inline Eigen::Matrix3d RY(const double alpha) {
   R(0, 0) = R(2, 2) = cos(alpha);
   R(0, 2) = sin(alpha);
   R(2, 0) = -R(0, 2);
+  return R;
 }
 
 }

@@ -41,6 +41,35 @@ automatic stopping criterion selection (small EpsX).
      Copyright 02.04.2010 by Bochkanov Sergey
 *************************************************************************/
 
+/*************************************************************************
+ 2922 L-BFGS algorithm results
+ 2923 
+ 2924 INPUT PARAMETERS:
+ 2925     State   -   algorithm state
+ 2926 
+ 2927 OUTPUT PARAMETERS:
+ 2928     X       -   array[0..N-1], solution
+ 2929     Rep     -   optimization report:
+ 2930                 * Rep.TerminationType completetion code:
+ 2931                     * -7    gradient verification failed.
+ 2932                             See MinLBFGSSetGradientCheck() for more information.
+ 2933                     * -2    rounding errors prevent further improvement.
+ 2934                             X contains best point found.
+ 2935                     * -1    incorrect parameters were specified
+ 2936                     *  1    relative function improvement is no more than
+ 2937                             EpsF.
+ 2938                     *  2    relative step is no more than EpsX.
+ 2939                     *  4    gradient norm is no more than EpsG
+ 2940                     *  5    MaxIts steps was taken
+ 2941                     *  7    stopping conditions are too stringent,
+ 2942                             further improvement is impossible
+ 2943                 * Rep.IterationsCount contains iterations count
+ 2944                 * NFEV countains number of function calculations
+ 2945 
+ 2946   -- ALGLIB --
+ 2947      Copyright 02.04.2010 by Bochkanov Sergey
+*************************************************************************/
+
 int lbfgs_solve(const std::shared_ptr<Functional<double>> &f,
                 double *X, const size_t dim,
                 const double EpsF = 0, const double EpsX = 0,
