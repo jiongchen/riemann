@@ -261,21 +261,22 @@ cross_frame_opt* cross_frame_opt::create(const mati_t &tets, const matd_t &nods)
 int cross_frame_opt::solve_laplacian(VectorXd &Fs) const {
   const size_t dim = Fs.size();
   ASSERT(dim == 9*vert_num_);
-  cout << "\t@dimension: " << dim << endl;
+  cout << "\t@dimension: " << dim << endl << endl;
 
   auto fs = dynamic_pointer_cast<SH_smooth_energy>(buffer_[0]);
   auto fa = dynamic_pointer_cast<SH_align_energy>(buffer_[1]);
 
-  double prev_value = 0; {
-    fs->ValSH(Fs.data(), &prev_value);
-    fa->ValSH(Fs.data(), &prev_value);
-    cout << "\t@prev energy value: " << prev_value << endl;
+  double prev_vs = 0, prev_va = 0; {
+    fs->ValSH(Fs.data(), &prev_vs);
+    fa->ValSH(Fs.data(), &prev_va);
+    cout << "\t@prev smoothness energy: " << prev_vs << endl;
+    cout << "\t@prev alignment energy: " << prev_va << endl << endl;
   }
 
   VectorXd g = VectorXd::Zero(dim); {
     fs->GraSH(Fs.data(), g.data());
     fa->GraSH(Fs.data(), g.data());
-    cout << "\t@prev grad norm: " << g.norm() << endl;
+    cout << "\t@prev grad norm: " << g.norm() << endl << endl;
   }
   
   SparseMatrix<double> H(dim, dim); {
@@ -292,16 +293,17 @@ int cross_frame_opt::solve_laplacian(VectorXd &Fs) const {
   ASSERT(solver.info() == Success);
   Fs += dx;
   
-  double post_value = 0; {
-    fs->ValSH(Fs.data(), &post_value);
-    fa->ValSH(Fs.data(), &post_value);
-    cout << "\t@post energy value: " << post_value << endl;
+  double post_vs = 0, post_va = 0; {
+    fs->ValSH(Fs.data(), &post_vs);
+    fa->ValSH(Fs.data(), &post_va);
+    cout << "\t@post smoothness energy: " << post_vs << endl;
+    cout << "\t@post alignment energy: " << post_va << endl << endl;
   }
 
   VectorXd gs = VectorXd::Zero(dim); {
     fs->GraSH(Fs.data(), gs.data());
     fa->GraSH(Fs.data(), gs.data());
-    cout << "\t@post grad norm: " << gs.norm() << endl;
+    cout << "\t@post grad norm: " << gs.norm() << endl << endl;
   }
 
   cout << "\t@SOLUTION NORM: " << Fs.norm() << endl;
@@ -313,13 +315,13 @@ int cross_frame_opt::solve_initial_frames(const VectorXd &Fs, VectorXd &abc) con
   ASSERT(abc.size() == 3*vert_num_);
 
   for (size_t i = 0; i < vert_num_; ++i) {
-    double prev_res = 0; 
-    sh_residual_(&prev_res, &abc[3*i], &Fs[9*i]);
+    // double prev_res = 0; 
+    // sh_residual_(&prev_res, &abc[3*i], &Fs[9*i]);
     
     sh_to_zyz(&Fs[9*i], &abc[3*i], 1000);
 
-    double post_res = 0;
-    sh_residual_(&post_res, &abc[3*i], &Fs[9*i]);
+    // double post_res = 0;
+    // sh_residual_(&post_res, &abc[3*i], &Fs[9*i]);
   }
 
   return 0;
@@ -337,7 +339,7 @@ int cross_frame_opt::optimize_frames(VectorXd &abc) const {
     cout << "\t@prev alignment energy: " << va << endl;
     VectorXd g = VectorXd::Zero(energy_->Nx());
     energy_->Gra(abc.data(), g.data());
-    cout << "\t@prev gradient norm: " << g.norm() << endl;
+    cout << "\t@prev gradient norm: " << g.norm() << endl << endl;
   }
   
   lbfgs_solve(energy_, abc.data(), abc.size(), epsf, epsx, maxits);
@@ -350,10 +352,9 @@ int cross_frame_opt::optimize_frames(VectorXd &abc) const {
     cout << "\t@post alignment energy: " << va << endl;
     VectorXd g = VectorXd::Zero(energy_->Nx());
     energy_->Gra(abc.data(), g.data());
-    cout << "\t@post gradient norm: " << g.norm() << endl;
+    cout << "\t@post gradient norm: " << g.norm() << endl << endl;
   }
 
-  cout << "\t@zyz angle norm: " << abc.norm() << endl;
   return 0;
 }
 
