@@ -53,4 +53,5 @@ target_link_libraries(riemann
     ${ARPACK_LIBRARIES}
     alglib
     minpack
+    lbfgs
 )
