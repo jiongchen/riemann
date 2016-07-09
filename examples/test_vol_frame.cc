@@ -83,6 +83,10 @@ static void zyz_sh_convert_test() {
   cout << "recover zyz: " << zyz.transpose() << endl;
 }
 
+extern "C" {
+  void cubic_sym_align_(double *val, const double *, const double *, const double *area);
+}
+
 int main(int argc, char *argv[])
 {
   po::options_description desc("Available options"); {

@@ -99,8 +99,9 @@ load(cj_function)$
 load(hj_fortran2)$
 load(f90)$
 
-/* /\* CONVERT ZYZ ANGLES TO SH COEFFS *\/ */
-/* zyz2sh(zyz) := rot_sh_z(zyz[3, 1], 4).RX4_NEG_HALF_PI.rot_sh_z(zyz[2, 1], 4).RX4_POS_HALF_PI.rot_sh_z(zyz[1, 1], 4).CUB_SYM_H_COEF$ */
+/* CONVERT ZYZ ANGLES TO SH COEFFS */
+zyz2sh(zyz) := rot_sh_z(zyz[3, 1], 4).RX4_NEG_HALF_PI.rot_sh_z(zyz[2, 1], 4).RX4_POS_HALF_PI.rot_sh_z(zyz[1, 1], 4).CUB_SYM_H_COEF$
+
 /* ZYZ: transpose(matrix([aa, bb, cc]))$ */
 /* ZYZ_VAL: zyz2sh(ZYZ)$ */
 /* ZYZ_JAC: GRAD(ZYZ_VAL, ZYZ)$ */
