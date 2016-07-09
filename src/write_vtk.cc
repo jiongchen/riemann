@@ -126,7 +126,7 @@ int draw_vert_direct_field(const char *filename,
   line(0, colon()) = colon(0, vert_num-1);
   line(1, colon()) = colon(vert_num, 2*vert_num-1);
   matrix<double> pts(3, 2*vert_num);
-  pts(colon(), colon(0, vert_num-1)) = nods;
+  pts(colon(), colon(0, vert_num-1)) = nods-df;
   pts(colon(), colon(vert_num, 2*vert_num-1)) = nods+df;
   line2vtk(os, pts.begin(), pts.size(2), line.begin(), line.size(2));
   os.close();

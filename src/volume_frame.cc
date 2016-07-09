@@ -30,7 +30,7 @@ extern "C" {
 
   void cubic_smooth_sh_coef_(double *val, const double *F, const double *CR, const double *vol);
   void cubic_smooth_sh_coef_jac_(double *jac, const double *F, const double *CR, const double *vol);
-  void cubic_smooth_sh_coef_hes_(double *hes, const double *F, const double *CR, const double *vol);;
+  void cubic_smooth_sh_coef_hes_(double *hes, const double *F, const double *CR, const double *vol);
 
   void cubic_align_sh_coef_(double *val, const double *F, const double *Rnz, const double *area);
   void cubic_align_sh_coef_jac_(double *jac, const double *F, const double *Rnz, const double *area);
@@ -66,10 +66,9 @@ size_t SH_smooth_energy::Nx() const {
 
 int SH_smooth_energy::Val(const double *abc, double *val) const {
   itr_matrix<const double *> ABC(3, dim_/3, abc);
-  matd_t abcs = zeros<double>(3, 4);
+  matd_t abcs = zeros<double>(3, 4); double value = 0;
   for (size_t i = 0; i < tets_.size(2); ++i) {
     abcs = ABC(colon(), tets_(colon(), i));
-    double value = 0;
     cubic_sym_smooth_(&value, &abcs[0], &basis_(0, i), &vol_[i]);
     *val += w_*value;
   }
@@ -90,8 +89,7 @@ int SH_smooth_energy::Gra(const double *abc, double *gra) const {
 
 int SH_smooth_energy::ValSH(const double *f, double *val) const {
   itr_matrix<const double *> F(9, dim_/3, f);
-  matd_t fs = zeros<double>(9, 4);
-  double value = 0;
+  matd_t fs = zeros<double>(9, 4); double value = 0;
   for (size_t i = 0; i < tets_.size(2); ++i) {
     fs = F(colon(), tets_(colon(), i));
     cubic_smooth_sh_coef_(&value, &fs[0], &basis_(0, i), &vol_[i]);
@@ -168,7 +166,6 @@ size_t SH_align_energy::Nx() const {
 int SH_align_energy::Val(const double *abc, double *val) const {
   itr_matrix<const double *> ABC(3, dim_/3, abc);
   double value = 0;
-  matd_t abcs = zeros<double>(3, 1);
   for (size_t i = 0; i < surf_.size(2); ++i) {
     for (size_t j = 0; j < surf_.size(1); ++j) {
       const size_t idx = surf_(j, i);
@@ -182,7 +179,7 @@ int SH_align_energy::Val(const double *abc, double *val) const {
 int SH_align_energy::Gra(const double *abc, double *gra) const {
   itr_matrix<const double *> ABC(3, dim_/3, abc);
   itr_matrix<double *> G(3, dim_/3, gra);
-  matd_t abcs = zeros<double>(3, 1), g = zeros<double>(3, 1);
+  matd_t g = zeros<double>(3, 1);
   for (size_t i = 0; i < surf_.size(2); ++i) {
     for (size_t j = 0; j < surf_.size(1); ++j) {
       const double idx = surf_(j, i);
@@ -244,7 +241,7 @@ int cross_frame_opt::init(const mati_t &tets, const matd_t &nods) {
   vert_num_ = nods.size(2);
   int success = 0;
   buffer_.push_back(make_shared<SH_smooth_energy>(tets, nods, 1e0));
-  buffer_.push_back(make_shared<SH_align_energy>(tets, nods, 1e4));
+  buffer_.push_back(make_shared<SH_align_energy>(tets, nods, 1e3));
   try {
     energy_ = make_shared<energy_t<double>>(buffer_);
   } catch ( exception &e ) {
@@ -261,8 +258,9 @@ cross_frame_opt* cross_frame_opt::create(const mati_t &tets, const matd_t &nods)
   return handle;
 }
 
-int cross_frame_opt::solve_smooth_sh_coeffs(VectorXd &Fs) const {
+int cross_frame_opt::solve_laplacian(VectorXd &Fs) const {
   const size_t dim = Fs.size();
+  ASSERT(dim == 9*vert_num_);
   cout << "\t@dimension: " << dim << endl;
 
   auto fs = dynamic_pointer_cast<SH_smooth_energy>(buffer_[0]);
@@ -279,14 +277,15 @@ int cross_frame_opt::solve_smooth_sh_coeffs(VectorXd &Fs) const {
     fa->GraSH(Fs.data(), g.data());
     cout << "\t@prev grad norm: " << g.norm() << endl;
   }
+  
   SparseMatrix<double> H(dim, dim); {
     vector<Triplet<double>> trips;
     fs->HesSH(nullptr, &trips);
     fa->HesSH(nullptr, &trips);
     H.setFromTriplets(trips.begin(), trips.end());
   }
-  CholmodSimplicialLDLT<SparseMatrix<double>> solver;
-  //SimplicialCholesky<SparseMatrix<double>> solver;
+  
+  CholmodSimplicialLLT<SparseMatrix<double>> solver;
   solver.compute(H);
   ASSERT(solver.info() == Success);
   VectorXd dx = -solver.solve(g);
@@ -299,7 +298,13 @@ int cross_frame_opt::solve_smooth_sh_coeffs(VectorXd &Fs) const {
     cout << "\t@post energy value: " << post_value << endl;
   }
 
-  cout << "\t@solution norm: " << Fs.norm() << endl;
+  VectorXd gs = VectorXd::Zero(dim); {
+    fs->GraSH(Fs.data(), gs.data());
+    fa->GraSH(Fs.data(), gs.data());
+    cout << "\t@post grad norm: " << gs.norm() << endl;
+  }
+
+  cout << "\t@SOLUTION NORM: " << Fs.norm() << endl;
   return 0;
 }
 
@@ -321,7 +326,7 @@ int cross_frame_opt::solve_initial_frames(const VectorXd &Fs, VectorXd &abc) con
 }
 
 int cross_frame_opt::optimize_frames(VectorXd &abc) const {
-  const double epsf = 1e-8, epsx = 0;
+  const double epsf = 1e-5, epsx = 0;
   const size_t maxits = 1000;
 
   {

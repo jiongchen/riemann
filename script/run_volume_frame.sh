@@ -1,8 +1,8 @@
 #!/bin/bash
 
 EXE=../build/bin/test_vol_frame
-MESH=../dat/cube.tet
-OUT_DIR=../result/volume_frame/cube
+MESH=../dat/tets/ball.v282.tet
+OUT_DIR=../result/volume_frame/ball
 
 if [ ! -d "$OUT_DIR" ]; then
     mkdir -p $OUT_DIR
