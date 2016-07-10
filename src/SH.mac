@@ -24,8 +24,6 @@ SH(l, m, theta, phi) :=
 int_on_unit_sphere(f) := block(
   [int_theta, int_phi],
   assume(notequal(cos(theta), 0)),
-  assume(sin(theta)>0),
-  assume(sin(theta)<1),
   f: trigsimp(trigexpand(f)),
   int_phi: integrate(f, phi, 0, 2*%pi),
   int_theta: integrate(int_phi*sin(theta), theta, 0, %pi)
@@ -63,8 +61,8 @@ rot_sphere_coord_x(alpha, theta, phi) := block(
   R[1, 1]: 1,
   R[2, 2]: cos(alpha),
   R[3, 3]: cos(alpha),
-  R[2, 3]: -sin(alpha),
-  R[3, 2]: sin(alpha),
+  R[2, 3]: sin(alpha),
+  R[3, 2]: -sin(alpha),
   /* display(R), */
   Y: R.X,
   matrix([acos(Y[3, 1])], [atan2(Y[2, 1], Y[1, 1])])
@@ -74,6 +72,7 @@ rot_sh_x(alpha, l) := block(
   [rot_sphere_coord, rtn],
   rtn: zeromatrix(2*l+1, 2*l+1),
   rot_sphere_coord: rot_sphere_coord_x(alpha, theta, phi),
+  display(rot_sphere_coord),
   for i:-l thru l do
     for j:-l thru l do block(
       temp: trigexpand(trigsimp(SH(l, i, rot_sphere_coord[1, 1], rot_sphere_coord[2, 1]))), /*!*/
@@ -86,9 +85,10 @@ rot_sh_x(alpha, l) := block(
   rtn
 )$
 
-RZ4_ALPHA:       rot_sh_z(alpha, 4);
+RZ4_ALPHA:       rot_sh_z(alpha, 4)$
+RX2_POS_HALF_PI: rot_sh_x(%pi/2, 2)$
 RX4_POS_HALF_PI: rot_sh_x(%pi/2, 4);
-RX4_NEG_HALF_PI: rot_sh_x(-%pi/2, 4);
+RX4_NEG_HALF_PI: transpose(RX4_POS_HALF_PI);
 CUB_SYM_H_COEF: transpose(matrix([0, 0, 0, 0, sqrt(7), 0, 0, 0, sqrt(5)]));
 
 /* verify the proof for lemma in [Huang11] */

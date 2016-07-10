@@ -1,0 +1,126 @@
+triginverses : all$
+
+assume(theta >= 0)$
+assume(theta <= %pi)$
+assume(sin(theta) >= 0)$
+
+LP(l, x) := 1/(2^l*l!)*diff((x^2-1)^l, x, l)$
+
+/*call LP*/
+ALP(l, m, x) :=
+	if m >= 0 then
+		(-1)^m*(1-x^2)^(m/2)*diff(LP(l, x), x, m)
+	else
+		(-1)^(-m)*((l+m)!/(l-m)!)*ALP(l, -m, x)$
+
+/*call LP*/
+ALP_cos(l,m,theta) := (-1)^m*(sin(theta))^abs(m)
+	*subst(cos(theta), x, diff(LP(l, x), x, abs(m)))$
+
+N(l, m) := sqrt((2*l+1)/(4*%pi)*((l-m)!/(l+m)!))$
+
+/*call ALP_cos N*/
+Y(l, m, theta,phi) :=
+	if m >= 0 then
+		N(l, m)*exp(%i*m*phi)*ALP_cos(l, m, theta)
+	else
+		(-1)^(-m)*conjugate(Y(l, -m, theta,phi))$
+
+/*call Y*/
+Y_r(l, m, theta, phi) := rectform(
+	if m > 0 then
+		1/sqrt(2)*(Y(l, m, theta, phi)+(-1)^m*Y(l, -m, theta, phi))
+	else
+		if m < 0 then
+			1/(%i*sqrt(2))*(Y(l, -m, theta, phi)-(-1)^m*Y(l, m, theta, phi))
+		else
+			Y(l, 0, theta, phi)
+	)$
+
+/*call ALP_cos N*/
+Y_r2(l, m, theta, phi) :=
+	if m > 0 then
+		sqrt(2)*N(l, m)*cos(m*phi)*ALP_cos(l, m, theta)
+	else
+		if m < 0 then
+			sqrt(2)*N(l, -m)*sin(-m*phi)*ALP_cos(l, -m, theta)
+		else
+			N(l, m)*ALP_cos(l, m, theta)$
+
+Comp_check(l, m) := Y_r(l, m, theta, phi) - Y_r2(l, m, theta, phi)$
+
+/* hard to integrate
+unit_spherical_coordinates_int(f) :=
+	block(
+		[int_theta],
+		int_theta : trigsimp(factor(integrate(trigsimp(trigexpand(f*sin(theta))),  theta, 0, %pi))),
+		print(trigsimp(trigexpand(f*sin(theta)))),
+		print(int_theta),
+		'integrate(trigsimp(factor(int_theta)), phi, 0, 2*%pi)
+	)$
+*/
+
+unit_spherical_coordinates_int(f) :=
+	block(
+		[int_phi, int_theta],
+		assume(notequal(cos(theta), 0)),
+/*		int_phi : radcan(trigsimp(factor(trigsimp(trigexpand(f))))),*/
+		int_phi : trigsimp(trigexpand(f)),
+/*		print(int_phi),*/
+		int_phi : integrate(int_phi,  phi, 0, 2*%pi),
+/*		print(int_phi),*/
+		ratsimp(trigreduce(radcan(integrate(int_phi*sin(theta), theta, 0, %pi))))
+	)$
+
+
+spherical2Cartesian(r, theta, phi) := r*matrix([sin(theta)*cos(phi)], [sin(theta)*sin(phi)], [cos(theta)])$
+spherical2Cartesian_v(s) := spherical2Cartesian(s[1, 1], s[2, 1], s[3, 1])$
+
+Cartesian2spherical(x, y, z) := subst(
+	[atan2(sin(phi)*sin(theta), cos(phi)*sin(theta))=phi],
+	matrix([sqrt(x^2+y^2+z^2)], [acos(z/sqrt(x^2+y^2+z^2))], [atan2(y, x)]))$
+Cartesian2spherical_v(c) := Cartesian2spherical(c[1, 1], c[2, 1], c[3, 1])$
+
+Cartesian2spherical_check(x,y,z) := block(
+	[c],
+	c : matrix([x], [y], [z]),
+	[radcan(spherical2Cartesian_v(Cartesian2spherical_v(c)) - c), trigreduce(trigsimp(Cartesian2spherical_v(spherical2Cartesian_v(c)) - c))]
+)$
+
+rot_SH(R3x3, F, l, m, theta, phi) :=
+	block(
+		[s],
+		s : transpose([1, theta, phi]),
+		s : trigsimp(Cartesian2spherical_v(R3x3.spherical2Cartesian_v(s))),
+		RF : trigexpand(trigsimp(F(l, m, s[2, 1], s[3,1])))
+	)$
+
+rot_SH_r_coef_ij(R3x3, l, i, j) :=
+	block(
+		[f],
+		f : rot_SH(R3x3, Y_r2, l, i, theta, phi)*Y_r2(l, j, theta, phi),
+		f : subst([(cos(phi)^2*sin(theta)^2+cos(theta)^2)=1-sin(phi)^2*sin(theta)^2], f),
+		ratsimp(unit_spherical_coordinates_int(f))
+	)$
+
+rot_SH_r_coef(R3x3, l) :=
+	block(
+		[i, j, M],
+		M : zeromatrix(2*l+1, 2*l+1),
+		for i:-l thru l do
+			for j:-l thru l do
+				block(
+					print [i, j],
+					M[l+i+1, l+j+1] : rot_SH_r_coef_ij(R3x3, l, i, j)
+				),
+		M
+	)$
+
+/* +%pi/2 */
+Rx:matrix([1, 0, 0], [0, 0, 1], [0, -1, 0])$
+
+Rx4 : rot_SH_r_coef(Rx, 4);
+
+Rz:matrix([cos(alpha), -sin(alpha), 0], [sin(alpha), cos(alpha), 0], [ 0, 0, 1])$
+
+Rz4_alpha : rot_SH_r_coef(Rz, 4);
