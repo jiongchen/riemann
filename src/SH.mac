@@ -120,11 +120,17 @@ block(
   vol: genmatrix(vol, 1, 1),
   cubic_sym_smooth(ABC, CR, vol) := block(
     [coef, rtn],
+    /* coef: addcol( */
+    /*   rot_sh_z(ABC[3, 1], 4).RX4_NEG_HALF_PI.rot_sh_z(ABC[2, 1], 4).RX4_POS_HALF_PI.rot_sh_z(ABC[1, 1], 4).CUB_SYM_H_COEF, */
+    /*   rot_sh_z(ABC[3, 2], 4).RX4_NEG_HALF_PI.rot_sh_z(ABC[2, 2], 4).RX4_POS_HALF_PI.rot_sh_z(ABC[1, 2], 4).CUB_SYM_H_COEF, */
+    /*   rot_sh_z(ABC[3, 3], 4).RX4_NEG_HALF_PI.rot_sh_z(ABC[2, 3], 4).RX4_POS_HALF_PI.rot_sh_z(ABC[1, 3], 4).CUB_SYM_H_COEF, */
+    /*   rot_sh_z(ABC[3, 4], 4).RX4_NEG_HALF_PI.rot_sh_z(ABC[2, 4], 4).RX4_POS_HALF_PI.rot_sh_z(ABC[1, 4], 4).CUB_SYM_H_COEF */
+    /* ), */
     coef: addcol(
-      rot_sh_z(ABC[3, 1], 4).RX4_NEG_HALF_PI.rot_sh_z(ABC[2, 1], 4).RX4_POS_HALF_PI.rot_sh_z(ABC[1, 1], 4).CUB_SYM_H_COEF,
-      rot_sh_z(ABC[3, 2], 4).RX4_NEG_HALF_PI.rot_sh_z(ABC[2, 2], 4).RX4_POS_HALF_PI.rot_sh_z(ABC[1, 2], 4).CUB_SYM_H_COEF,
-      rot_sh_z(ABC[3, 3], 4).RX4_NEG_HALF_PI.rot_sh_z(ABC[2, 3], 4).RX4_POS_HALF_PI.rot_sh_z(ABC[1, 3], 4).CUB_SYM_H_COEF,
-      rot_sh_z(ABC[3, 4], 4).RX4_NEG_HALF_PI.rot_sh_z(ABC[2, 4], 4).RX4_POS_HALF_PI.rot_sh_z(ABC[1, 4], 4).CUB_SYM_H_COEF
+      zyz2sh(col(ABC, 1)),
+      zyz2sh(col(ABC, 2)),
+      zyz2sh(col(ABC, 3)),
+      zyz2sh(col(ABC, 4))
     ),
     rtn: 0,
     for i:1 thru 9 do
@@ -158,7 +164,8 @@ block(
   area: genmatrix(area, 1, 1),
   cubic_sym_align(ABC, Rnz, area) := block(
     [coef],
-    coef: rot_sh_z(ABC[3, 1], 4).RX4_NEG_HALF_PI.rot_sh_z(ABC[2, 1], 4).RX4_POS_HALF_PI.rot_sh_z(ABC[1, 1], 4).CUB_SYM_H_COEF,
+    /* coef: rot_sh_z(ABC[3, 1], 4).RX4_NEG_HALF_PI.rot_sh_z(ABC[2, 1], 4).RX4_POS_HALF_PI.rot_sh_z(ABC[1, 1], 4).CUB_SYM_H_COEF, */
+    coef: zyz2sh(ABC),
     coef: rot_sh_z(Rnz[3, 1], 4).RX4_NEG_HALF_PI.rot_sh_z(Rnz[2, 1], 4).RX4_POS_HALF_PI.rot_sh_z(Rnz[1, 1], 4).coef,
     area*(coef[5, 1]-sqrt(7))^2
   ),
@@ -186,7 +193,8 @@ block(
   f0:  genmatrix(f0, 9, 1),
   sh_residual(ABC, f0) := block(
     [coef],
-    coef: rot_sh_z(ABC[3, 1], 4).RX4_NEG_HALF_PI.rot_sh_z(ABC[2, 1], 4).RX4_POS_HALF_PI.rot_sh_z(ABC[1, 1], 4).CUB_SYM_H_COEF,
+    /* coef: rot_sh_z(ABC[3, 1], 4).RX4_NEG_HALF_PI.rot_sh_z(ABC[2, 1], 4).RX4_POS_HALF_PI.rot_sh_z(ABC[1, 1], 4).CUB_SYM_H_COEF, */
+    coef: zyz2sh(ABC),
     matrix([NORM(f0-coef)^2])
   ),
   with_stdout(f, val_jac_hes_to_f90(sh_residual, [ABC, f0])),
