@@ -87,8 +87,27 @@ extern "C" {
   void cubic_sym_align_(double *val, const double *, const double *, const double *area);
 }
 
+static void alignment_test() {
+  Vector3d zyz = Vector3d::Random();
+  Matrix3d frm = RZ(zyz[2])*RX(-M_PI/2)*RZ(zyz[1])*RX(M_PI/2)*RZ(zyz[0]);
+  Vector3d axis = frm.col(2);
+  Vector3d nzyz = Vector3d(-atan2(axis[1], axis[0]), -acos(axis[2]), 0);
+  double value = 0, area = 1;
+  
+  cubic_sym_align_(&value, zyz.data(), nzyz.data(), &area);
+  cout << value << endl << endl;
+
+  zyz = Vector3d::Ones()*M_PI; //setZero();
+  VectorXd sh(9);
+  zyz_to_sh(zyz.data(), sh.data());
+  cout << sh << endl;
+}
+
 int main(int argc, char *argv[])
 {
+  alignment_test();
+  return __LINE__;
+  
   po::options_description desc("Available options"); {
     desc.add_options()
         ("help,h", "produce help message")

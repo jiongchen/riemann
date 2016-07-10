@@ -86,10 +86,10 @@ rot_sh_x(alpha, l) := block(
   rtn
 )$
 
-RZ4_ALPHA:       rot_sh_z(alpha, 4)$
-RX4_POS_HALF_PI: rot_sh_x(%pi/2, 4)$
-RX4_NEG_HALF_PI: rot_sh_x(-%pi/2, 4)$
-CUB_SYM_H_COEF: transpose(matrix([0, 0, 0, 0, sqrt(7), 0, 0, 0, sqrt(5)]))$
+RZ4_ALPHA:       rot_sh_z(alpha, 4);
+RX4_POS_HALF_PI: rot_sh_x(%pi/2, 4);
+RX4_NEG_HALF_PI: rot_sh_x(-%pi/2, 4);
+CUB_SYM_H_COEF: transpose(matrix([0, 0, 0, 0, sqrt(7), 0, 0, 0, sqrt(5)]));
 
 /* verify the proof for lemma in [Huang11] */
 /* A: rot_sh_z(gamma, 4).RX4_NEG_HALF_PI.rot_sh_z(beta, 4).RX4_POS_HALF_PI.rot_sh_z(alpha, 4).CUB_SYM_H_COEF$ */
@@ -120,12 +120,6 @@ block(
   vol: genmatrix(vol, 1, 1),
   cubic_sym_smooth(ABC, CR, vol) := block(
     [coef, rtn],
-    /* coef: addcol( */
-    /*   rot_sh_z(ABC[3, 1], 4).RX4_NEG_HALF_PI.rot_sh_z(ABC[2, 1], 4).RX4_POS_HALF_PI.rot_sh_z(ABC[1, 1], 4).CUB_SYM_H_COEF, */
-    /*   rot_sh_z(ABC[3, 2], 4).RX4_NEG_HALF_PI.rot_sh_z(ABC[2, 2], 4).RX4_POS_HALF_PI.rot_sh_z(ABC[1, 2], 4).CUB_SYM_H_COEF, */
-    /*   rot_sh_z(ABC[3, 3], 4).RX4_NEG_HALF_PI.rot_sh_z(ABC[2, 3], 4).RX4_POS_HALF_PI.rot_sh_z(ABC[1, 3], 4).CUB_SYM_H_COEF, */
-    /*   rot_sh_z(ABC[3, 4], 4).RX4_NEG_HALF_PI.rot_sh_z(ABC[2, 4], 4).RX4_POS_HALF_PI.rot_sh_z(ABC[1, 4], 4).CUB_SYM_H_COEF */
-    /* ), */
     coef: addcol(
       zyz2sh(col(ABC, 1)),
       zyz2sh(col(ABC, 2)),
@@ -164,7 +158,6 @@ block(
   area: genmatrix(area, 1, 1),
   cubic_sym_align(ABC, Rnz, area) := block(
     [coef],
-    /* coef: rot_sh_z(ABC[3, 1], 4).RX4_NEG_HALF_PI.rot_sh_z(ABC[2, 1], 4).RX4_POS_HALF_PI.rot_sh_z(ABC[1, 1], 4).CUB_SYM_H_COEF, */
     coef: zyz2sh(ABC),
     coef: rot_sh_z(Rnz[3, 1], 4).RX4_NEG_HALF_PI.rot_sh_z(Rnz[2, 1], 4).RX4_POS_HALF_PI.rot_sh_z(Rnz[1, 1], 4).coef,
     area*(coef[5, 1]-sqrt(7))^2
@@ -193,7 +186,6 @@ block(
   f0:  genmatrix(f0, 9, 1),
   sh_residual(ABC, f0) := block(
     [coef],
-    /* coef: rot_sh_z(ABC[3, 1], 4).RX4_NEG_HALF_PI.rot_sh_z(ABC[2, 1], 4).RX4_POS_HALF_PI.rot_sh_z(ABC[1, 1], 4).CUB_SYM_H_COEF, */
     coef: zyz2sh(ABC),
     matrix([NORM(f0-coef)^2])
   ),
