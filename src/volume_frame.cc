@@ -39,6 +39,48 @@ extern "C" {
 }
 
 //===============================================================================
+
+class SH_smooth_energy : public Functional<double>
+{
+public:
+  SH_smooth_energy(const mati_t &tets, const matd_t &nods, const double w);
+  size_t Nx() const;
+  int Val(const double *abc, double *val) const;
+  int Gra(const double *abc, double *gra) const;
+  int Hes(const double *abc, std::vector<Eigen::Triplet<double>> *hes) const { return __LINE__; }
+  int ValSH(const double *f, double *val) const;
+  int GraSH(const double *f, double *gra) const;
+  int HesSH(const double *f, std::vector<Eigen::Triplet<double>> *hes) const;
+private:
+  double w_;
+  const size_t dim_;
+  const mati_t &tets_;
+  matd_t basis_;
+  matd_t vol_;
+};
+
+class SH_align_energy : public Functional<double>
+{
+public:
+  SH_align_energy(const mati_t &tets, const matd_t &nods, const double w);
+  size_t Nx() const;
+  int Val(const double *abc, double *val) const;
+  int Gra(const double *abc, double *gra) const;
+  int Hes(const double *abc, std::vector<Eigen::Triplet<double>> *hes) const { return __LINE__; }
+  int ValSH(const double *f, double *val) const;
+  int GraSH(const double *f, double *gra) const;
+  int HesSH(const double *f, std::vector<Eigen::Triplet<double>> *hes) const;
+private:
+  double w_;
+  const size_t dim_;
+  const mati_t &tets_;
+  mati_t surf_;
+  matd_t zyz_;
+  matd_t area_;
+};
+
+//===============================================================================
+
 SH_smooth_energy::SH_smooth_energy(const mati_t &tets, const matd_t &nods, const double w)
     : tets_(tets), w_(w), dim_(3*nods.size(2)) {
   vol_ = zeros<double>(1, tets_.size(2)); {
@@ -237,11 +279,12 @@ int SH_align_energy::HesSH(const double *f, vector<Triplet<double>> *hes) const 
   return 0;
 }
 //===============================================================================
-int cross_frame_opt::init(const mati_t &tets, const matd_t &nods) {
+int cross_frame_opt::init(const mati_t &tets, const matd_t &nods, const cross_frame_args &args) {
   vert_num_ = nods.size(2);
+  args_ = args;
   int success = 0;
-  buffer_.push_back(make_shared<SH_smooth_energy>(tets, nods, 0.01));
-  buffer_.push_back(make_shared<SH_align_energy>(tets, nods, 2e3));
+  buffer_.push_back(make_shared<SH_smooth_energy>(tets, nods, args_.ws));
+  buffer_.push_back(make_shared<SH_align_energy>(tets, nods, args_.wa));
   try {
     energy_ = make_shared<energy_t<double>>(buffer_);
   } catch ( exception &e ) {
@@ -251,9 +294,9 @@ int cross_frame_opt::init(const mati_t &tets, const matd_t &nods) {
   return success;
 }
 
-cross_frame_opt* cross_frame_opt::create(const mati_t &tets, const matd_t &nods) {
+cross_frame_opt* cross_frame_opt::create(const mati_t &tets, const matd_t &nods, const cross_frame_args &args) {
   cross_frame_opt *handle = new cross_frame_opt;
-  if ( handle->init(tets, nods) )
+  if ( handle->init(tets, nods, args) )
     return nullptr;
   return handle;
 }
@@ -328,8 +371,8 @@ int cross_frame_opt::solve_initial_frames(const VectorXd &Fs, VectorXd &abc) con
 }
 
 int cross_frame_opt::optimize_frames(VectorXd &abc) const {
-  const double epsf = 1e-5, epsx = 0;
-  const size_t maxits = 1000;
+  const double epsf = args_.epsf, epsx = 0;
+  const size_t maxits = args_.maxits;
 
   {
     double vs = 0, va = 0;

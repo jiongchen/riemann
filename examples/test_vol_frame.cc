@@ -23,12 +23,12 @@ public:
     return 2;
   }
   int Val(const double *x, double *val) const {
-    *val += 100*pow(x[0]+3,4) + pow(x[1]-3,4);
+    *val += 100*pow(x[0]+3, 4)+pow(x[1]-3, 4);
     return 0;
   }
   int Gra(const double *x, double *gra) const {
-    gra[0] += 400*pow(x[0]+3,3);
-    gra[1] += 4*pow(x[1]-3,3);
+    gra[0] += 400*pow(x[0]+3, 3);
+    gra[1] += 4*pow(x[1]-3, 3);
     return 0;
   }
   int Hes(const double *x, vector<Triplet<double>> *hes) const {
@@ -36,8 +36,8 @@ public:
   }
 };
 
-static int simple_test_on_lbfgs()
-{
+static void test_lbfgs_opt() {
+  cout << "---------------TEST CASE----------------" << endl;
   shared_ptr<Functional<double>> F = make_shared<test_func>();
   double x[2] = {0};
   
@@ -45,8 +45,39 @@ static int simple_test_on_lbfgs()
   const size_t maxits = 0;
   lbfgs_solve(F, x, 2, epsf, epsx, maxits);
 
-  cout << x[0] << " " << x[1] << endl;
-  return 0;
+  cout << x[0] << " " << x[1] << endl << endl;
+}
+
+extern "C" {
+  void cubic_sym_align_(double *val, const double *, const double *, const double *area);
+}
+
+static void test_alignment_energy() {
+  cout << "---------------TEST CASE----------------" << endl;
+  srand(time(NULL));
+  Vector3d zyz = Vector3d::Random();
+  Matrix3d frm = RZ(zyz[2])*RX(-M_PI/2)*RZ(zyz[1])*RX(M_PI/2)*RZ(zyz[0]);
+  Vector3d axis = frm.col(2);
+  Vector3d nzyz = Vector3d(-atan2(axis[1], axis[0]), -acos(axis[2]), 0);
+
+  double value = 0, area = 1;
+  cubic_sym_align_(&value, zyz.data(), nzyz.data(), &area);
+  cout << value << endl << endl;
+}
+
+static void test_sh_to_zyz() {
+  cout << "---------------TEST CASE----------------" << endl;
+  srand(time(NULL));
+  
+  Vector3d zyz = Vector3d::Random();
+  cout << "orig zyz: " << zyz.transpose() << endl;
+
+  Matrix<double, 9, 1> sh;
+  zyz_to_sh(zyz.data(), sh.data());
+  cout << "SH coeffs: " << sh.transpose() << endl;
+
+  sh_to_zyz(sh.data(), zyz.data(), 10);
+  cout << "recover zyz: " << zyz.transpose() << endl << endl;
 }
 
 static int write_tet_zyz(const char *filename, const MatrixXd &tet_zyz) {
@@ -69,46 +100,22 @@ static int zyz_vert_to_tet(const mati_t &tets, const VectorXd &abc, MatrixXd& zy
   return 0;
 }
 
-static void zyz_sh_convert_test() {
-  srand(time(NULL));
-  
-  Vector3d zyz = Vector3d::Random();
-  cout << "orig zyz: " << zyz.transpose() << endl;
-
-  Matrix<double, 9, 1> sh;
-  zyz_to_sh(zyz.data(), sh.data());
-  cout << "SH coeffs: " << sh.transpose() << endl;
-
-  sh_to_zyz(sh.data(), zyz.data(), 10);
-  cout << "recover zyz: " << zyz.transpose() << endl;
-}
-
-extern "C" {
-  void cubic_sym_align_(double *val, const double *, const double *, const double *area);
-}
-
-static void alignment_test() {
-  Vector3d zyz = Vector3d::Random();
-  Matrix3d frm = RZ(zyz[2])*RX(-M_PI/2)*RZ(zyz[1])*RX(M_PI/2)*RZ(zyz[0]);
-  Vector3d axis = frm.col(2);
-  Vector3d nzyz = Vector3d(-atan2(axis[1], axis[0]), -acos(axis[2]), 0);
-  double value = 0, area = 1;
-  
-  cubic_sym_align_(&value, zyz.data(), nzyz.data(), &area);
-  cout << value << endl << endl;
-
-  zyz = Vector3d::Ones()*M_PI; //setZero();
-  VectorXd sh(9);
-  zyz_to_sh(zyz.data(), sh.data());
-  cout << sh << endl;
-}
-
 int main(int argc, char *argv[])
 {
+#if 0
+  test_lbfgs_opt();
+  test_alignment_energy();
+  test_sh_to_zyz();
+  return __LINE__;
+#endif
   po::options_description desc("Available options"); {
     desc.add_options()
         ("help,h", "produce help message")
-        ("mesh,i", po::value<string>(), "input mesh")
+        ("mesh,i",          po::value<string>(), "input mesh")
+        ("ws",              po::value<double>(), "smoothness weight")
+        ("wa",              po::value<double>(), "alignment weight")
+        ("epsf",            po::value<double>(), "tolerance of energy convergence")
+        ("maxits",          po::value<size_t>(), "maximum iter for LBFGS")
         ("output_folder,o", po::value<string>(), "output folder")
         ;
   }
@@ -121,14 +128,20 @@ int main(int argc, char *argv[])
   }
 
   mati_t tets; matd_t nods;
-  jtf::mesh::tet_mesh_read_from_zjumat(vm["mesh"].as<string>().c_str(), &nods, &tets);
+  jtf::mesh::tet_mesh_read_from_zjumat(vm["mesh"].as<string>().c_str(), &nods, &tets); {    
+    string out = vm["output_folder"].as<string>()+string("/tet.vtk");
+    ofstream ofs(out);
+    tet2vtk(ofs, &nods[0], nods.size(2), &tets[0], tets.size(2));
+    ofs.close();
+  }
 
-  string tet_out = vm["output_folder"].as<string>()+string("/tet.vtk");
-  ofstream ofs(tet_out);
-  tet2vtk(ofs, &nods[0], nods.size(2), &tets[0], tets.size(2));
-  ofs.close();
-
-  shared_ptr<cross_frame_opt> frame_opt(cross_frame_opt::create(tets, nods));
+  cross_frame_args args; {
+    args.ws = vm["ws"].as<double>();
+    args.wa = vm["wa"].as<double>();
+    args.epsf = vm["epsf"].as<double>();
+    args.maxits = vm["maxits"].as<size_t>();
+  }
+  shared_ptr<cross_frame_opt> frame_opt(cross_frame_opt::create(tets, nods, args));
 
   cout << "[INFO] solve Laplacian\n";
   VectorXd Fs = VectorXd::Zero(9*nods.size(2));

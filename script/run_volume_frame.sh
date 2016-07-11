@@ -1,14 +1,18 @@
 #!/bin/bash
 
 EXE=../build/bin/test_vol_frame
-MESH=../dat/tets/ball.v282.tet
-OUT_DIR=../result/volume_frame/ball
+MESH=../dat/tets/cylinder.v285.tet
+OUT_DIR=../result/volume_frame/cylinder
+WS=1e0
+WA=1e3
+EPS=1e-5
+MAXITS=1000
 
 if [ ! -d "$OUT_DIR" ]; then
     mkdir -p $OUT_DIR
 fi
 
-$EXE -i $MESH -o $OUT_DIR | tee LOG.txt
+$EXE -i $MESH -o $OUT_DIR --ws=$WS --wa=$WA --epsf=$EPS --maxits=$MAXITS | tee LOG.txt
 
 
 # # === Visualize sigularity of frame field === #
