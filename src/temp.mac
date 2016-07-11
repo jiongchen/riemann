@@ -20,24 +20,6 @@ ALP_cos(l,m,theta) := (-1)^m*(sin(theta))^abs(m)
 N(l, m) := sqrt((2*l+1)/(4*%pi)*((l-m)!/(l+m)!))$
 
 /*call ALP_cos N*/
-Y(l, m, theta,phi) :=
-	if m >= 0 then
-		N(l, m)*exp(%i*m*phi)*ALP_cos(l, m, theta)
-	else
-		(-1)^(-m)*conjugate(Y(l, -m, theta,phi))$
-
-/*call Y*/
-Y_r(l, m, theta, phi) := rectform(
-	if m > 0 then
-		1/sqrt(2)*(Y(l, m, theta, phi)+(-1)^m*Y(l, -m, theta, phi))
-	else
-		if m < 0 then
-			1/(%i*sqrt(2))*(Y(l, -m, theta, phi)-(-1)^m*Y(l, m, theta, phi))
-		else
-			Y(l, 0, theta, phi)
-	)$
-
-/*call ALP_cos N*/
 Y_r2(l, m, theta, phi) :=
 	if m > 0 then
 		sqrt(2)*N(l, m)*cos(m*phi)*ALP_cos(l, m, theta)
@@ -47,28 +29,12 @@ Y_r2(l, m, theta, phi) :=
 		else
 			N(l, m)*ALP_cos(l, m, theta)$
 
-Comp_check(l, m) := Y_r(l, m, theta, phi) - Y_r2(l, m, theta, phi)$
-
-/* hard to integrate
-unit_spherical_coordinates_int(f) :=
-	block(
-		[int_theta],
-		int_theta : trigsimp(factor(integrate(trigsimp(trigexpand(f*sin(theta))),  theta, 0, %pi))),
-		print(trigsimp(trigexpand(f*sin(theta)))),
-		print(int_theta),
-		'integrate(trigsimp(factor(int_theta)), phi, 0, 2*%pi)
-	)$
-*/
-
 unit_spherical_coordinates_int(f) :=
 	block(
 		[int_phi, int_theta],
 		assume(notequal(cos(theta), 0)),
-/*		int_phi : radcan(trigsimp(factor(trigsimp(trigexpand(f))))),*/
 		int_phi : trigsimp(trigexpand(f)),
-/*		print(int_phi),*/
 		int_phi : integrate(int_phi,  phi, 0, 2*%pi),
-/*		print(int_phi),*/
 		ratsimp(trigreduce(radcan(integrate(int_phi*sin(theta), theta, 0, %pi))))
 	)$
 
@@ -81,19 +47,17 @@ Cartesian2spherical(x, y, z) := subst(
 	matrix([sqrt(x^2+y^2+z^2)], [acos(z/sqrt(x^2+y^2+z^2))], [atan2(y, x)]))$
 Cartesian2spherical_v(c) := Cartesian2spherical(c[1, 1], c[2, 1], c[3, 1])$
 
-Cartesian2spherical_check(x,y,z) := block(
-	[c],
-	c : matrix([x], [y], [z]),
-	[radcan(spherical2Cartesian_v(Cartesian2spherical_v(c)) - c), trigreduce(trigsimp(Cartesian2spherical_v(spherical2Cartesian_v(c)) - c))]
-)$
-
 rot_SH(R3x3, F, l, m, theta, phi) :=
 	block(
 		[s],
 		s : transpose([1, theta, phi]),
 		s : trigsimp(Cartesian2spherical_v(R3x3.spherical2Cartesian_v(s))),
-		RF : trigexpand(trigsimp(F(l, m, s[2, 1], s[3,1])))
+		RF : trigexpand(trigsimp(F(l, m, s[2, 1], s[3,1]))),
+                RF
 	)$
+
+/* +%pi/2 */
+Rx:matrix([1, 0, 0], [0, 0, 1], [0, -1, 0])$
 
 rot_SH_r_coef_ij(R3x3, l, i, j) :=
 	block(
@@ -116,11 +80,8 @@ rot_SH_r_coef(R3x3, l) :=
 		M
 	)$
 
-/* +%pi/2 */
-Rx:matrix([1, 0, 0], [0, 0, 1], [0, -1, 0])$
-
 Rx4 : rot_SH_r_coef(Rx, 4);
 
-Rz:matrix([cos(alpha), -sin(alpha), 0], [sin(alpha), cos(alpha), 0], [ 0, 0, 1])$
+/* Rz:matrix([cos(alpha), -sin(alpha), 0], [sin(alpha), cos(alpha), 0], [ 0, 0, 1])$ */
 
-Rz4_alpha : rot_SH_r_coef(Rz, 4);
+/* Rz4_alpha : rot_SH_r_coef(Rz, 4); */
