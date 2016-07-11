@@ -241,7 +241,7 @@ int cross_frame_opt::init(const mati_t &tets, const matd_t &nods) {
   vert_num_ = nods.size(2);
   int success = 0;
   buffer_.push_back(make_shared<SH_smooth_energy>(tets, nods, 0.01));
-  buffer_.push_back(make_shared<SH_align_energy>(tets, nods, 1e3));
+  buffer_.push_back(make_shared<SH_align_energy>(tets, nods, 2e3));
   try {
     energy_ = make_shared<energy_t<double>>(buffer_);
   } catch ( exception &e ) {

@@ -105,9 +105,6 @@ static void alignment_test() {
 
 int main(int argc, char *argv[])
 {
-  alignment_test();
-  return __LINE__;
-  
   po::options_description desc("Available options"); {
     desc.add_options()
         ("help,h", "produce help message")
