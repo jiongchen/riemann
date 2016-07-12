@@ -131,6 +131,7 @@ int main(int argc, char *argv[])
     desc.add_options()
         ("help,h", "produce help message")
         ("mesh,i",          po::value<string>(), "input mesh")
+        ("type,t",          po::value<string>(), "mesh file type")
         ("ws",              po::value<double>(), "smoothness weight")
         ("wa",              po::value<double>(), "alignment weight")
         ("epsf",            po::value<double>(), "tolerance of energy convergence")
@@ -147,7 +148,16 @@ int main(int argc, char *argv[])
   }
 
   mati_t tets; matd_t nods;
-  jtf::mesh::tet_mesh_read_from_zjumat(vm["mesh"].as<string>().c_str(), &nods, &tets); {    
+  if ( vm["type"].as<string>() == "zjumat" ) {
+    jtf::mesh::tet_mesh_read_from_zjumat(vm["mesh"].as<string>().c_str(), &nods, &tets);
+  } else if ( vm["type"].as<string>() == "vtk" ) {
+    jtf::mesh::tet_mesh_read_from_vtk(vm["mesh"].as<string>().c_str(), &nods, &tets);
+  } else {
+    cerr << "[Info] unsupported mesh file format\n";
+    return __LINE__;
+  }
+  
+  {    
     string out = vm["output_folder"].as<string>()+string("/tet.vtk");
     ofstream ofs(out);
     tet2vtk(ofs, &nods[0], nods.size(2), &tets[0], tets.size(2));

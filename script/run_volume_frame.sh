@@ -2,8 +2,8 @@
 
 echo -e "# ================================== Run cross frame fild ========================================= #"
 EXE=../build/bin/test_vol_frame
-MESH=../dat/tets/cylinder.v285.tet
-OUT_DIR=../result/volume_frame/cylinder
+MESH=../dat/tets/fandisk.c58k.tet.vtk
+OUT_DIR=../result/volume_frame/fandisk
 WS=1e0
 WA=1e3
 EPS=1e-5
@@ -13,7 +13,7 @@ if [ ! -d "$OUT_DIR" ]; then
     mkdir -p $OUT_DIR
 fi
 
-$EXE -i $MESH -o $OUT_DIR --ws=$WS --wa=$WA --epsf=$EPS --maxits=$MAXITS | tee LOG.txt
+$EXE -i $MESH -t vtk -o $OUT_DIR --ws=$WS --wa=$WA --epsf=$EPS --maxits=$MAXITS | tee LOG.txt
 
 
 echo -e "# ============================== Visualize sigularity of frame field ============================== #"
