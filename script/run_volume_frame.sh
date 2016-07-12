@@ -1,5 +1,6 @@
 #!/bin/bash
 
+echo -e "# ================================== Run cross frame fild ========================================= #"
 EXE=../build/bin/test_vol_frame
 MESH=../dat/tets/cylinder.v285.tet
 OUT_DIR=../result/volume_frame/cylinder
@@ -15,12 +16,14 @@ fi
 $EXE -i $MESH -o $OUT_DIR --ws=$WS --wa=$WA --epsf=$EPS --maxits=$MAXITS | tee LOG.txt
 
 
-# # === Visualize sigularity of frame field === #
-# cd ../bin
+echo -e "# ============================== Visualize sigularity of frame field ============================== #"
+cd ../bin
 
-# FF_EXE=./frame_field
-# MESH_FILE=$OUT_DIR/tet.vtk
-# ZYZ_FILE=$OUT_DIR/zyz.txt
-# SING_FILE=$OUT_DIR/sing.vtk
+FF_EXE=./frame_field
+MESH_FILE=$OUT_DIR/tet.vtk
+ZYZ_FILE=$OUT_DIR/zyz.txt
+SING_FILE=$OUT_DIR/sing.vtk
 
-# $FF_EXE prog=draw_3d_frame_sing tet=$MESH_FILE zyz=$ZYZ_FILE out=$SING_FILE
+$FF_EXE prog=draw_3d_frame_sing tet=$MESH_FILE zyz=$ZYZ_FILE out=$SING_FILE
+
+echo -e "# ================================================================================================= #"

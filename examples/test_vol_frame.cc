@@ -16,6 +16,10 @@ using namespace riemann;
 using namespace Eigen;
 namespace po=boost::program_options;
 
+extern "C" {
+  void cubic_sym_align_(double*, const double*, const double*, const double*);
+}
+
 class test_func : public Functional<double>
 {
 public:
@@ -48,21 +52,20 @@ static void test_lbfgs_opt() {
   cout << x[0] << " " << x[1] << endl << endl;
 }
 
-extern "C" {
-  void cubic_sym_align_(double *val, const double *, const double *, const double *area);
-}
-
 static void test_alignment_energy() {
   cout << "---------------TEST CASE----------------" << endl;
   srand(time(NULL));
   Vector3d zyz = Vector3d::Random();
   Matrix3d frm = RZ(zyz[2])*RX(-M_PI/2)*RZ(zyz[1])*RX(M_PI/2)*RZ(zyz[0]);
-  Vector3d axis = frm.col(2);
-  Vector3d nzyz = Vector3d(-atan2(axis[1], axis[0]), -acos(axis[2]), 0);
 
-  double value = 0, area = 1;
-  cubic_sym_align_(&value, zyz.data(), nzyz.data(), &area);
-  cout << value << endl << endl;
+  for (size_t j = 0; j < 3; ++j) {
+    Vector3d axis = frm.col(j);
+    Vector3d nzyz = Vector3d(-atan2(axis[1], axis[0]), -acos(axis[2]), 0);
+    double value = 0, area = 1;
+    cubic_sym_align_(&value, zyz.data(), nzyz.data(), &area);
+    cout << "aixs " << j << ": " << value << endl;
+  }
+  cout << endl;
 }
 
 static void test_sh_to_zyz() {
@@ -72,12 +75,21 @@ static void test_sh_to_zyz() {
   Vector3d zyz = Vector3d::Random();
   cout << "orig zyz: " << zyz.transpose() << endl;
 
-  Matrix<double, 9, 1> sh;
+  Matrix<double, 9, 1> sh = Matrix<double, 9, 1>::Zero();
   zyz_to_sh(zyz.data(), sh.data());
   cout << "SH coeffs: " << sh.transpose() << endl;
-
-  sh_to_zyz(sh.data(), zyz.data(), 10);
-  cout << "recover zyz: " << zyz.transpose() << endl << endl;
+  double res = 0;
+  sh_residual_(&res, zyz.data(), sh.data());
+  cout << "residual: " << res << endl;
+  
+  zyz.setZero();
+  sh_to_zyz(sh.data(), zyz.data(), 1000);
+  cout << "recover zyz: " << zyz.transpose() << endl;
+  res = 0;
+  sh_residual_(&res, zyz.data(), sh.data());
+  cout << "reconstructed residual: " << res << endl;
+  zyz_to_sh(zyz.data(), sh.data());
+  cout << "SH coeffs: " << sh.transpose() << endl << endl;
 }
 
 static int write_tet_zyz(const char *filename, const MatrixXd &tet_zyz) {
@@ -93,9 +105,16 @@ static int write_tet_zyz(const char *filename, const MatrixXd &tet_zyz) {
 }
 
 static int zyz_vert_to_tet(const mati_t &tets, const VectorXd &abc, MatrixXd& zyz) {
-  Map<const MatrixXd> ABC(abc.data(), 3, abc.size()/3);
+  zyz.setZero(3, tets.size(2));
+
+  MatrixXd vert_sh(9, abc.size()/3);
+  for (size_t i = 0; i < vert_sh.cols(); ++i) {
+    zyz_to_sh(&abc[3*i], &vert_sh(0, i));
+  }
   for (size_t i = 0; i < tets.size(2); ++i) {
-    zyz.col(i) = (ABC.col(tets(0, i))+ABC.col(tets(1, i))+ABC.col(tets(2, i))+ABC.col(tets(3, i)))/4.0;
+    VectorXd tsh = (vert_sh.col(tets(0, i))+vert_sh.col(tets(1, i))
+                   +vert_sh.col(tets(2, i))+vert_sh.col(tets(3, i)))/4.0;
+    sh_to_zyz(tsh.data(), &zyz(0, i), 1000);
   }
   return 0;
 }
@@ -136,9 +155,9 @@ int main(int argc, char *argv[])
   }
 
   cross_frame_args args; {
-    args.ws = vm["ws"].as<double>();
-    args.wa = vm["wa"].as<double>();
-    args.epsf = vm["epsf"].as<double>();
+    args.ws =     vm["ws"].as<double>();
+    args.wa =     vm["wa"].as<double>();
+    args.epsf =   vm["epsf"].as<double>();
     args.maxits = vm["maxits"].as<size_t>();
   }
   shared_ptr<cross_frame_opt> frame_opt(cross_frame_opt::create(tets, nods, args));
@@ -173,13 +192,13 @@ int main(int argc, char *argv[])
   MatrixXd rz = frames.block(6, 0, 3, frames.cols());
   draw_vert_direct_field(zfile.c_str(), &nods[0], nods.size(2), rz.data());
   
-  // // interpolate frames on tet
-  // MatrixXd tet_zyz(3, tets.size(2));
-  // zyz_vert_to_tet(tets, abc, tet_zyz);
+  // interpolate frames on tet
+  MatrixXd tet_zyz(3, tets.size(2));
+  zyz_vert_to_tet(tets, abc, tet_zyz);
 
-  // // write zyz
-  // string zyz_file = vm["output_folder"].as<string>()+string("/zyz.txt");
-  // write_tet_zyz(zyz_file.c_str(), tet_zyz);
+  // write zyz
+  string zyz_file = vm["output_folder"].as<string>()+string("/zyz.txt");
+  write_tet_zyz(zyz_file.c_str(), tet_zyz);
   
   cout << "[Info] done\n";
   return 0;
