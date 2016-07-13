@@ -42,6 +42,8 @@ extern "C" {
   
 }
 
+static inline void normal2zyz(const double *n, double *zyz);
+
 //===============================================================================
 
 class SH_smooth_energy : public Functional<double>
@@ -86,22 +88,22 @@ private:
 class SH_smooth_energy_vol : public Functional<double>
 {
 public:
-  SH_vol_smooth_energy_vol(const mati_t &tets, const matd_t &nods, const double w)
+  SH_smooth_energy_vol(const mati_t &tets, const matd_t &nods, const double w)
       : tets_(tets), w_(w), dim_(3*tets.size(2)) {
-    matd_t volume = zeros<double>();
+    matd_t volume = zeros<double>(tets.size(2), 1);
     for (size_t i = 0; i < tets.size(2); ++i) {
     }
     
     shared_ptr<face2tet_adjacent> f2t(face2tet_adjacent::create(tets));
     for (size_t i = 0; i < f2t->face2tet_.size(); ++i) {
-      const pair<size_t, size_t> adj = f2c->face2tet_[i];
-      if ( !is_outside_face(adjt) )
+      const pair<size_t, size_t> adj = f2t->face2tet_[i];
+      if ( !f2t->is_outside_face(adj) )
         adjt_.push_back(adj);
     }
 
-    adjw_ = zeros<double>(adjt_.size(), 1);;
-    for (size_t i = 0; i < adjw_.size(); ++i) {
-      const double len = ;
+    stiff_ = zeros<double>(adjt_.size(), 1);
+    for (size_t i = 0; i < stiff_.size(); ++i) {
+      const double len = 0;
       
     }
   }
@@ -127,11 +129,12 @@ public:
     return 0;
   }
 private:
-  double w_;
-  const size_t dim_;
   const mati_t &tets_;
-  matd_t adjw_;
+  const double w_;
+  const size_t dim_;
+
   vector<pair<size_t, size_t>> adjt_;
+  matd_t stiff_;
 };
 
 class SH_align_energy_vol : public Functional<double>
@@ -139,13 +142,61 @@ class SH_align_energy_vol : public Functional<double>
 public:
   SH_align_energy_vol(const mati_t &tets, const matd_t &nods, const double w)
       : tets_(tets), w_(w), dim_(3*tets.size(2)) {
+    shared_ptr<face2tet_adjacent> f2t(face2tet_adjacent::create(tets));
+    mati_t surf;
+    bool check_order = true;
+    jtf::mesh::get_outside_face(*f2t, surf, check_order, &nods);
+  
+    stiff_.resize(1, surf.size(2)); {
+#pragma omp parallel for
+      for (size_t i = 0; i < surf.size(2); ++i)
+        stiff_[i] = jtf::mesh::cal_face_area(nods(colon(), surf(colon(), i)));
+    }
+    double sum_area = sum(stiff_);
+    stiff_ /= sum_area;
+
+    adjt_.resize(surf.size(2));
+    zyz_.resize(3, surf.size(2)); {
+      #pragma omp parallel for
+      for (size_t i = 0; i < surf.size(2); ++i) {
+        matd_t n = zeros<double>(3, 1);
+        jtf::mesh::cal_face_normal(nods(colon(), surf(colon(), i)), n);
+        normal2zyz(&n[0], &zyz_(0, i));
+
+        const pair<size_t, size_t> t = f2t->query(surf(0, i), surf(1, i), surf(2, i));
+        adjt_[i] = t.first == -1 ? t.second : t.first;
+      }
+    }
+  }
+  size_t Nx() const {
+    return dim_;
+  }
+  int Val(const double *abc, double *val) const {
+    return 0;
+  }
+  int Gra(const double *abc, double *gra) const {
+    return 0;
+  }
+  int Hes(const double *abc, vector<Triplet<double>> *hes) const {
+    return __LINE__;
+  }
+  int ValSH(const double *f, double *val) const {
+    return 0;
+  }
+  int GraSH(const double *f, double *gra) const {
+    return 0;
+  }
+  int HesSH(const double *f, vector<Triplet<double>> *hes) const {
+    return 0;
   }
 private:
-  const double w_;
   const mati_t &tets_;
-  matd_t weight_;
+  const double w_;
+  const size_t dim_;
+
+  vector<size_t> adjt_;
+  matd_t stiff_;
   matd_t zyz_;
-  vector<size_t> surf2tet_;
 };
 
 //===============================================================================
