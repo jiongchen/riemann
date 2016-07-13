@@ -373,6 +373,7 @@ int cross_frame_opt::solve_initial_frames(const VectorXd &Fs, VectorXd &abc) con
   ASSERT(Fs.size() == 9*vert_num_);
   ASSERT(abc.size() == 3*vert_num_);
 
+  #pragma omp parallel for
   for (size_t i = 0; i < vert_num_; ++i) {
     // double prev_res = 0; 
     // sh_residual_(&prev_res, &abc[3*i], &Fs[9*i]);

@@ -33,7 +33,7 @@ static int progress(void *instance,
                     const lbfgsfloatval_t step,
                     int n, int k, int ls) {
   if ( k % 100 == 0 )
-   printf("\t# iteration %d, energy: %f\n", k, fx);
+    cout << "\t# iteration " << k << ", energy: " << fx << endl;
   //  printf("  fx = %f, x[0] = %f, x[1] = %f\n", fx, x[0], x[1]);
   //  printf("  xnorm = %f, gnorm = %f, step = %f\n", xnorm, gnorm, step);
   //  printf("\n");
@@ -63,7 +63,7 @@ int lbfgs_solve(const shared_ptr<Functional<double>> &f,
 
   int ret = lbfgs(dim, x, &fx, evaluate, progress, NULL, &param);
 
-  printf("\t@LBFGS return = %d\n", ret);
+  cout << "\t@LBFGS return value: " << ret << endl;
   return 0;
 }
 

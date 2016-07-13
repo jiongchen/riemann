@@ -261,22 +261,26 @@ void zyz_to_sh_jac(const double *zyz, double *out) {
   out[26]=-4*tt53*tt17-4*tt54*tt9;
 }
 
-static double *g_SH;
+/* static double *g_SH; */
+
+struct lmder_prb {
+  int m, n;
+  double *sh;
+};
 
 static void lmder_callback(int *m, int *n, double *x, double *fvec, double *fjac, int *ldfjac, int *iflag) {
+  const double *SH = *(double **)(n+1);
   if ( *iflag == 1 ) {
     zyz_to_sh(x, fvec);
     unsigned int i = 0;
     for (i = 0; i < 9; ++i)
-      fvec[i] -= g_SH[i];
+      fvec[i] -= SH[i];
   } else if ( *iflag == 2 ) {
     zyz_to_sh_jac(x, fjac);
   }
 }
 
 int sh_to_zyz(const double *sh, double *zyz, const unsigned int maxits) {
-  g_SH = sh;
-  
   int m = 9, n = 3;
   double fvec[9], fjac[27];
   int ipvt[3];
@@ -286,12 +290,17 @@ int sh_to_zyz(const double *sh, double *zyz, const unsigned int maxits) {
   int lwa = 9*3+5*3+9;
   double wa[9*3+5*3+9];
 
+  struct lmder_prb prb;
+  prb.m = m;
+  prb.n = n;
+  prb.sh = sh;
+  
   unsigned int i = 0;
   for (i = 0; i < maxits; ++i) {
-    lmder1_(lmder_callback, &m, &n, zyz, fvec, fjac, &m,
+    lmder1_(lmder_callback, &prb.m, &prb.n, zyz, fvec, fjac, &m,
             &tol, &info, &ipvt[0], &wa[0], &lwa);
     if ( info < 4 )
       break;
-  }  
+  }
   return info;
 }

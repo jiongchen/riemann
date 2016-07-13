@@ -111,6 +111,7 @@ static int zyz_vert_to_tet(const mati_t &tets, const VectorXd &abc, MatrixXd& zy
   for (size_t i = 0; i < vert_sh.cols(); ++i) {
     zyz_to_sh(&abc[3*i], &vert_sh(0, i));
   }
+  #pragma omp parallel for
   for (size_t i = 0; i < tets.size(2); ++i) {
     VectorXd tsh = (vert_sh.col(tets(0, i))+vert_sh.col(tets(1, i))
                    +vert_sh.col(tets(2, i))+vert_sh.col(tets(3, i)))/4.0;
