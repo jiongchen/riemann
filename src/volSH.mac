@@ -1,0 +1,102 @@
+triginverses: all$
+assume(theta >= 0)$
+assume(theta <= %pi)$
+assume(sin(theta) >= 0)$
+
+LP(l, x) := legendre_p(l, x)$
+
+ALP(l, m, x) := assoc_legendre_p(l, m, x)$
+
+ALP_cos(l, m, theta) := (-1)^m*(sin(theta))^abs(m)*subst(cos(theta), x, diff(LP(l, x), x, abs(m)))$
+
+K(l, m) := sqrt((2*l+1)/(4*%pi)*((l-abs(m))!/(l+abs(m))!))$
+
+SH(l, m, theta, phi) := 
+  if m > 0 then
+    sqrt(2)*K(l, m)*cos(m*phi)*ALP_cos(l, m, theta) /*subst(cos(theta), x, ALP(l, m, x))*/
+  else 
+    if m < 0 then
+      sqrt(2)*K(l, m)*sin(-m*phi)*ALP_cos(l, -m, theta) /*subst(cos(theta), x, ALP(l, -m, x))*/
+    else
+      K(l, 0)*ALP_cos(l, 0, theta)$ /*subst(cos(theta), x, ALP(l, 0, x))$*/
+
+int_on_unit_sphere(f) := block(
+  [int_theta, int_phi],
+  assume(notequal(cos(theta), 0)),
+  f: trigsimp(trigexpand(f)),
+  int_phi: integrate(f, phi, 0, 2*%pi),
+  int_theta: integrate(int_phi*sin(theta), theta, 0, %pi)
+)$
+
+/* M_{ij} = \int_{S} Y_i(\mathbf{R}s)Y_j(s) ds, see [Robin Green 03] */
+rot_sh_z(alpha, l) := block(
+  [rtn],
+  rtn: zeromatrix(2*l+1, 2*l+1),
+  for i:-l thru l do
+    for j:-l thru l do
+      rtn[i+l+1, j+l+1]: trigsimp(int_on_unit_sphere(SH(l, i, theta, phi+alpha)*SH(l, j, theta, phi))),
+  rtn
+)$
+
+rot_sphere_coord_x(alpha, theta, phi) := block(
+  [X, Y, R],
+  X: matrix([sin(theta)*cos(phi)], [sin(theta)*sin(phi)], [cos(theta)]),
+  R: zeromatrix(3, 3),
+  R[1, 1]: 1,
+  R[2, 2]: cos(alpha),
+  R[3, 3]: cos(alpha),
+  R[2, 3]: -sin(alpha),
+  R[3, 2]: sin(alpha),
+  /* display(R), */
+  Y: R.X,
+  matrix([acos(Y[3, 1])], [atan2(Y[2, 1], Y[1, 1])])
+)$
+
+rot_sh_x(alpha, l) := block(
+  [rot_sphere_coord, rtn],
+  rtn: zeromatrix(2*l+1, 2*l+1),
+  rot_sphere_coord: rot_sphere_coord_x(alpha, theta, phi),
+  for i:-l thru l do
+    for j:-l thru l do block(
+      temp: trigexpand(trigsimp(SH(l, i, rot_sphere_coord[1, 1], rot_sphere_coord[2, 1]))), /*!*/
+      temp: temp*SH(l, j, theta, phi),
+      temp: subst([(cos(phi)^2*sin(theta)^2+cos(theta)^2)=1-sin(phi)^2*sin(theta)^2], temp),
+      temp: trigexpand(temp),
+      /* display(temp), */
+      rtn[i+l+1, j+l+1]: radcan(int_on_unit_sphere(temp))
+    ),
+  rtn
+)$
+
+RZ4_ALPHA:       rot_sh_z(alpha, 4)$
+RX2_POS_HALF_PI: rot_sh_x(%pi/2, 2)$
+RX4_POS_HALF_PI: rot_sh_x(%pi/2, 4)$
+RX4_NEG_HALF_PI: transpose(RX4_POS_HALF_PI)$
+CUB_SYM_H_COEF: transpose(matrix([0, 0, 0, 0, sqrt(7), 0, 0, 0, sqrt(5)]))$
+
+load(cj_function)$
+load(hj_fortran2)$
+load(f90)$
+
+/* CONVERT ZYZ ANGLES TO SH COEFFS */
+zyz2sh(zyz) := rot_sh_z(zyz[3, 1], 4).RX4_NEG_HALF_PI.rot_sh_z(zyz[2, 1], 4).RX4_POS_HALF_PI.rot_sh_z(zyz[1, 1], 4).CUB_SYM_H_COEF$
+
+optimprefix: tt$
+
+f: openw("vol_cubic_sym_sh.f90")$
+
+block(
+  [ABC, stiff],
+  ABC: genmatrix(ABC, 3, 2),
+  stiff: genmatrix(stiff, 1, 1),
+  vol_cubic_sym_smooth(ABC, stiff) := block(
+    [c1, c2],
+    c1: zyz2sh(col(ABC, 1)),
+    c2: zyz2sh(col(ABC, 2)),
+    weight*NORM(c1-c2)^2
+  ),
+  with_stdout(f, val_jac_hes_to_f90(vol_cubic_sym_smooth, [ABC, stiff])),
+  return()
+)$
+
+close(f)$

@@ -83,6 +83,71 @@ private:
   matd_t area_;
 };
 
+class SH_smooth_energy_vol : public Functional<double>
+{
+public:
+  SH_vol_smooth_energy_vol(const mati_t &tets, const matd_t &nods, const double w)
+      : tets_(tets), w_(w), dim_(3*tets.size(2)) {
+    matd_t volume = zeros<double>();
+    for (size_t i = 0; i < tets.size(2); ++i) {
+    }
+    
+    shared_ptr<face2tet_adjacent> f2t(face2tet_adjacent::create(tets));
+    for (size_t i = 0; i < f2t->face2tet_.size(); ++i) {
+      const pair<size_t, size_t> adj = f2c->face2tet_[i];
+      if ( !is_outside_face(adjt) )
+        adjt_.push_back(adj);
+    }
+
+    adjw_ = zeros<double>(adjt_.size(), 1);;
+    for (size_t i = 0; i < adjw_.size(); ++i) {
+      const double len = ;
+      
+    }
+  }
+  size_t Nx() const {
+    return dim_;
+  }
+  int Val(const double *abc, double *val) const {
+    return 0;
+  }
+  int Gra(const double *abc, double *gra) const {
+    return 0;
+  }
+  int Hes(const double *abc, vector<Triplet<double>> *hes) const {
+    return __LINE__;
+  }
+  int ValSH(const double *f, double *val) const {
+    return 0;
+  }
+  int GraSH(const double *f, double *gra) const {
+    return 0;
+  }
+  int HesSH(const double *f, vector<Triplet<double>> *hes) const {
+    return 0;
+  }
+private:
+  double w_;
+  const size_t dim_;
+  const mati_t &tets_;
+  matd_t adjw_;
+  vector<pair<size_t, size_t>> adjt_;
+};
+
+class SH_align_energy_vol : public Functional<double>
+{
+public:
+  SH_align_energy_vol(const mati_t &tets, const matd_t &nods, const double w)
+      : tets_(tets), w_(w), dim_(3*tets.size(2)) {
+  }
+private:
+  const double w_;
+  const mati_t &tets_;
+  matd_t weight_;
+  matd_t zyz_;
+  vector<size_t> surf2tet_;
+};
+
 //===============================================================================
 
 SH_smooth_energy::SH_smooth_energy(const mati_t &tets, const matd_t &nods, const double w)
@@ -284,8 +349,10 @@ int SH_align_energy::HesSH(const double *f, vector<Triplet<double>> *hes) const 
 }
 //===============================================================================
 int cross_frame_opt::init(const mati_t &tets, const matd_t &nods, const cross_frame_args &args) {
+  tets_num_ = tets.size(2);
   vert_num_ = nods.size(2);
   args_ = args;
+
   int success = 0;
   buffer_.push_back(make_shared<SH_smooth_energy>(tets, nods, args_.ws));
   buffer_.push_back(make_shared<SH_align_energy>(tets, nods, args_.wa));

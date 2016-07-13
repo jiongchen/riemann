@@ -7,7 +7,7 @@ WS=1e0
 WA=5e3
 EPS=1e-5
 MAXITS=1000
-OUT_DIR=../result/volume_frame/sculptre-59k-ws$WS-wa$WA
+OUT_DIR=../result/volume_frame/sculpture-59k-ws$WS-wa$WA
 
 if [ ! -d "$OUT_DIR" ]; then
     mkdir -p $OUT_DIR
