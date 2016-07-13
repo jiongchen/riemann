@@ -5,8 +5,12 @@
 #include <jtflib/mesh/util.h>
 #include <hjlib/math/blas_lapack.h>
 #include <zjucad/matrix/lapack.h>
+#include <zjucad/linear_solver/linear_solver.h>
 #include <Eigen/Eigen>
-#include <Eigen/CholmodSupport>
+
+#ifdef USE_CHOLMOD
+  #include <Eigen/CholmodSupport>
+#endif
 
 #include "config.h"
 #include "grad_operator.h"
@@ -319,6 +323,7 @@ int cross_frame_opt::solve_laplacian(VectorXd &Fs) const {
   VectorXd g = VectorXd::Zero(dim); {
     fs->GraSH(Fs.data(), g.data());
     fa->GraSH(Fs.data(), g.data());
+    g *= -1;
     cout << "\t@prev grad norm: " << g.norm() << endl << endl;
   }
   
@@ -327,13 +332,24 @@ int cross_frame_opt::solve_laplacian(VectorXd &Fs) const {
     fs->HesSH(nullptr, &trips);
     fa->HesSH(nullptr, &trips);
     H.setFromTriplets(trips.begin(), trips.end());
+    H.makeCompressed();
   }
-  
+
+#ifdef USE_CHOLMOD
   CholmodSimplicialLLT<SparseMatrix<double>> solver;
   solver.compute(H);
   ASSERT(solver.info() == Success);
-  VectorXd dx = -solver.solve(g);
+  VectorXd dx = solver.solve(g);
   ASSERT(solver.info() == Success);
+#else
+  boost::property_tree::ptree pt;
+  pt.put("linear_solver/type.value", "PETsc");
+  shared_ptr<linear_solver> solver
+      (linear_solver::create(H.valuePtr(), H.innerIndexPtr(), H.outerIndexPtr(), H.nonZeros(), dim, dim, pt));
+  VectorXd dx = VectorXd::Zero(dim);
+  solver->solve(g.data(), dx.data(), dim, pt);
+#endif
+  
   Fs += dx;
   
   double post_vs = 0, post_va = 0; {

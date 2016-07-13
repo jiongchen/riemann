@@ -1,13 +1,13 @@
 #!/bin/bash
 
-echo -e "# ================================== Run cross frame fild ========================================= #"
+echo -e "# ================================== Run cross frame field ======================================== #"
 EXE=../build/bin/test_vol_frame
-MESH=../dat/tets/fandisk.c58k.tet.vtk
-OUT_DIR=../result/volume_frame/fandisk
+MESH=../dat/tets/sphere.v51k.tet.vtk
 WS=1e0
-WA=1e3
+WA=5e3
 EPS=1e-5
 MAXITS=1000
+OUT_DIR=../result/volume_frame/sphere-ws$WS-wa$WA
 
 if [ ! -d "$OUT_DIR" ]; then
     mkdir -p $OUT_DIR
