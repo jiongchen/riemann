@@ -14,6 +14,7 @@
 using namespace std;
 using namespace riemann;
 using namespace Eigen;
+using namespace zjucad::matrix;
 namespace po=boost::program_options;
 
 extern "C" {
@@ -176,7 +177,7 @@ int main(int argc, char *argv[])
   cout << "[INFO] solve Laplacian\n";
   VectorXd Fs;
   frame_opt->solve_laplacian(Fs);
-  
+
   cout << "[INFO] solve for initial zyz angles\n";
   VectorXd abc;
   frame_opt->solve_initial_frames(Fs, abc);
@@ -184,28 +185,33 @@ int main(int argc, char *argv[])
   cout << "[INFO] optimize frames\n";
   frame_opt->optimize_frames(abc);
 
-  MatrixXd frames(9, nods.size(2));
-  for (size_t i = 0; i < nods.size(2); ++i) {
+  MatrixXd frames(9, tets.size(2));
+  for (size_t i = 0; i < tets.size(2); ++i) {
     Matrix3d R = RZ(abc[3*i+2])*RY(abc[3*i+1])*RZ(abc[3*i+0]);
     Map<Matrix3d>(&frames(0, i)) = R;
   }
-  frames *= 0.05;
+  frames *= 0.075;
+
+  matd_t center(3, tets.size(2));
+  for (size_t i = 0; i < tets.size(2); ++i)
+    center(colon(), i) = nods(colon(), tets(colon(), i))*ones<double>(4, 1)/4.0;
   
   string xfile = vm["output_folder"].as<string>()+string("/x.vtk");
   MatrixXd rx = frames.block(0, 0, 3, frames.cols());
-  draw_vert_direct_field(xfile.c_str(), &nods[0], nods.size(2), rx.data());
+  draw_vert_direct_field(xfile.c_str(), &center[0], center.size(2), rx.data());
 
   string yfile = vm["output_folder"].as<string>()+string("/y.vtk");
   MatrixXd ry = frames.block(3, 0, 3, frames.cols());
-  draw_vert_direct_field(yfile.c_str(), &nods[0], nods.size(2), ry.data());
+  draw_vert_direct_field(yfile.c_str(), &center[0], center.size(2), ry.data());
 
   string zfile = vm["output_folder"].as<string>()+string("/z.vtk");
   MatrixXd rz = frames.block(6, 0, 3, frames.cols());
-  draw_vert_direct_field(zfile.c_str(), &nods[0], nods.size(2), rz.data());
+  draw_vert_direct_field(zfile.c_str(), &center[0], center.size(2), rz.data());
   
   // interpolate frames on tet
   MatrixXd tet_zyz(3, tets.size(2));
-  zyz_vert_to_tet(tets, abc, tet_zyz);
+  // zyz_vert_to_tet(tets, abc, tet_zyz);
+  tet_zyz = Map<const MatrixXd>(tet_zyz.data(), 3, abc.size()/3);
 
   // write zyz
   string zyz_file = vm["output_folder"].as<string>()+string("/zyz.txt");

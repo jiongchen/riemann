@@ -16,6 +16,7 @@
 #include "grad_operator.h"
 #include "lbfgs_solve.h"
 #include "sh_zyz_convert.h"
+#include "util.h"
 
 using namespace std;
 using namespace zjucad::matrix;
@@ -93,36 +94,37 @@ class SH_smooth_energy_tet : public Functional<double>
 public:
   SH_smooth_energy_tet(const mati_t &tets, const matd_t &nods, const double w)
       : tets_(tets), w_(w), dim_(3*tets.size(2)) {
-    // matd_t volume = zeros<double>(tets.size(2), 1); {
-    //   #pragma omp parallel for
-    //   for (size_t i = 0; i < tets.size(2); ++i) {
-    //     matd_t Ds = nods(colon(), tets(colon(1, 3), i))-nods(colon(), tets(0, i))*ones<double>(1, 3);
-    //     volume[i] = fabs(det(Ds))/6.0;
-    //   }
-    // }
+    matd_t volume = zeros<double>(tets.size(2), 1); {
+      #pragma omp parallel for
+      for (size_t i = 0; i < tets.size(2); ++i) {
+        matd_t Ds = nods(colon(), tets(colon(1, 3), i))-nods(colon(), tets(0, i))*ones<double>(1, 3);
+        volume[i] = fabs(det(Ds))/6.0;
+      }
+    }
     
-    // shared_ptr<face2tet_adjacent> f2t(face2tet_adjacent::create(tets));
-    // vector<size_t> buffer;
-    // for (size_t i = 0; i < f2t->face2tet_.size(); ++i) {
-    //   const pair<size_t, size_t> adj = f2t->face2tet_[i];
-    //   if ( !f2t->is_outside_face(adj) ) {
-    //     buffer.push_back(adj.first);
-    //     buffer.push_back(adj.second);
-    //   }
-    // }
-    // adjt_.resize(2, buffer.size()/2);
-    // std::copy(buffer.begin(), buffer.end(), adjt_.begin());
+    shared_ptr<face2tet_adjacent> f2t(face2tet_adjacent::create(tets));
+    vector<size_t> buffer;
+    for (size_t i = 0; i < f2t->face2tet_.size(); ++i) {
+      const pair<size_t, size_t> adj = f2t->face2tet_[i];
+      if ( !f2t->is_outside_face(adj) ) {
+        buffer.push_back(adj.first);
+        buffer.push_back(adj.second);
+      }
+    }
+    adjt_.resize(2, buffer.size()/2);
+    std::copy(buffer.begin(), buffer.end(), adjt_.begin());
 
-    // stiff_.resize(adjt_.size(2)); {
-    //   #pragma omp parallel for
-    //   for (size_t i = 0; i < stiff_.size(); ++i) {
-    //     const double len = norm(
-    //         nods(colon(), tets(colon(), left))*ones<double>(4, 1)/4.0-
-    //         nods(colon(), tets(colon(), right))*ones<double>(4, 1)/4.0
-    //                             );
-    //     stiff_[i] = (volume[left]+volume[right])/(len*len);
-    //   }
-    // }
+    stiff_.resize(adjt_.size(2)); {
+      #pragma omp parallel for
+      for (size_t i = 0; i < stiff_.size(); ++i) {
+        const double dist = norm(
+            nods(colon(), tets(colon(), adjt_(0, i)))*ones<double>(4, 1)/4.0-
+            nods(colon(), tets(colon(), adjt_(1, i)))*ones<double>(4, 1)/4.0);
+        stiff_[i] = (volume[adjt_(0, i)]+volume[adjt_(1, i)])/(dist*dist);
+      }
+    }
+    double total = sum(stiff_);
+    stiff_ /= total;
   }
   size_t Nx() const {
     return dim_;
@@ -152,12 +154,35 @@ public:
     return __LINE__;
   }
   int ValSH(const double *f, double *val) const {
+    itr_matrix<const double *> Fs(9, dim_/3, f);
+    matd_t fs = zeros<double>(9, 2), dif = zeros<double>(9, 1);
+    for (size_t i = 0; i < adjt_.size(2); ++i) {
+      fs = Fs(colon(), adjt_(colon(), i));
+      dif = fs(colon(), 0)-fs(colon(), 1);
+      *val += w_*stiff_[i]*dot(dif, dif);
+    }
     return 0;
   }
   int GraSH(const double *f, double *gra) const {
+    itr_matrix<const double *> Fs(9, dim_/3, f);
+    itr_matrix<double *> G(9, dim_/3, gra);
+    matd_t fs = zeros<double>(9, 2);
+    for (size_t i = 0; i < adjt_.size(2); ++i) {
+      fs = Fs(colon(), adjt_(colon(), i));
+      G(colon(), adjt_(0, i)) += 2.0*w_*stiff_[i]*(fs(colon(), 0)-fs(colon(), 1));
+      G(colon(), adjt_(1, i)) += 2.0*w_*stiff_[i]*(fs(colon(), 1)-fs(colon(), 0));
+    }
     return 0;
   }
   int HesSH(const double *f, vector<Triplet<double>> *hes) const {
+    for (size_t i = 0; i < adjt_.size(2); ++i) {
+      const size_t l = adjt_(0, i), r = adjt_(1, i);
+      const double entry = 2.0*w_*stiff_[i];
+      add_diag_block<double, 9>(l, l, entry, hes);
+      add_diag_block<double, 9>(l, r, -entry, hes);
+      add_diag_block<double, 9>(r, l, -entry, hes);
+      add_diag_block<double, 9>(r, r, entry, hes);
+    }
     return 0;
   }
 private:
@@ -478,8 +503,8 @@ int cross_frame_opt::init(const mati_t &tets, const matd_t &nods, const cross_fr
   args_ = args;
 
   int success = 0;
-  buffer_.push_back(make_shared<SH_smooth_energy>(tets, nods, args_.ws));
-  buffer_.push_back(make_shared<SH_align_energy>(tets, nods, args_.wa));
+  buffer_.push_back(make_shared<SH_smooth_energy_tet>(tets, nods, args_.ws));
+  buffer_.push_back(make_shared<SH_align_energy_tet>(tets, nods, args_.wa));
   try {
     energy_ = make_shared<energy_t<double>>(buffer_);
   } catch ( exception &e ) {
@@ -501,8 +526,8 @@ int cross_frame_opt::solve_laplacian(VectorXd &Fs) const {
   Fs = VectorXd::Zero(dim);
   cout << "\t@linear solve dimension: " << dim << endl << endl;
 
-  auto fs = dynamic_pointer_cast<SH_smooth_energy>(buffer_[0]);
-  auto fa = dynamic_pointer_cast<SH_align_energy>(buffer_[1]);
+  auto fs = dynamic_pointer_cast<SH_smooth_energy_tet>(buffer_[0]);
+  auto fa = dynamic_pointer_cast<SH_align_energy_tet>(buffer_[1]);
 
   double prev_vs = 0, prev_va = 0; {
     fs->ValSH(Fs.data(), &prev_vs);
