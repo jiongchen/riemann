@@ -211,7 +211,7 @@ int main(int argc, char *argv[])
   // interpolate frames on tet
   MatrixXd tet_zyz(3, tets.size(2));
   // zyz_vert_to_tet(tets, abc, tet_zyz);
-  tet_zyz = Map<const MatrixXd>(tet_zyz.data(), 3, abc.size()/3);
+  tet_zyz = Map<const MatrixXd>(abc.data(), 3, abc.size()/3);
 
   // write zyz
   string zyz_file = vm["output_folder"].as<string>()+string("/zyz.txt");

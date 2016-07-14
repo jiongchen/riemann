@@ -122,9 +122,9 @@ public:
             nods(colon(), tets(colon(), adjt_(1, i)))*ones<double>(4, 1)/4.0);
         stiff_[i] = (volume[adjt_(0, i)]+volume[adjt_(1, i)])/(dist*dist);
       }
+      double total = sum(volume);
+      stiff_ /= std::cbrt(total);
     }
-    double total = sum(stiff_);
-    stiff_ /= total;
   }
   size_t Nx() const {
     return dim_;
@@ -207,10 +207,10 @@ public:
       #pragma omp parallel for
       for (size_t i = 0; i < surf.size(2); ++i)
         stiff_[i] = jtf::mesh::cal_face_area(nods(colon(), surf(colon(), i)));
+      double sum_area = sum(stiff_);
+      stiff_ /= sum_area;
     }
-    double sum_area = sum(stiff_);
-    stiff_ /= sum_area;
-
+    
     adjt_.resize(surf.size(2));
     zyz_.resize(3, surf.size(2)); {
       #pragma omp parallel for
@@ -220,7 +220,7 @@ public:
         normal2zyz(&n[0], &zyz_(0, i));
 
         const pair<size_t, size_t> t = f2t->query(surf(0, i), surf(1, i), surf(2, i));
-        adjt_[i] = t.first == -1 ? t.second : t.first;
+        adjt_[i] = (t.first == -1) ? t.second : t.first;
       }
     }
   }
@@ -292,7 +292,7 @@ private:
   const double w_;
   const size_t dim_;
 
-  vector<size_t> adjt_;
+  mati_t adjt_;
   matd_t stiff_;
   matd_t zyz_;
 };
