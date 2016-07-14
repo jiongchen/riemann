@@ -117,6 +117,20 @@ optimprefix: tt$
 f: openw("cubic_sym_sh.f90")$
 
 block(
+  [ABC, stiff],
+  ABC:   genmatrix(ABC, 3, 2),
+  stiff: genmatrix(stiff, 1, 1),
+  cubic_sym_smooth_tet(ABC, stiff) := block(
+    [c1, c2],
+    c1: zyz2sh(col(ABC, 1)),
+    c2: zyz2sh(col(ABC, 2)),
+    stiff*NORM(c1-c2)^2
+  ),
+  with_stdout(f, val_jac_hes_to_f90(cubic_sym_smooth_tet, [ABC, stiff])),
+  return()
+)$
+
+block(
   [ABC, CR, vol],
   ABC: genmatrix(ABC, 3, 4),
   CR:  genmatrix(CR,  3, 4),

@@ -39,6 +39,9 @@ extern "C" {
   void cubic_align_sh_coef_(double *val, const double *F, const double *Rnz, const double *area);
   void cubic_align_sh_coef_jac_(double *jac, const double *F, const double *Rnz, const double *area);
   void cubic_align_sh_coef_hes_(double *hes, const double *F, const double *Rnz, const double *area);
+
+  void cubic_sym_smooth_tet_(double *val, const double *abc, const double *stiff);
+  void cubic_sym_smooth_tet_jac_(double *jac, const double *abc, const double *stiff);
   
 }
 
@@ -85,35 +88,64 @@ private:
   matd_t area_;
 };
 
-class SH_smooth_energy_vol : public Functional<double>
+class SH_smooth_energy_tet : public Functional<double>
 {
 public:
-  SH_smooth_energy_vol(const mati_t &tets, const matd_t &nods, const double w)
+  SH_smooth_energy_tet(const mati_t &tets, const matd_t &nods, const double w)
       : tets_(tets), w_(w), dim_(3*tets.size(2)) {
-    matd_t volume = zeros<double>(tets.size(2), 1);
-    for (size_t i = 0; i < tets.size(2); ++i) {
-    }
+    // matd_t volume = zeros<double>(tets.size(2), 1); {
+    //   #pragma omp parallel for
+    //   for (size_t i = 0; i < tets.size(2); ++i) {
+    //     matd_t Ds = nods(colon(), tets(colon(1, 3), i))-nods(colon(), tets(0, i))*ones<double>(1, 3);
+    //     volume[i] = fabs(det(Ds))/6.0;
+    //   }
+    // }
     
-    shared_ptr<face2tet_adjacent> f2t(face2tet_adjacent::create(tets));
-    for (size_t i = 0; i < f2t->face2tet_.size(); ++i) {
-      const pair<size_t, size_t> adj = f2t->face2tet_[i];
-      if ( !f2t->is_outside_face(adj) )
-        adjt_.push_back(adj);
-    }
+    // shared_ptr<face2tet_adjacent> f2t(face2tet_adjacent::create(tets));
+    // vector<size_t> buffer;
+    // for (size_t i = 0; i < f2t->face2tet_.size(); ++i) {
+    //   const pair<size_t, size_t> adj = f2t->face2tet_[i];
+    //   if ( !f2t->is_outside_face(adj) ) {
+    //     buffer.push_back(adj.first);
+    //     buffer.push_back(adj.second);
+    //   }
+    // }
+    // adjt_.resize(2, buffer.size()/2);
+    // std::copy(buffer.begin(), buffer.end(), adjt_.begin());
 
-    stiff_ = zeros<double>(adjt_.size(), 1);
-    for (size_t i = 0; i < stiff_.size(); ++i) {
-      const double len = 0;
-      
-    }
+    // stiff_.resize(adjt_.size(2)); {
+    //   #pragma omp parallel for
+    //   for (size_t i = 0; i < stiff_.size(); ++i) {
+    //     const double len = norm(
+    //         nods(colon(), tets(colon(), left))*ones<double>(4, 1)/4.0-
+    //         nods(colon(), tets(colon(), right))*ones<double>(4, 1)/4.0
+    //                             );
+    //     stiff_[i] = (volume[left]+volume[right])/(len*len);
+    //   }
+    // }
   }
   size_t Nx() const {
     return dim_;
   }
   int Val(const double *abc, double *val) const {
+    itr_matrix<const double *> ABC(3, dim_/3, abc);
+    matd_t abcs = zeros<double>(3, 2); double value = 0;
+    for (size_t i = 0; i < adjt_.size(2); ++i) {
+      abcs = ABC(colon(), adjt_(colon(), i));
+      cubic_sym_smooth_tet_(&value, &abcs[0], &stiff_[i]);
+      *val += w_*value;
+    }
     return 0;
   }
   int Gra(const double *abc, double *gra) const {
+    itr_matrix<const double *> ABC(3, dim_/3, abc);
+    itr_matrix<double *> G(3, dim_/3, gra);
+    matd_t abcs = zeros<double>(3, 2), g = zeros<double>(3, 2);
+    for (size_t i = 0; i < adjt_.size(2); ++i) {
+      abcs = ABC(colon(), adjt_(colon(), i));
+      cubic_sym_smooth_tet_jac_(&g[0], &abcs[0], &stiff_[i]);
+      G(colon(), adjt_(colon(), i)) += w_*g;
+    }
     return 0;
   }
   int Hes(const double *abc, vector<Triplet<double>> *hes) const {
@@ -133,22 +165,21 @@ private:
   const double w_;
   const size_t dim_;
 
-  vector<pair<size_t, size_t>> adjt_;
+  mati_t adjt_;
   matd_t stiff_;
 };
 
-class SH_align_energy_vol : public Functional<double>
+class SH_align_energy_tet : public Functional<double>
 {
 public:
-  SH_align_energy_vol(const mati_t &tets, const matd_t &nods, const double w)
+  SH_align_energy_tet(const mati_t &tets, const matd_t &nods, const double w)
       : tets_(tets), w_(w), dim_(3*tets.size(2)) {
     shared_ptr<face2tet_adjacent> f2t(face2tet_adjacent::create(tets));
-    mati_t surf;
-    bool check_order = true;
+    mati_t surf; bool check_order = true;
     jtf::mesh::get_outside_face(*f2t, surf, check_order, &nods);
   
-    stiff_.resize(1, surf.size(2)); {
-#pragma omp parallel for
+    stiff_.resize(surf.size(2)); {
+      #pragma omp parallel for
       for (size_t i = 0; i < surf.size(2); ++i)
         stiff_[i] = jtf::mesh::cal_face_area(nods(colon(), surf(colon(), i)));
     }
@@ -172,21 +203,63 @@ public:
     return dim_;
   }
   int Val(const double *abc, double *val) const {
+    itr_matrix<const double *> ABC(3, dim_/3, abc);
+    double value = 0;
+    for (size_t i = 0; i < adjt_.size(); ++i) {
+      const size_t tid = adjt_[i];
+      cubic_sym_align_(&value, &ABC(0, tid), &zyz_(0, i), &stiff_[i]);
+      *val += w_*value;
+    }
     return 0;
   }
   int Gra(const double *abc, double *gra) const {
+    itr_matrix<const double *> ABC(3, dim_/3, abc);
+    itr_matrix<double *> G(3, dim_/3, gra);
+    matd_t g = zeros<double>(3, 1);
+    for (size_t i = 0; i < adjt_.size(); ++i) {
+      const size_t tid = adjt_[i];
+      cubic_sym_align_jac_(&g[0], &ABC(0, tid), &zyz_(0, i), &stiff_[i]);
+      G(colon(), tid) += w_*g;
+    }
     return 0;
   }
   int Hes(const double *abc, vector<Triplet<double>> *hes) const {
     return __LINE__;
   }
   int ValSH(const double *f, double *val) const {
+    itr_matrix<const double *> Fs(9, dim_/3, f);
+    double value = 0;
+    for (size_t i = 0; i < adjt_.size(); ++i) {
+      const size_t tid = adjt_[i];
+      cubic_align_sh_coef_(&value, &Fs(0, tid), &zyz_(0, i), &stiff_[i]);
+      *val += w_*value;
+    }
     return 0;
   }
   int GraSH(const double *f, double *gra) const {
+    itr_matrix<const double *> Fs(9, dim_/3, f);
+    itr_matrix<double *> G(9, dim_/3, gra);
+    matd_t g = zeros<double>(9, 1);
+    for (size_t i = 0; i < adjt_.size(); ++i) {
+      const size_t tid = adjt_[i];
+      cubic_align_sh_coef_jac_(&g[0], &Fs(0, tid), &zyz_(0, i), &stiff_[i]);
+      G(colon(), tid) += w_*g;
+    }
     return 0;
   }
   int HesSH(const double *f, vector<Triplet<double>> *hes) const {
+    matd_t H = zeros<double>(9, 9);
+    for (size_t i = 0; i < adjt_.size(); ++i) {
+      const size_t tid = adjt_[i];
+      cubic_align_sh_coef_hes_(&H[0], nullptr, &zyz_(0, i), &stiff_[i]);
+      for (size_t p = 0; p < 9; ++p) {
+        for (size_t q = 0; q < 9; ++q) {
+          const size_t I = 9*tid+p;
+          const size_t J = 9*tid+q;
+          hes->push_back(Triplet<double>(I, J, w_*H(p, q)));
+        }
+      }
+    }
     return 0;
   }
 private:
@@ -424,9 +497,9 @@ cross_frame_opt* cross_frame_opt::create(const mati_t &tets, const matd_t &nods,
 }
 
 int cross_frame_opt::solve_laplacian(VectorXd &Fs) const {
-  const size_t dim = Fs.size();
-  ASSERT(dim == 9*vert_num_);
-  cout << "\t@dimension: " << dim << endl << endl;
+  const size_t dim = 3*energy_->Nx();
+  Fs = VectorXd::Zero(dim);
+  cout << "\t@linear solve dimension: " << dim << endl << endl;
 
   auto fs = dynamic_pointer_cast<SH_smooth_energy>(buffer_[0]);
   auto fa = dynamic_pointer_cast<SH_align_energy>(buffer_[1]);
@@ -488,11 +561,10 @@ int cross_frame_opt::solve_laplacian(VectorXd &Fs) const {
 }
 
 int cross_frame_opt::solve_initial_frames(const VectorXd &Fs, VectorXd &abc) const {
-  ASSERT(Fs.size() == 9*vert_num_);
-  ASSERT(abc.size() == 3*vert_num_);
-
+  abc = VectorXd::Zero(energy_->Nx());
+  
   #pragma omp parallel for
-  for (size_t i = 0; i < vert_num_; ++i) {
+  for (size_t i = 0; i < abc.size()/3; ++i) {
     // double prev_res = 0; 
     // sh_residual_(&prev_res, &abc[3*i], &Fs[9*i]);
     

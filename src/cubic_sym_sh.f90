@@ -1,3 +1,1103 @@
+SUBROUTINE cubic_sym_smooth_tet(val, ABC, stiff) 
+IMPLICIT NONE 
+REAL(KIND=8) val(1, 1) 
+REAL(KIND=8) ABC(3, 2) 
+REAL(KIND=8) stiff(1, 1) 
+REAL(KIND=8)  tt1 
+REAL(KIND=8)  tt2 
+REAL(KIND=8)  tt3 
+REAL(KIND=8)  tt4 
+REAL(KIND=8)  tt5 
+REAL(KIND=8)  tt6 
+REAL(KIND=8)  tt7 
+REAL(KIND=8)  tt8 
+REAL(KIND=8)  tt9 
+REAL(KIND=8)  tt10 
+REAL(KIND=8)  tt11 
+REAL(KIND=8)  tt12 
+REAL(KIND=8)  tt13 
+REAL(KIND=8)  tt14 
+REAL(KIND=8)  tt15 
+REAL(KIND=8)  tt16 
+REAL(KIND=8)  tt17 
+REAL(KIND=8)  tt18 
+REAL(KIND=8)  tt19 
+REAL(KIND=8)  tt20 
+REAL(KIND=8)  tt21 
+REAL(KIND=8)  tt22 
+REAL(KIND=8)  tt23 
+REAL(KIND=8)  tt24 
+REAL(KIND=8)  tt25 
+REAL(KIND=8)  tt26 
+REAL(KIND=8)  tt27 
+REAL(KIND=8)  tt28 
+REAL(KIND=8)  tt29 
+REAL(KIND=8)  tt30 
+REAL(KIND=8)  tt31 
+REAL(KIND=8)  tt32 
+REAL(KIND=8)  tt33 
+REAL(KIND=8)  tt34 
+REAL(KIND=8)  tt35 
+REAL(KIND=8)  tt36 
+REAL(KIND=8)  tt37 
+REAL(KIND=8)  tt38 
+REAL(KIND=8)  tt39 
+REAL(KIND=8)  tt40 
+REAL(KIND=8)  tt41 
+REAL(KIND=8)  tt42 
+REAL(KIND=8)  tt43 
+REAL(KIND=8)  tt44 
+REAL(KIND=8)  tt45 
+REAL(KIND=8)  tt46 
+REAL(KIND=8)  tt47 
+REAL(KIND=8)  tt48 
+REAL(KIND=8)  tt49 
+REAL(KIND=8)  tt50 
+REAL(KIND=8)  tt51 
+REAL(KIND=8)  tt52 
+REAL(KIND=8)  tt53 
+REAL(KIND=8)  tt54 
+REAL(KIND=8)  tt55 
+REAL(KIND=8)  tt56 
+REAL(KIND=8)  tt57 
+REAL(KIND=8)  tt58 
+REAL(KIND=8)  tt59 
+REAL(KIND=8)  tt60 
+REAL(KIND=8)  tt61 
+REAL(KIND=8)  tt62 
+REAL(KIND=8)  tt63 
+REAL(KIND=8)  tt64 
+REAL(KIND=8)  tt65 
+REAL(KIND=8)  tt66 
+REAL(KIND=8)  tt67 
+REAL(KIND=8)  tt68 
+REAL(KIND=8)  tt69 
+REAL(KIND=8)  tt70 
+REAL(KIND=8)  tt71 
+REAL(KIND=8)  tt72 
+REAL(KIND=8)  tt73 
+REAL(KIND=8)  tt74 
+REAL(KIND=8)  tt75 
+REAL(KIND=8)  tt76 
+REAL(KIND=8)  tt77 
+REAL(KIND=8)  tt78 
+REAL(KIND=8)  tt79 
+REAL(KIND=8)  tt80 
+tt1 = sqrt(7.0)
+tt2 = 3.0*tt1/8.0
+tt3 = 4*ABC(1,1)
+tt4 = cos(tt3)
+tt5 = 5.0*tt1*tt4/8.0+tt2
+tt6 = 4*ABC(1,2)
+tt7 = cos(tt6)
+tt8 = 5.0*tt1*tt7/8.0+tt2
+tt9 = sqrt(5.0)
+tt10 = tt9*tt1/4.0
+tt11 = tt10-tt9*tt1*tt4/4.0
+tt12 = 2*ABC(2,1)
+tt13 = cos(tt12)
+tt14 = 7.0*tt9/8.0
+tt15 = tt9*tt4/8.0+tt14
+tt16 = 4*ABC(2,1)
+tt17 = cos(tt16)
+tt18 = tt10-tt9*tt1*tt7/4.0
+tt19 = 2*ABC(2,2)
+tt20 = cos(tt19)
+tt21 = tt9*tt7/8.0+tt14
+tt22 = 4*ABC(2,2)
+tt23 = cos(tt22)
+tt24 = sqrt(2.0)
+tt25 = 1/tt24**3
+tt26 = sin(tt12)
+tt27 = sin(tt16)
+tt28 = -tt25*tt1*tt15*tt27-tt25*tt11*tt26
+tt29 = cos(ABC(3,1))
+tt30 = 1/tt24**7
+tt31 = sin(tt3)
+tt32 = sin(ABC(2,1))
+tt33 = 3*ABC(2,1)
+tt34 = sin(tt33)
+tt35 = 3*tt30*tt9*tt1*tt31*tt32-tt30*tt9*tt1*tt31*tt34
+tt36 = sin(ABC(3,1))
+tt37 = sin(tt19)
+tt38 = sin(tt22)
+tt39 = -tt25*tt1*tt21*tt38-tt25*tt18*tt37
+tt40 = cos(ABC(3,2))
+tt41 = sin(tt6)
+tt42 = sin(ABC(2,2))
+tt43 = 3*ABC(2,2)
+tt44 = sin(tt43)
+tt45 = 3*tt30*tt9*tt1*tt41*tt42-tt30*tt9*tt1*tt41*tt44
+tt46 = sin(ABC(3,2))
+tt47 = -tt1*tt15*tt17/4.0+tt11*tt13/2.0+tt9*tt5/4.0
+tt48 = 2*ABC(3,1)
+tt49 = cos(tt48)
+tt50 = cos(ABC(2,1))
+tt51 = cos(tt33)
+tt52 = tt9*tt1*tt31*tt50/8.0-tt9*tt1*tt31*tt51/8.0
+tt53 = sin(tt48)
+tt54 = -tt1*tt21*tt23/4.0+tt18*tt20/2.0+tt9*tt8/4.0
+tt55 = 2*ABC(3,2)
+tt56 = cos(tt55)
+tt57 = cos(ABC(2,2))
+tt58 = cos(tt43)
+tt59 = tt9*tt1*tt41*tt57/8.0-tt9*tt1*tt41*tt58/8.0
+tt60 = sin(tt55)
+tt61 = tt25*tt15*tt27-tt25*tt1*tt11*tt26
+tt62 = 3*ABC(3,1)
+tt63 = cos(tt62)
+tt64 = 3*tt30*tt9*tt31*tt34+7*tt30*tt9*tt31*tt32
+tt65 = sin(tt62)
+tt66 = tt25*tt21*tt38-tt25*tt1*tt18*tt37
+tt67 = 3*ABC(3,2)
+tt68 = cos(tt67)
+tt69 = 3*tt30*tt9*tt41*tt44+7*tt30*tt9*tt41*tt42
+tt70 = sin(tt67)
+tt71 = tt15*tt17/8.0-tt1*tt11*tt13/4.0+tt9*tt1*tt5/8.0
+tt72 = 4*ABC(3,1)
+tt73 = cos(tt72)
+tt74 = tt9*tt31*tt51/8.0+7.0*tt9*tt31*tt50/8.0
+tt75 = sin(tt72)
+tt76 = tt21*tt23/8.0-tt1*tt18*tt20/4.0+tt9*tt1*tt8/8.0
+tt77 = 4*ABC(3,2)
+tt78 = cos(tt77)
+tt79 = tt9*tt41*tt58/8.0+7.0*tt9*tt41*tt57/8.0
+tt80 = sin(tt77)
+val(1,1) = stiff(1,1)*((-tt76*tt80-tt79*tt78+tt71*tt75+tt74*tt73)&
+&**2+(tt79*tt80-tt76*tt78-tt74*tt75+tt71*tt73)**2+(-tt66*tt70-tt69&
+&*tt68+tt61*tt65+tt64*tt63)**2+(tt69*tt70-tt66*tt68-tt64*tt65+tt61&
+&*tt63)**2+(-tt54*tt60-tt59*tt56+tt47*tt53+tt52*tt49)**2+(tt59*tt6&
+&0-tt54*tt56-tt52*tt53+tt47*tt49)**2+(-tt39*tt46-tt45*tt40+tt28*tt&
+&36+tt35*tt29)**2+(tt45*tt46-tt39*tt40-tt35*tt36+tt28*tt29)**2+(-t&
+&t9*tt1*tt21*tt23/8.0-tt9*tt18*tt20/4.0+tt9*tt1*tt15*tt17/8.0+tt9*&
+&tt11*tt13/4.0+(-3.0)*tt8/8.0+3.0*tt5/8.0)**2)
+END 
+SUBROUTINE cubic_sym_smooth_tet_jac(jac, ABC, stiff) 
+IMPLICIT NONE 
+REAL(KIND=8) jac(1, 6) 
+REAL(KIND=8) ABC(3, 2) 
+REAL(KIND=8) stiff(1, 1) 
+REAL(KIND=8)  tt1 
+REAL(KIND=8)  tt2 
+REAL(KIND=8)  tt3 
+REAL(KIND=8)  tt4 
+REAL(KIND=8)  tt5 
+REAL(KIND=8)  tt6 
+REAL(KIND=8)  tt7 
+REAL(KIND=8)  tt8 
+REAL(KIND=8)  tt9 
+REAL(KIND=8)  tt10 
+REAL(KIND=8)  tt11 
+REAL(KIND=8)  tt12 
+REAL(KIND=8)  tt13 
+REAL(KIND=8)  tt14 
+REAL(KIND=8)  tt15 
+REAL(KIND=8)  tt16 
+REAL(KIND=8)  tt17 
+REAL(KIND=8)  tt18 
+REAL(KIND=8)  tt19 
+REAL(KIND=8)  tt20 
+REAL(KIND=8)  tt21 
+REAL(KIND=8)  tt22 
+REAL(KIND=8)  tt23 
+REAL(KIND=8)  tt24 
+REAL(KIND=8)  tt25 
+REAL(KIND=8)  tt26 
+REAL(KIND=8)  tt27 
+REAL(KIND=8)  tt28 
+REAL(KIND=8)  tt29 
+REAL(KIND=8)  tt30 
+REAL(KIND=8)  tt31 
+REAL(KIND=8)  tt32 
+REAL(KIND=8)  tt33 
+REAL(KIND=8)  tt34 
+REAL(KIND=8)  tt35 
+REAL(KIND=8)  tt36 
+REAL(KIND=8)  tt37 
+REAL(KIND=8)  tt38 
+REAL(KIND=8)  tt39 
+REAL(KIND=8)  tt40 
+REAL(KIND=8)  tt41 
+REAL(KIND=8)  tt42 
+REAL(KIND=8)  tt43 
+REAL(KIND=8)  tt44 
+REAL(KIND=8)  tt45 
+REAL(KIND=8)  tt46 
+REAL(KIND=8)  tt47 
+REAL(KIND=8)  tt48 
+REAL(KIND=8)  tt49 
+REAL(KIND=8)  tt50 
+REAL(KIND=8)  tt51 
+REAL(KIND=8)  tt52 
+REAL(KIND=8)  tt53 
+REAL(KIND=8)  tt54 
+REAL(KIND=8)  tt55 
+REAL(KIND=8)  tt56 
+REAL(KIND=8)  tt57 
+REAL(KIND=8)  tt58 
+REAL(KIND=8)  tt59 
+REAL(KIND=8)  tt60 
+REAL(KIND=8)  tt61 
+REAL(KIND=8)  tt62 
+REAL(KIND=8)  tt63 
+REAL(KIND=8)  tt64 
+REAL(KIND=8)  tt65 
+REAL(KIND=8)  tt66 
+REAL(KIND=8)  tt67 
+REAL(KIND=8)  tt68 
+REAL(KIND=8)  tt69 
+REAL(KIND=8)  tt70 
+REAL(KIND=8)  tt71 
+REAL(KIND=8)  tt72 
+REAL(KIND=8)  tt73 
+REAL(KIND=8)  tt74 
+REAL(KIND=8)  tt75 
+REAL(KIND=8)  tt76 
+REAL(KIND=8)  tt77 
+REAL(KIND=8)  tt78 
+REAL(KIND=8)  tt79 
+REAL(KIND=8)  tt80 
+REAL(KIND=8)  tt81 
+REAL(KIND=8)  tt82 
+REAL(KIND=8)  tt83 
+REAL(KIND=8)  tt84 
+REAL(KIND=8)  tt85 
+REAL(KIND=8)  tt86 
+REAL(KIND=8)  tt87 
+REAL(KIND=8)  tt88 
+REAL(KIND=8)  tt89 
+REAL(KIND=8)  tt90 
+REAL(KIND=8)  tt91 
+REAL(KIND=8)  tt92 
+REAL(KIND=8)  tt93 
+REAL(KIND=8)  tt94 
+REAL(KIND=8)  tt95 
+REAL(KIND=8)  tt96 
+REAL(KIND=8)  tt97 
+REAL(KIND=8)  tt98 
+REAL(KIND=8)  tt99 
+REAL(KIND=8)  tt100 
+REAL(KIND=8)  tt101 
+REAL(KIND=8)  tt102 
+REAL(KIND=8)  tt103 
+REAL(KIND=8)  tt104 
+REAL(KIND=8)  tt105 
+REAL(KIND=8)  tt106 
+REAL(KIND=8)  tt107 
+REAL(KIND=8)  tt108 
+REAL(KIND=8)  tt109 
+REAL(KIND=8)  tt110 
+REAL(KIND=8)  tt111 
+REAL(KIND=8)  tt112 
+REAL(KIND=8)  tt113 
+REAL(KIND=8)  tt114 
+REAL(KIND=8)  tt115 
+REAL(KIND=8)  tt116 
+REAL(KIND=8)  tt117 
+REAL(KIND=8)  tt118 
+REAL(KIND=8)  tt119 
+REAL(KIND=8)  tt120 
+REAL(KIND=8)  tt121 
+REAL(KIND=8)  tt122 
+REAL(KIND=8)  tt123 
+REAL(KIND=8)  tt124 
+REAL(KIND=8)  tt125 
+REAL(KIND=8)  tt126 
+REAL(KIND=8)  tt127 
+REAL(KIND=8)  tt128 
+tt1 = sqrt(7.0)
+tt2 = 4*ABC(1,1)
+tt3 = sin(tt2)
+tt4 = 2*ABC(2,1)
+tt5 = cos(tt4)
+tt6 = 4*ABC(2,1)
+tt7 = cos(tt6)
+tt8 = 3.0*tt1/8.0
+tt9 = cos(tt2)
+tt10 = 5.0*tt1*tt9/8.0+tt8
+tt11 = 4*ABC(1,2)
+tt12 = cos(tt11)
+tt13 = 5.0*tt1*tt12/8.0+tt8
+tt14 = sqrt(5.0)
+tt15 = tt14*tt1/4.0
+tt16 = tt15-tt14*tt1*tt9/4.0
+tt17 = 7.0*tt14/8.0
+tt18 = tt14*tt9/8.0+tt17
+tt19 = tt15-tt14*tt1*tt12/4.0
+tt20 = 2*ABC(2,2)
+tt21 = cos(tt20)
+tt22 = tt14*tt12/8.0+tt17
+tt23 = 4*ABC(2,2)
+tt24 = cos(tt23)
+tt25 = -tt14*tt1*tt22*tt24/8.0-tt14*tt19*tt21/4.0+tt14*tt1*tt18*t&
+&t7/8.0+tt14*tt16*tt5/4.0+(-3.0)*tt13/8.0+3.0*tt10/8.0
+tt26 = sqrt(2.0)
+tt27 = 1/tt26**3
+tt28 = sin(tt4)
+tt29 = 1/tt26**5
+tt30 = sin(tt6)
+tt31 = tt29*tt14*tt1*tt3*tt30-tt27*tt14*tt1*tt3*tt28
+tt32 = cos(ABC(3,1))
+tt33 = sin(ABC(2,1))
+tt34 = 3*ABC(2,1)
+tt35 = sin(tt34)
+tt36 = 3*tt27*tt14*tt1*tt9*tt33-tt27*tt14*tt1*tt9*tt35
+tt37 = sin(ABC(3,1))
+tt38 = -tt27*tt1*tt18*tt30-tt27*tt16*tt28
+tt39 = tt38*tt32
+tt40 = 1/tt26**7
+tt41 = 3*tt40*tt14*tt1*tt3*tt33-tt40*tt14*tt1*tt3*tt35
+tt42 = -tt41*tt37
+tt43 = sin(tt20)
+tt44 = sin(tt23)
+tt45 = -tt27*tt1*tt22*tt44-tt27*tt19*tt43
+tt46 = cos(ABC(3,2))
+tt47 = -tt45*tt46
+tt48 = sin(tt11)
+tt49 = sin(ABC(2,2))
+tt50 = 3*ABC(2,2)
+tt51 = sin(tt50)
+tt52 = 3*tt40*tt14*tt1*tt48*tt49-tt40*tt14*tt1*tt48*tt51
+tt53 = sin(ABC(3,2))
+tt54 = tt52*tt53
+tt55 = tt54+tt47+tt42+tt39
+tt56 = -tt45*tt53-tt52*tt46+tt38*tt37+tt41*tt32
+tt57 = tt14**3
+tt58 = tt14*tt1*tt3*tt7/8.0+tt14*tt1*tt3*tt5/2.0-tt57*tt1*tt3/8.0&
+&
+tt59 = 2*ABC(3,1)
+tt60 = cos(tt59)
+tt61 = cos(ABC(2,1))
+tt62 = cos(tt34)
+tt63 = tt14*tt1*tt9*tt61/2.0-tt14*tt1*tt9*tt62/2.0
+tt64 = sin(tt59)
+tt65 = -tt1*tt18*tt7/4.0+tt16*tt5/2.0+tt14*tt10/4.0
+tt66 = tt14*tt1*tt3*tt61/8.0-tt14*tt1*tt3*tt62/8.0
+tt67 = -tt1*tt22*tt24/4.0+tt19*tt21/2.0+tt14*tt13/4.0
+tt68 = 2*ABC(3,2)
+tt69 = cos(tt68)
+tt70 = cos(ABC(2,2))
+tt71 = cos(tt50)
+tt72 = tt14*tt1*tt48*tt70/8.0-tt14*tt1*tt48*tt71/8.0
+tt73 = sin(tt68)
+tt74 = tt72*tt73-tt67*tt69-tt66*tt64+tt65*tt60
+tt75 = -tt67*tt73-tt72*tt69+tt65*tt64+tt66*tt60
+tt76 = -tt29*tt14*tt3*tt30-7*tt27*tt14*tt3*tt28
+tt77 = 3*ABC(3,1)
+tt78 = cos(tt77)
+tt79 = 3*tt27*tt14*tt9*tt35+7*tt27*tt14*tt9*tt33
+tt80 = sin(tt77)
+tt81 = tt27*tt18*tt30-tt27*tt1*tt16*tt28
+tt82 = 3*tt40*tt14*tt3*tt35+7*tt40*tt14*tt3*tt33
+tt83 = tt27*tt22*tt44-tt27*tt1*tt19*tt43
+tt84 = 3*ABC(3,2)
+tt85 = cos(tt84)
+tt86 = 3*tt40*tt14*tt48*tt51+7*tt40*tt14*tt48*tt49
+tt87 = sin(tt84)
+tt88 = tt86*tt87-tt83*tt85-tt82*tt80+tt81*tt78
+tt89 = -tt83*tt87-tt86*tt85+tt81*tt80+tt82*tt78
+tt90 = -tt14*tt3*tt7/16.0+(-7.0)*tt14*tt3*tt5/4.0+(-7.0)*tt57*tt3&
+&/16.0
+tt91 = 4*ABC(3,1)
+tt92 = cos(tt91)
+tt93 = tt14*tt9*tt62/2.0+7.0*tt14*tt9*tt61/2.0
+tt94 = sin(tt91)
+tt95 = tt18*tt7/8.0-tt1*tt16*tt5/4.0+tt14*tt1*tt10/8.0
+tt96 = tt14*tt3*tt62/8.0+7.0*tt14*tt3*tt61/8.0
+tt97 = tt22*tt24/8.0-tt1*tt19*tt21/4.0+tt14*tt1*tt13/8.0
+tt98 = 4*ABC(3,2)
+tt99 = cos(tt98)
+tt100 = tt14*tt48*tt71/8.0+7.0*tt14*tt48*tt70/8.0
+tt101 = sin(tt98)
+tt102 = tt100*tt101-tt97*tt99-tt96*tt94+tt95*tt92
+tt103 = -tt97*tt101-tt100*tt99+tt95*tt94+tt96*tt92
+tt104 = 1/tt26
+tt105 = -tt26*tt1*tt18*tt7-tt104*tt16*tt5
+tt106 = 3*tt40*tt14*tt1*tt3*tt61-3*tt40*tt14*tt1*tt3*tt62
+tt107 = tt1*tt18*tt30-tt16*tt28
+tt108 = 3.0*tt14*tt1*tt3*tt35/8.0-tt14*tt1*tt3*tt33/8.0
+tt109 = tt26*tt18*tt7-tt104*tt1*tt16*tt5
+tt110 = 9*tt40*tt14*tt3*tt62+7*tt40*tt14*tt3*tt61
+tt111 = tt1*tt16*tt28/2.0-tt18*tt30/2.0
+tt112 = (-3.0)*tt14*tt3*tt35/8.0+(-7.0)*tt14*tt3*tt33/8.0
+tt113 = tt29*tt14*tt1*tt48*tt44-tt27*tt14*tt1*tt48*tt43
+tt114 = 3*tt27*tt14*tt1*tt12*tt49-tt27*tt14*tt1*tt12*tt51
+tt115 = tt14*tt1*tt48*tt24/8.0+tt14*tt1*tt48*tt21/2.0-tt57*tt1*tt&
+&48/8.0
+tt116 = tt14*tt1*tt12*tt70/2.0-tt14*tt1*tt12*tt71/2.0
+tt117 = -tt29*tt14*tt48*tt44-7*tt27*tt14*tt48*tt43
+tt118 = 3*tt27*tt14*tt12*tt51+7*tt27*tt14*tt12*tt49
+tt119 = -tt14*tt48*tt24/16.0+(-7.0)*tt14*tt48*tt21/4.0+(-7.0)*tt5&
+&7*tt48/16.0
+tt120 = tt14*tt12*tt71/2.0+7.0*tt14*tt12*tt70/2.0
+tt121 = -tt26*tt1*tt22*tt24-tt104*tt19*tt21
+tt122 = 3*tt40*tt14*tt1*tt48*tt70-3*tt40*tt14*tt1*tt48*tt71
+tt123 = tt1*tt22*tt44-tt19*tt43
+tt124 = 3.0*tt14*tt1*tt48*tt51/8.0-tt14*tt1*tt48*tt49/8.0
+tt125 = tt26*tt22*tt24-tt104*tt1*tt19*tt21
+tt126 = 9*tt40*tt14*tt48*tt71+7*tt40*tt14*tt48*tt70
+tt127 = tt1*tt19*tt43/2.0-tt22*tt44/2.0
+tt128 = (-3.0)*tt14*tt48*tt51/8.0+(-7.0)*tt14*tt48*tt49/8.0
+jac(1,1) = stiff(1,1)*(2*(tt90*tt94+tt93*tt92)*tt103+2*(tt90*tt92&
+&-tt93*tt94)*tt102+2*(tt76*tt80+tt79*tt78)*tt89+2*(tt76*tt78-tt79*&
+&tt80)*tt88+2*(tt58*tt64+tt63*tt60)*tt75+2*(tt58*tt60-tt63*tt64)*t&
+&t74+2*(tt31*tt37+tt36*tt32)*tt56+2*(tt31*tt32-tt36*tt37)*tt55+2*(&
+&(-5.0)*tt1*tt3*tt7/16.0+5.0*tt1*tt3*tt5/4.0+(-15.0)*tt1*tt3/16.0)&
+&*tt25)
+jac(1,2) = stiff(1,1)*(2*(tt111*tt94+tt112*tt92)*tt103+2*(tt111*t&
+&t92-tt112*tt94)*tt102+2*(tt109*tt80+tt110*tt78)*tt89+2*(tt109*tt7&
+&8-tt110*tt80)*tt88+2*(tt107*tt64+tt108*tt60)*tt75+2*(tt107*tt60-t&
+&t108*tt64)*tt74+2*(tt105*tt37+tt106*tt32)*tt56+2*(tt105*tt32-tt10&
+&6*tt37)*tt55+2*(-tt14*tt1*tt18*tt30/2.0-tt14*tt16*tt28/2.0)*tt25)
+jac(1,3) = stiff(1,1)*(2*(4*tt95*tt92-4*tt96*tt94)*tt103+2*(-4*tt&
+&95*tt94-4*tt96*tt92)*tt102+2*(3*tt81*tt78-3*tt82*tt80)*tt89+2*(-3&
+&*tt81*tt80-3*tt82*tt78)*tt88+2*(2*tt65*tt60-2*tt66*tt64)*tt75+2*(&
+&-2*tt65*tt64-2*tt66*tt60)*tt74+2*(tt42+tt39)*tt56+2*(-tt38*tt37-t&
+&t41*tt32)*tt55)
+jac(1,4) = stiff(1,1)*(2*tt103*(-tt119*tt101-tt120*tt99)+2*(tt120&
+&*tt101-tt119*tt99)*tt102+2*tt89*(-tt117*tt87-tt118*tt85)+2*(tt118&
+&*tt87-tt117*tt85)*tt88+2*tt75*(-tt115*tt73-tt116*tt69)+2*(tt116*t&
+&t73-tt115*tt69)*tt74+2*tt56*(-tt113*tt53-tt114*tt46)+2*(tt114*tt5&
+&3-tt113*tt46)*tt55+2*tt25*(5.0*tt1*tt48*tt24/16.0+(-5.0)*tt1*tt48&
+&*tt21/4.0+15.0*tt1*tt48/16.0))
+jac(1,5) = stiff(1,1)*(2*tt103*(-tt127*tt101-tt128*tt99)+2*tt102*&
+&(tt128*tt101-tt127*tt99)+2*(-tt125*tt87-tt126*tt85)*tt89+2*(tt126&
+&*tt87-tt125*tt85)*tt88+2*tt75*(-tt123*tt73-tt124*tt69)+2*tt74*(tt&
+&124*tt73-tt123*tt69)+2*(-tt121*tt53-tt122*tt46)*tt56+2*(tt122*tt5&
+&3-tt121*tt46)*tt55+2*tt25*(tt14*tt1*tt22*tt44/2.0+tt14*tt19*tt43/&
+&2.0))
+jac(1,6) = stiff(1,1)*(2*tt102*(4*tt97*tt101+4*tt100*tt99)+2*(4*t&
+&t100*tt101-4*tt97*tt99)*tt103+2*tt88*(3*tt83*tt87+3*tt86*tt85)+2*&
+&(3*tt86*tt87-3*tt83*tt85)*tt89+2*tt74*(2*tt67*tt73+2*tt72*tt69)+2&
+&*(2*tt72*tt73-2*tt67*tt69)*tt75+2*tt55*(tt45*tt53+tt52*tt46)+2*(t&
+&t54+tt47)*tt56)
+END 
+SUBROUTINE cubic_sym_smooth_tet_hes(hes, ABC, stiff) 
+IMPLICIT NONE 
+REAL(KIND=8) hes(6, 6) 
+REAL(KIND=8) ABC(3, 2) 
+REAL(KIND=8) stiff(1, 1) 
+REAL(KIND=8)  tt1 
+REAL(KIND=8)  tt2 
+REAL(KIND=8)  tt3 
+REAL(KIND=8)  tt4 
+REAL(KIND=8)  tt5 
+REAL(KIND=8)  tt6 
+REAL(KIND=8)  tt7 
+REAL(KIND=8)  tt8 
+REAL(KIND=8)  tt9 
+REAL(KIND=8)  tt10 
+REAL(KIND=8)  tt11 
+REAL(KIND=8)  tt12 
+REAL(KIND=8)  tt13 
+REAL(KIND=8)  tt14 
+REAL(KIND=8)  tt15 
+REAL(KIND=8)  tt16 
+REAL(KIND=8)  tt17 
+REAL(KIND=8)  tt18 
+REAL(KIND=8)  tt19 
+REAL(KIND=8)  tt20 
+REAL(KIND=8)  tt21 
+REAL(KIND=8)  tt22 
+REAL(KIND=8)  tt23 
+REAL(KIND=8)  tt24 
+REAL(KIND=8)  tt25 
+REAL(KIND=8)  tt26 
+REAL(KIND=8)  tt27 
+REAL(KIND=8)  tt28 
+REAL(KIND=8)  tt29 
+REAL(KIND=8)  tt30 
+REAL(KIND=8)  tt31 
+REAL(KIND=8)  tt32 
+REAL(KIND=8)  tt33 
+REAL(KIND=8)  tt34 
+REAL(KIND=8)  tt35 
+REAL(KIND=8)  tt36 
+REAL(KIND=8)  tt37 
+REAL(KIND=8)  tt38 
+REAL(KIND=8)  tt39 
+REAL(KIND=8)  tt40 
+REAL(KIND=8)  tt41 
+REAL(KIND=8)  tt42 
+REAL(KIND=8)  tt43 
+REAL(KIND=8)  tt44 
+REAL(KIND=8)  tt45 
+REAL(KIND=8)  tt46 
+REAL(KIND=8)  tt47 
+REAL(KIND=8)  tt48 
+REAL(KIND=8)  tt49 
+REAL(KIND=8)  tt50 
+REAL(KIND=8)  tt51 
+REAL(KIND=8)  tt52 
+REAL(KIND=8)  tt53 
+REAL(KIND=8)  tt54 
+REAL(KIND=8)  tt55 
+REAL(KIND=8)  tt56 
+REAL(KIND=8)  tt57 
+REAL(KIND=8)  tt58 
+REAL(KIND=8)  tt59 
+REAL(KIND=8)  tt60 
+REAL(KIND=8)  tt61 
+REAL(KIND=8)  tt62 
+REAL(KIND=8)  tt63 
+REAL(KIND=8)  tt64 
+REAL(KIND=8)  tt65 
+REAL(KIND=8)  tt66 
+REAL(KIND=8)  tt67 
+REAL(KIND=8)  tt68 
+REAL(KIND=8)  tt69 
+REAL(KIND=8)  tt70 
+REAL(KIND=8)  tt71 
+REAL(KIND=8)  tt72 
+REAL(KIND=8)  tt73 
+REAL(KIND=8)  tt74 
+REAL(KIND=8)  tt75 
+REAL(KIND=8)  tt76 
+REAL(KIND=8)  tt77 
+REAL(KIND=8)  tt78 
+REAL(KIND=8)  tt79 
+REAL(KIND=8)  tt80 
+REAL(KIND=8)  tt81 
+REAL(KIND=8)  tt82 
+REAL(KIND=8)  tt83 
+REAL(KIND=8)  tt84 
+REAL(KIND=8)  tt85 
+REAL(KIND=8)  tt86 
+REAL(KIND=8)  tt87 
+REAL(KIND=8)  tt88 
+REAL(KIND=8)  tt89 
+REAL(KIND=8)  tt90 
+REAL(KIND=8)  tt91 
+REAL(KIND=8)  tt92 
+REAL(KIND=8)  tt93 
+REAL(KIND=8)  tt94 
+REAL(KIND=8)  tt95 
+REAL(KIND=8)  tt96 
+REAL(KIND=8)  tt97 
+REAL(KIND=8)  tt98 
+REAL(KIND=8)  tt99 
+REAL(KIND=8)  tt100 
+REAL(KIND=8)  tt101 
+REAL(KIND=8)  tt102 
+REAL(KIND=8)  tt103 
+REAL(KIND=8)  tt104 
+REAL(KIND=8)  tt105 
+REAL(KIND=8)  tt106 
+REAL(KIND=8)  tt107 
+REAL(KIND=8)  tt108 
+REAL(KIND=8)  tt109 
+REAL(KIND=8)  tt110 
+REAL(KIND=8)  tt111 
+REAL(KIND=8)  tt112 
+REAL(KIND=8)  tt113 
+REAL(KIND=8)  tt114 
+REAL(KIND=8)  tt115 
+REAL(KIND=8)  tt116 
+REAL(KIND=8)  tt117 
+REAL(KIND=8)  tt118 
+REAL(KIND=8)  tt119 
+REAL(KIND=8)  tt120 
+REAL(KIND=8)  tt121 
+REAL(KIND=8)  tt122 
+REAL(KIND=8)  tt123 
+REAL(KIND=8)  tt124 
+REAL(KIND=8)  tt125 
+REAL(KIND=8)  tt126 
+REAL(KIND=8)  tt127 
+REAL(KIND=8)  tt128 
+REAL(KIND=8)  tt129 
+REAL(KIND=8)  tt130 
+REAL(KIND=8)  tt131 
+REAL(KIND=8)  tt132 
+REAL(KIND=8)  tt133 
+REAL(KIND=8)  tt134 
+REAL(KIND=8)  tt135 
+REAL(KIND=8)  tt136 
+REAL(KIND=8)  tt137 
+REAL(KIND=8)  tt138 
+REAL(KIND=8)  tt139 
+REAL(KIND=8)  tt140 
+REAL(KIND=8)  tt141 
+REAL(KIND=8)  tt142 
+REAL(KIND=8)  tt143 
+REAL(KIND=8)  tt144 
+REAL(KIND=8)  tt145 
+REAL(KIND=8)  tt146 
+REAL(KIND=8)  tt147 
+REAL(KIND=8)  tt148 
+REAL(KIND=8)  tt149 
+REAL(KIND=8)  tt150 
+REAL(KIND=8)  tt151 
+REAL(KIND=8)  tt152 
+REAL(KIND=8)  tt153 
+REAL(KIND=8)  tt154 
+REAL(KIND=8)  tt155 
+REAL(KIND=8)  tt156 
+REAL(KIND=8)  tt157 
+REAL(KIND=8)  tt158 
+REAL(KIND=8)  tt159 
+REAL(KIND=8)  tt160 
+REAL(KIND=8)  tt161 
+REAL(KIND=8)  tt162 
+REAL(KIND=8)  tt163 
+REAL(KIND=8)  tt164 
+REAL(KIND=8)  tt165 
+REAL(KIND=8)  tt166 
+REAL(KIND=8)  tt167 
+REAL(KIND=8)  tt168 
+REAL(KIND=8)  tt169 
+REAL(KIND=8)  tt170 
+REAL(KIND=8)  tt171 
+REAL(KIND=8)  tt172 
+REAL(KIND=8)  tt173 
+REAL(KIND=8)  tt174 
+REAL(KIND=8)  tt175 
+REAL(KIND=8)  tt176 
+REAL(KIND=8)  tt177 
+REAL(KIND=8)  tt178 
+REAL(KIND=8)  tt179 
+REAL(KIND=8)  tt180 
+REAL(KIND=8)  tt181 
+REAL(KIND=8)  tt182 
+REAL(KIND=8)  tt183 
+REAL(KIND=8)  tt184 
+REAL(KIND=8)  tt185 
+REAL(KIND=8)  tt186 
+REAL(KIND=8)  tt187 
+REAL(KIND=8)  tt188 
+REAL(KIND=8)  tt189 
+REAL(KIND=8)  tt190 
+REAL(KIND=8)  tt191 
+REAL(KIND=8)  tt192 
+REAL(KIND=8)  tt193 
+REAL(KIND=8)  tt194 
+REAL(KIND=8)  tt195 
+REAL(KIND=8)  tt196 
+REAL(KIND=8)  tt197 
+REAL(KIND=8)  tt198 
+REAL(KIND=8)  tt199 
+REAL(KIND=8)  tt200 
+REAL(KIND=8)  tt201 
+REAL(KIND=8)  tt202 
+REAL(KIND=8)  tt203 
+REAL(KIND=8)  tt204 
+REAL(KIND=8)  tt205 
+REAL(KIND=8)  tt206 
+REAL(KIND=8)  tt207 
+REAL(KIND=8)  tt208 
+REAL(KIND=8)  tt209 
+REAL(KIND=8)  tt210 
+REAL(KIND=8)  tt211 
+REAL(KIND=8)  tt212 
+REAL(KIND=8)  tt213 
+REAL(KIND=8)  tt214 
+REAL(KIND=8)  tt215 
+REAL(KIND=8)  tt216 
+REAL(KIND=8)  tt217 
+REAL(KIND=8)  tt218 
+REAL(KIND=8)  tt219 
+REAL(KIND=8)  tt220 
+REAL(KIND=8)  tt221 
+REAL(KIND=8)  tt222 
+REAL(KIND=8)  tt223 
+REAL(KIND=8)  tt224 
+REAL(KIND=8)  tt225 
+REAL(KIND=8)  tt226 
+REAL(KIND=8)  tt227 
+REAL(KIND=8)  tt228 
+REAL(KIND=8)  tt229 
+REAL(KIND=8)  tt230 
+REAL(KIND=8)  tt231 
+REAL(KIND=8)  tt232 
+REAL(KIND=8)  tt233 
+REAL(KIND=8)  tt234 
+REAL(KIND=8)  tt235 
+REAL(KIND=8)  tt236 
+REAL(KIND=8)  tt237 
+REAL(KIND=8)  tt238 
+REAL(KIND=8)  tt239 
+REAL(KIND=8)  tt240 
+REAL(KIND=8)  tt241 
+REAL(KIND=8)  tt242 
+REAL(KIND=8)  tt243 
+REAL(KIND=8)  tt244 
+tt1 = sqrt(7.0)
+tt2 = 4*ABC(1,1)
+tt3 = sin(tt2)
+tt4 = 2*ABC(2,1)
+tt5 = cos(tt4)
+tt6 = 4*ABC(2,1)
+tt7 = cos(tt6)
+tt8 = (-5.0)*tt1*tt3*tt7/16.0+5.0*tt1*tt3*tt5/4.0+(-15.0)*tt1*tt3&
+&/16.0
+tt9 = cos(tt2)
+tt10 = 3.0*tt1/8.0
+tt11 = 5.0*tt1*tt9/8.0+tt10
+tt12 = 4*ABC(1,2)
+tt13 = cos(tt12)
+tt14 = 5.0*tt1*tt13/8.0+tt10
+tt15 = sqrt(5.0)
+tt16 = tt15*tt1/4.0
+tt17 = tt16-tt15*tt1*tt9/4.0
+tt18 = 7.0*tt15/8.0
+tt19 = tt15*tt9/8.0+tt18
+tt20 = tt16-tt15*tt1*tt13/4.0
+tt21 = 2*ABC(2,2)
+tt22 = cos(tt21)
+tt23 = tt15*tt13/8.0+tt18
+tt24 = 4*ABC(2,2)
+tt25 = cos(tt24)
+tt26 = -tt15*tt1*tt23*tt25/8.0-tt15*tt20*tt22/4.0+tt15*tt1*tt19*t&
+&t7/8.0+tt15*tt17*tt5/4.0+(-3.0)*tt14/8.0+3.0*tt11/8.0
+tt27 = sqrt(2.0)
+tt28 = 1/tt27**3
+tt29 = sin(tt4)
+tt30 = tt27**5
+tt31 = 1/tt30
+tt32 = sin(tt6)
+tt33 = tt31*tt15*tt1*tt3*tt32-tt28*tt15*tt1*tt3*tt29
+tt34 = cos(ABC(3,1))
+tt35 = sin(ABC(2,1))
+tt36 = 3*ABC(2,1)
+tt37 = sin(tt36)
+tt38 = 3*tt28*tt15*tt1*tt9*tt35-tt28*tt15*tt1*tt9*tt37
+tt39 = sin(ABC(3,1))
+tt40 = tt33*tt34-tt38*tt39
+tt41 = tt33*tt39+tt38*tt34
+tt42 = tt15**3
+tt43 = tt15*tt1*tt3*tt7/8.0+tt15*tt1*tt3*tt5/2.0-tt42*tt1*tt3/8.0&
+&
+tt44 = 2*ABC(3,1)
+tt45 = cos(tt44)
+tt46 = cos(ABC(2,1))
+tt47 = cos(tt36)
+tt48 = tt15*tt1*tt9*tt46/2.0-tt15*tt1*tt9*tt47/2.0
+tt49 = sin(tt44)
+tt50 = tt43*tt45-tt48*tt49
+tt51 = tt43*tt49+tt48*tt45
+tt52 = -tt31*tt15*tt3*tt32-7*tt28*tt15*tt3*tt29
+tt53 = 3*ABC(3,1)
+tt54 = cos(tt53)
+tt55 = 3*tt28*tt15*tt9*tt37+7*tt28*tt15*tt9*tt35
+tt56 = sin(tt53)
+tt57 = tt52*tt54-tt55*tt56
+tt58 = tt52*tt56+tt55*tt54
+tt59 = -tt15*tt3*tt7/16.0+(-7.0)*tt15*tt3*tt5/4.0+(-7.0)*tt42*tt3&
+&/16.0
+tt60 = 4*ABC(3,1)
+tt61 = cos(tt60)
+tt62 = tt15*tt9*tt47/2.0+7.0*tt15*tt9*tt46/2.0
+tt63 = sin(tt60)
+tt64 = tt59*tt61-tt62*tt63
+tt65 = tt59*tt63+tt62*tt61
+tt66 = 1/tt27
+tt67 = tt66*tt15*tt1*tt9*tt32-tt27*tt15*tt1*tt9*tt29
+tt68 = tt27*tt15*tt1*tt3*tt37-3*tt27*tt15*tt1*tt3*tt35
+tt69 = -tt28*tt1*tt19*tt32-tt28*tt17*tt29
+tt70 = tt69*tt34
+tt71 = 1/tt27**7
+tt72 = 3*tt71*tt15*tt1*tt3*tt35-tt71*tt15*tt1*tt3*tt37
+tt73 = -tt72*tt39
+tt74 = sin(tt21)
+tt75 = sin(tt24)
+tt76 = -tt28*tt1*tt23*tt75-tt28*tt20*tt74
+tt77 = cos(ABC(3,2))
+tt78 = -tt76*tt77
+tt79 = sin(tt12)
+tt80 = sin(ABC(2,2))
+tt81 = 3*ABC(2,2)
+tt82 = sin(tt81)
+tt83 = 3*tt71*tt15*tt1*tt79*tt80-tt71*tt15*tt1*tt79*tt82
+tt84 = sin(ABC(3,2))
+tt85 = tt83*tt84
+tt86 = tt85+tt78+tt73+tt70
+tt87 = -tt76*tt84-tt83*tt77+tt69*tt39+tt72*tt34
+tt88 = tt15*tt1*tt9*tt7/2.0+2*tt15*tt1*tt9*tt5-tt42*tt1*tt9/2.0
+tt89 = 2*tt15*tt1*tt3*tt47-2*tt15*tt1*tt3*tt46
+tt90 = -tt1*tt19*tt7/4.0+tt17*tt5/2.0+tt15*tt11/4.0
+tt91 = tt15*tt1*tt3*tt46/8.0-tt15*tt1*tt3*tt47/8.0
+tt92 = -tt1*tt23*tt25/4.0+tt20*tt22/2.0+tt15*tt14/4.0
+tt93 = 2*ABC(3,2)
+tt94 = cos(tt93)
+tt95 = cos(ABC(2,2))
+tt96 = cos(tt81)
+tt97 = tt15*tt1*tt79*tt95/8.0-tt15*tt1*tt79*tt96/8.0
+tt98 = sin(tt93)
+tt99 = tt97*tt98-tt92*tt94-tt91*tt49+tt90*tt45
+tt100 = -tt92*tt98-tt97*tt94+tt90*tt49+tt91*tt45
+tt101 = -tt66*tt15*tt9*tt32-7*tt27*tt15*tt9*tt29
+tt102 = -3*tt27*tt15*tt3*tt37-7*tt27*tt15*tt3*tt35
+tt103 = tt28*tt19*tt32-tt28*tt1*tt17*tt29
+tt104 = 3*tt71*tt15*tt3*tt37+7*tt71*tt15*tt3*tt35
+tt105 = tt28*tt23*tt75-tt28*tt1*tt20*tt74
+tt106 = 3*ABC(3,2)
+tt107 = cos(tt106)
+tt108 = 3*tt71*tt15*tt79*tt82+7*tt71*tt15*tt79*tt80
+tt109 = sin(tt106)
+tt110 = tt108*tt109-tt105*tt107-tt104*tt56+tt103*tt54
+tt111 = -tt105*tt109-tt108*tt107+tt103*tt56+tt104*tt54
+tt112 = -tt15*tt9*tt7/4.0-7*tt15*tt9*tt5+(-7.0)*tt42*tt9/4.0
+tt113 = -2*tt15*tt3*tt47-14*tt15*tt3*tt46
+tt114 = tt19*tt7/8.0-tt1*tt17*tt5/4.0+tt15*tt1*tt11/8.0
+tt115 = tt15*tt3*tt47/8.0+7.0*tt15*tt3*tt46/8.0
+tt116 = tt23*tt25/8.0-tt1*tt20*tt22/4.0+tt15*tt1*tt14/8.0
+tt117 = 4*ABC(3,2)
+tt118 = cos(tt117)
+tt119 = tt15*tt79*tt96/8.0+7.0*tt15*tt79*tt95/8.0
+tt120 = sin(tt117)
+tt121 = tt119*tt120-tt116*tt118-tt115*tt63+tt114*tt61
+tt122 = -tt116*tt120-tt119*tt118+tt114*tt63+tt115*tt61
+tt123 = -tt15*tt1*tt19*tt32/2.0-tt15*tt17*tt29/2.0
+tt124 = -tt27*tt1*tt19*tt7-tt66*tt17*tt5
+tt125 = 3*tt71*tt15*tt1*tt3*tt46-3*tt71*tt15*tt1*tt3*tt47
+tt126 = tt124*tt34-tt125*tt39
+tt127 = tt124*tt39+tt125*tt34
+tt128 = tt1*tt19*tt32-tt17*tt29
+tt129 = 3.0*tt15*tt1*tt3*tt37/8.0-tt15*tt1*tt3*tt35/8.0
+tt130 = tt128*tt45-tt129*tt49
+tt131 = tt128*tt49+tt129*tt45
+tt132 = tt27*tt19*tt7-tt66*tt1*tt17*tt5
+tt133 = 9*tt71*tt15*tt3*tt47+7*tt71*tt15*tt3*tt46
+tt134 = tt132*tt54-tt133*tt56
+tt135 = tt132*tt56+tt133*tt54
+tt136 = tt1*tt17*tt29/2.0-tt19*tt32/2.0
+tt137 = (-3.0)*tt15*tt3*tt37/8.0+(-7.0)*tt15*tt3*tt35/8.0
+tt138 = tt136*tt61-tt137*tt63
+tt139 = tt136*tt63+tt137*tt61
+tt140 = tt66*tt15*tt1*tt3*tt7-tt66*tt15*tt1*tt3*tt5
+tt141 = 3*tt28*tt15*tt1*tt9*tt46-3*tt28*tt15*tt1*tt9*tt47
+tt142 = -tt15*tt1*tt3*tt32/2.0-tt15*tt1*tt3*tt29
+tt143 = 3.0*tt15*tt1*tt9*tt37/2.0-tt15*tt1*tt9*tt35/2.0
+tt144 = -tt66*tt15*tt3*tt7-7*tt66*tt15*tt3*tt5
+tt145 = 9*tt28*tt15*tt9*tt47+7*tt28*tt15*tt9*tt46
+tt146 = tt15*tt3*tt32/4.0+7.0*tt15*tt3*tt29/2.0
+tt147 = (-3.0)*tt15*tt9*tt37/2.0+(-7.0)*tt15*tt9*tt35/2.0
+tt148 = stiff(1,1)*(2*(tt146*tt63+tt147*tt61)*tt122+2*(tt146*tt61&
+&-tt147*tt63)*tt121+2*(tt144*tt56+tt145*tt54)*tt111+2*(tt144*tt54-&
+&tt145*tt56)*tt110+2*(tt142*tt49+tt143*tt45)*tt100+2*(tt142*tt45-t&
+&t143*tt49)*tt99+2*(tt140*tt39+tt141*tt34)*tt87+2*(tt140*tt34-tt14&
+&1*tt39)*tt86+2*tt65*tt139+2*tt64*tt138+2*tt135*tt58+2*tt134*tt57+&
+&2*tt51*tt131+2*tt50*tt130+2*tt127*tt41+2*tt126*tt40+2*(5.0*tt1*tt&
+&3*tt32/4.0+(-5.0)*tt1*tt3*tt29/2.0)*tt26+2*tt8*tt123)
+tt149 = -tt69*tt39-tt72*tt34
+tt150 = tt73+tt70
+tt151 = -2*tt90*tt49-2*tt91*tt45
+tt152 = 2*tt90*tt45-2*tt91*tt49
+tt153 = -3*tt103*tt56-3*tt104*tt54
+tt154 = 3*tt103*tt54-3*tt104*tt56
+tt155 = -4*tt114*tt63-4*tt115*tt61
+tt156 = 4*tt114*tt61-4*tt115*tt63
+tt157 = stiff(1,1)*(2*(4*tt59*tt61-4*tt62*tt63)*tt122+2*(-4*tt59*&
+&tt63-4*tt62*tt61)*tt121+2*(3*tt52*tt54-3*tt55*tt56)*tt111+2*(-3*t&
+&t52*tt56-3*tt55*tt54)*tt110+2*(2*tt43*tt45-2*tt48*tt49)*tt100+2*(&
+&-2*tt43*tt49-2*tt48*tt45)*tt99+2*tt40*tt87+2*(-tt33*tt39-tt38*tt3&
+&4)*tt86+2*tt156*tt65+2*tt64*tt155+2*tt154*tt58+2*tt57*tt153+2*tt1&
+&52*tt51+2*tt50*tt151+2*tt150*tt41+2*tt40*tt149)
+tt158 = 5.0*tt1*tt79*tt25/16.0+(-5.0)*tt1*tt79*tt22/4.0+15.0*tt1*&
+&tt79/16.0
+tt159 = tt31*tt15*tt1*tt79*tt75-tt28*tt15*tt1*tt79*tt74
+tt160 = 3*tt28*tt15*tt1*tt13*tt80-tt28*tt15*tt1*tt13*tt82
+tt161 = tt160*tt84-tt159*tt77
+tt162 = -tt159*tt84-tt160*tt77
+tt163 = tt15*tt1*tt79*tt25/8.0+tt15*tt1*tt79*tt22/2.0-tt42*tt1*tt&
+&79/8.0
+tt164 = tt15*tt1*tt13*tt95/2.0-tt15*tt1*tt13*tt96/2.0
+tt165 = tt164*tt98-tt163*tt94
+tt166 = -tt163*tt98-tt164*tt94
+tt167 = -tt31*tt15*tt79*tt75-7*tt28*tt15*tt79*tt74
+tt168 = 3*tt28*tt15*tt13*tt82+7*tt28*tt15*tt13*tt80
+tt169 = tt168*tt109-tt167*tt107
+tt170 = -tt167*tt109-tt168*tt107
+tt171 = -tt15*tt79*tt25/16.0+(-7.0)*tt15*tt79*tt22/4.0+(-7.0)*tt4&
+&2*tt79/16.0
+tt172 = tt15*tt13*tt96/2.0+7.0*tt15*tt13*tt95/2.0
+tt173 = tt172*tt120-tt171*tt118
+tt174 = -tt171*tt120-tt172*tt118
+tt175 = stiff(1,1)*(2*tt65*tt174+2*tt64*tt173+2*tt58*tt170+2*tt57&
+&*tt169+2*tt51*tt166+2*tt50*tt165+2*tt41*tt162+2*tt40*tt161+2*tt8*&
+&tt158)
+tt176 = tt15*tt1*tt23*tt75/2.0+tt15*tt20*tt74/2.0
+tt177 = -tt27*tt1*tt23*tt25-tt66*tt20*tt22
+tt178 = 3*tt71*tt15*tt1*tt79*tt95-3*tt71*tt15*tt1*tt79*tt96
+tt179 = tt178*tt84-tt177*tt77
+tt180 = -tt177*tt84-tt178*tt77
+tt181 = tt1*tt23*tt75-tt20*tt74
+tt182 = 3.0*tt15*tt1*tt79*tt82/8.0-tt15*tt1*tt79*tt80/8.0
+tt183 = tt182*tt98-tt181*tt94
+tt184 = -tt181*tt98-tt182*tt94
+tt185 = tt27*tt23*tt25-tt66*tt1*tt20*tt22
+tt186 = 9*tt71*tt15*tt79*tt96+7*tt71*tt15*tt79*tt95
+tt187 = tt186*tt109-tt185*tt107
+tt188 = -tt185*tt109-tt186*tt107
+tt189 = tt1*tt20*tt74/2.0-tt23*tt75/2.0
+tt190 = (-3.0)*tt15*tt79*tt82/8.0+(-7.0)*tt15*tt79*tt80/8.0
+tt191 = tt190*tt120-tt189*tt118
+tt192 = -tt189*tt120-tt190*tt118
+tt193 = stiff(1,1)*(2*tt65*tt192+2*tt64*tt191+2*tt58*tt188+2*tt57&
+&*tt187+2*tt51*tt184+2*tt50*tt183+2*tt41*tt180+2*tt40*tt179+2*tt8*&
+&tt176)
+tt194 = tt85+tt78
+tt195 = tt76*tt84+tt83*tt77
+tt196 = 2*tt97*tt98-2*tt92*tt94
+tt197 = 2*tt92*tt98+2*tt97*tt94
+tt198 = 3*tt108*tt109-3*tt105*tt107
+tt199 = 3*tt105*tt109+3*tt108*tt107
+tt200 = 4*tt119*tt120-4*tt116*tt118
+tt201 = 4*tt116*tt120+4*tt119*tt118
+tt202 = stiff(1,1)*(2*tt64*tt201+2*tt65*tt200+2*tt57*tt199+2*tt58&
+&*tt198+2*tt50*tt197+2*tt51*tt196+2*tt40*tt195+2*tt41*tt194)
+tt203 = tt30*tt1*tt19*tt32+tt27*tt17*tt29
+tt204 = 9*tt71*tt15*tt1*tt3*tt37-3*tt71*tt15*tt1*tt3*tt35
+tt205 = 4*tt1*tt19*tt7-2*tt17*tt5
+tt206 = 9.0*tt15*tt1*tt3*tt47/8.0-tt15*tt1*tt3*tt46/8.0
+tt207 = tt27*tt1*tt17*tt29-tt30*tt19*tt32
+tt208 = -27*tt71*tt15*tt3*tt37-7*tt71*tt15*tt3*tt35
+tt209 = tt1*tt17*tt5-2*tt19*tt7
+tt210 = (-9.0)*tt15*tt3*tt47/8.0+(-7.0)*tt15*tt3*tt46/8.0
+tt211 = stiff(1,1)*(2*(4*tt136*tt61-4*tt137*tt63)*tt122+2*(-4*tt1&
+&36*tt63-4*tt137*tt61)*tt121+2*(3*tt132*tt54-3*tt133*tt56)*tt111+2&
+&*(-3*tt132*tt56-3*tt133*tt54)*tt110+2*(2*tt128*tt45-2*tt129*tt49)&
+&*tt100+2*(-2*tt128*tt49-2*tt129*tt45)*tt99+2*tt126*tt87+2*(-tt124&
+&*tt39-tt125*tt34)*tt86+2*tt156*tt139+2*tt138*tt155+2*tt134*tt153+&
+&2*tt154*tt135+2*tt152*tt131+2*tt130*tt151+2*tt126*tt149+2*tt150*t&
+&t127)
+tt212 = stiff(1,1)*(2*tt139*tt174+2*tt138*tt173+2*tt135*tt170+2*t&
+&t134*tt169+2*tt131*tt166+2*tt130*tt165+2*tt127*tt162+2*tt126*tt16&
+&1+2*tt123*tt158)
+tt213 = stiff(1,1)*(2*tt139*tt192+2*tt138*tt191+2*tt135*tt188+2*t&
+&t134*tt187+2*tt131*tt184+2*tt130*tt183+2*tt127*tt180+2*tt126*tt17&
+&9+2*tt123*tt176)
+tt214 = stiff(1,1)*(2*tt138*tt201+2*tt139*tt200+2*tt134*tt199+2*t&
+&t135*tt198+2*tt130*tt197+2*tt131*tt196+2*tt126*tt195+2*tt127*tt19&
+&4)
+tt215 = stiff(1,1)*(2*tt156*tt174+2*tt155*tt173+2*tt154*tt170+2*t&
+&t153*tt169+2*tt152*tt166+2*tt151*tt165+2*tt150*tt162+2*tt149*tt16&
+&1)
+tt216 = stiff(1,1)*(2*tt156*tt192+2*tt155*tt191+2*tt154*tt188+2*t&
+&t153*tt187+2*tt152*tt184+2*tt151*tt183+2*tt150*tt180+2*tt149*tt17&
+&9)
+tt217 = stiff(1,1)*(2*tt155*tt201+2*tt156*tt200+2*tt153*tt199+2*t&
+&t154*tt198+2*tt151*tt197+2*tt152*tt196+2*tt149*tt195+2*tt150*tt19&
+&4)
+tt218 = tt66*tt15*tt1*tt13*tt75-tt27*tt15*tt1*tt13*tt74
+tt219 = tt27*tt15*tt1*tt79*tt82-3*tt27*tt15*tt1*tt79*tt80
+tt220 = tt15*tt1*tt13*tt25/2.0+2*tt15*tt1*tt13*tt22-tt42*tt1*tt13&
+&/2.0
+tt221 = 2*tt15*tt1*tt79*tt96-2*tt15*tt1*tt79*tt95
+tt222 = -tt66*tt15*tt13*tt75-7*tt27*tt15*tt13*tt74
+tt223 = -3*tt27*tt15*tt79*tt82-7*tt27*tt15*tt79*tt80
+tt224 = -tt15*tt13*tt25/4.0-7*tt15*tt13*tt22+(-7.0)*tt42*tt13/4.0&
+&
+tt225 = -2*tt15*tt79*tt96-14*tt15*tt79*tt95
+tt226 = tt66*tt15*tt1*tt79*tt25-tt66*tt15*tt1*tt79*tt22
+tt227 = 3*tt28*tt15*tt1*tt13*tt95-3*tt28*tt15*tt1*tt13*tt96
+tt228 = -tt15*tt1*tt79*tt75/2.0-tt15*tt1*tt79*tt74
+tt229 = 3.0*tt15*tt1*tt13*tt82/2.0-tt15*tt1*tt13*tt80/2.0
+tt230 = -tt66*tt15*tt79*tt25-7*tt66*tt15*tt79*tt22
+tt231 = 9*tt28*tt15*tt13*tt96+7*tt28*tt15*tt13*tt95
+tt232 = tt15*tt79*tt75/4.0+7.0*tt15*tt79*tt74/2.0
+tt233 = (-3.0)*tt15*tt13*tt82/2.0+(-7.0)*tt15*tt13*tt80/2.0
+tt234 = stiff(1,1)*(2*tt122*(-tt232*tt120-tt233*tt118)+2*tt174*tt&
+&192+2*tt173*tt191+2*tt121*(tt233*tt120-tt232*tt118)+2*tt188*tt170&
+&+2*(-tt230*tt109-tt231*tt107)*tt111+2*(tt231*tt109-tt230*tt107)*t&
+&t110+2*tt187*tt169+2*tt100*(-tt228*tt98-tt229*tt94)+2*tt166*tt184&
+&+2*tt165*tt183+2*tt99*(tt229*tt98-tt228*tt94)+2*tt180*tt162+2*(-t&
+&t226*tt84-tt227*tt77)*tt87+2*(tt227*tt84-tt226*tt77)*tt86+2*tt179&
+&*tt161+2*tt26*((-5.0)*tt1*tt79*tt75/4.0+5.0*tt1*tt79*tt74/2.0)+2*&
+&tt158*tt176)
+tt235 = stiff(1,1)*(2*tt121*(4*tt171*tt120+4*tt172*tt118)+2*tt200&
+&*tt174+2*tt173*tt201+2*(4*tt172*tt120-4*tt171*tt118)*tt122+2*tt11&
+&0*(3*tt167*tt109+3*tt168*tt107)+2*tt198*tt170+2*tt169*tt199+2*(3*&
+&tt168*tt109-3*tt167*tt107)*tt111+2*tt99*(2*tt163*tt98+2*tt164*tt9&
+&4)+2*tt196*tt166+2*tt165*tt197+2*(2*tt164*tt98-2*tt163*tt94)*tt10&
+&0+2*tt86*(tt159*tt84+tt160*tt77)+2*tt194*tt162+2*tt161*tt195+2*tt&
+&161*tt87)
+tt236 = tt30*tt1*tt23*tt75+tt27*tt20*tt74
+tt237 = 9*tt71*tt15*tt1*tt79*tt82-3*tt71*tt15*tt1*tt79*tt80
+tt238 = 4*tt1*tt23*tt25-2*tt20*tt22
+tt239 = 9.0*tt15*tt1*tt79*tt96/8.0-tt15*tt1*tt79*tt95/8.0
+tt240 = tt27*tt1*tt20*tt74-tt30*tt23*tt75
+tt241 = -27*tt71*tt15*tt79*tt82-7*tt71*tt15*tt79*tt80
+tt242 = tt1*tt20*tt22-2*tt23*tt25
+tt243 = (-9.0)*tt15*tt79*tt96/8.0+(-7.0)*tt15*tt79*tt95/8.0
+tt244 = stiff(1,1)*(2*tt121*(4*tt189*tt120+4*tt190*tt118)+2*tt200&
+&*tt192+2*tt191*tt201+2*(4*tt190*tt120-4*tt189*tt118)*tt122+2*tt18&
+&7*tt199+2*(3*tt186*tt109-3*tt185*tt107)*tt111+2*tt110*(3*tt185*tt&
+&109+3*tt186*tt107)+2*tt198*tt188+2*tt99*(2*tt181*tt98+2*tt182*tt9&
+&4)+2*tt196*tt184+2*tt183*tt197+2*(2*tt182*tt98-2*tt181*tt94)*tt10&
+&0+2*tt179*tt195+2*tt179*tt87+2*tt86*(tt177*tt84+tt178*tt77)+2*tt1&
+&94*tt180)
+hes(1,1) = stiff(1,1)*(2*(tt112*tt63+tt113*tt61)*tt122+2*(tt112*t&
+&t61-tt113*tt63)*tt121+2*(tt101*tt56+tt102*tt54)*tt111+2*(tt101*tt&
+&54-tt102*tt56)*tt110+2*(tt88*tt49+tt89*tt45)*tt100+2*(tt88*tt45-t&
+&t89*tt49)*tt99+2*(tt67*tt39+tt68*tt34)*tt87+2*(tt67*tt34-tt68*tt3&
+&9)*tt86+2*tt65**2+2*tt64**2+2*tt58**2+2*tt57**2+2*tt51**2+2*tt50*&
+&*2+2*tt41**2+2*tt40**2+2*((-5.0)*tt1*tt9*tt7/4.0+5*tt1*tt9*tt5+(-&
+&15.0)*tt1*tt9/4.0)*tt26+2*tt8**2)
+hes(1,2) = tt148
+hes(1,3) = tt157
+hes(1,4) = tt175
+hes(1,5) = tt193
+hes(1,6) = tt202
+hes(2,1) = tt148
+hes(2,2) = stiff(1,1)*(2*(tt209*tt63+tt210*tt61)*tt122+2*(tt209*t&
+&t61-tt210*tt63)*tt121+2*(tt207*tt56+tt208*tt54)*tt111+2*(tt207*tt&
+&54-tt208*tt56)*tt110+2*(tt205*tt49+tt206*tt45)*tt100+2*(tt205*tt4&
+&5-tt206*tt49)*tt99+2*(tt203*tt39+tt204*tt34)*tt87+2*(tt203*tt34-t&
+&t204*tt39)*tt86+2*tt139**2+2*tt138**2+2*tt135**2+2*tt134**2+2*tt1&
+&31**2+2*tt130**2+2*tt127**2+2*tt126**2+2*(-2*tt15*tt1*tt19*tt7-tt&
+&15*tt17*tt5)*tt26+2*tt123**2)
+hes(2,3) = tt211
+hes(2,4) = tt212
+hes(2,5) = tt213
+hes(2,6) = tt214
+hes(3,1) = tt157
+hes(3,2) = tt211
+hes(3,3) = stiff(1,1)*(2*(-16*tt114*tt63-16*tt115*tt61)*tt122+2*(&
+&16*tt115*tt63-16*tt114*tt61)*tt121+2*(-9*tt103*tt56-9*tt104*tt54)&
+&*tt111+2*(9*tt104*tt56-9*tt103*tt54)*tt110+2*(-4*tt90*tt49-4*tt91&
+&*tt45)*tt100+2*(4*tt91*tt49-4*tt90*tt45)*tt99+2*tt149*tt87+2*(tt7&
+&2*tt39-tt69*tt34)*tt86+2*tt155**2+2*tt156**2+2*tt153**2+2*tt154**&
+&2+2*tt151**2+2*tt152**2+2*tt149**2+2*tt150**2)
+hes(3,4) = tt215
+hes(3,5) = tt216
+hes(3,6) = tt217
+hes(4,1) = tt175
+hes(4,2) = tt212
+hes(4,3) = tt215
+hes(4,4) = stiff(1,1)*(2*tt174**2+2*tt173**2+2*(-tt224*tt120-tt22&
+&5*tt118)*tt122+2*(tt225*tt120-tt224*tt118)*tt121+2*tt170**2+2*tt1&
+&69**2+2*(-tt222*tt109-tt223*tt107)*tt111+2*tt110*(tt223*tt109-tt2&
+&22*tt107)+2*tt166**2+2*tt165**2+2*(-tt220*tt98-tt221*tt94)*tt100+&
+&2*tt99*(tt221*tt98-tt220*tt94)+2*tt162**2+2*tt161**2+2*(-tt218*tt&
+&84-tt219*tt77)*tt87+2*tt86*(tt219*tt84-tt218*tt77)+2*tt158**2+2*(&
+&5.0*tt1*tt13*tt25/4.0-5*tt1*tt13*tt22+15.0*tt1*tt13/4.0)*tt26)
+hes(4,5) = tt234
+hes(4,6) = tt235
+hes(5,1) = tt193
+hes(5,2) = tt213
+hes(5,3) = tt216
+hes(5,4) = tt234
+hes(5,5) = stiff(1,1)*(2*tt192**2+2*tt191**2+2*(-tt242*tt120-tt24&
+&3*tt118)*tt122+2*(tt243*tt120-tt242*tt118)*tt121+2*tt188**2+2*tt1&
+&87**2+2*tt111*(-tt240*tt109-tt241*tt107)+2*(tt241*tt109-tt240*tt1&
+&07)*tt110+2*tt184**2+2*tt183**2+2*tt100*(-tt238*tt98-tt239*tt94)+&
+&2*tt99*(tt239*tt98-tt238*tt94)+2*tt180**2+2*tt179**2+2*tt87*(-tt2&
+&36*tt84-tt237*tt77)+2*tt86*(tt237*tt84-tt236*tt77)+2*tt176**2+2*t&
+&t26*(2*tt15*tt1*tt23*tt25+tt15*tt20*tt22))
+hes(5,6) = tt244
+hes(6,1) = tt202
+hes(6,2) = tt214
+hes(6,3) = tt217
+hes(6,4) = tt235
+hes(6,5) = tt244
+hes(6,6) = stiff(1,1)*(2*tt201**2+2*tt200**2+2*tt122*(16*tt116*tt&
+&120+16*tt119*tt118)+2*(16*tt116*tt118-16*tt119*tt120)*tt121+2*tt1&
+&99**2+2*tt198**2+2*tt111*(9*tt105*tt109+9*tt108*tt107)+2*(9*tt105&
+&*tt107-9*tt108*tt109)*tt110+2*tt197**2+2*tt196**2+2*tt100*(4*tt92&
+&*tt98+4*tt97*tt94)+2*(4*tt92*tt94-4*tt97*tt98)*tt99+2*tt195**2+2*&
+&tt194**2+2*tt87*tt195+2*(tt76*tt77-tt83*tt84)*tt86)
+END 
 SUBROUTINE cubic_sym_smooth(val, ABC, CR, vol) 
 IMPLICIT NONE 
 REAL(KIND=8) val(1, 1) 

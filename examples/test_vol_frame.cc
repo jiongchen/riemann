@@ -174,11 +174,11 @@ int main(int argc, char *argv[])
   shared_ptr<cross_frame_opt> frame_opt(cross_frame_opt::create(tets, nods, args));
 
   cout << "[INFO] solve Laplacian\n";
-  VectorXd Fs = VectorXd::Zero(9*nods.size(2));
+  VectorXd Fs;
   frame_opt->solve_laplacian(Fs);
   
   cout << "[INFO] solve for initial zyz angles\n";
-  VectorXd abc = VectorXd::Zero(3*nods.size(2));
+  VectorXd abc;
   frame_opt->solve_initial_frames(Fs, abc);
 
   cout << "[INFO] optimize frames\n";
