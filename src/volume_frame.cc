@@ -105,10 +105,10 @@ public:
     shared_ptr<face2tet_adjacent> f2t(face2tet_adjacent::create(tets));
     vector<size_t> buffer;
     for (size_t i = 0; i < f2t->face2tet_.size(); ++i) {
-      const pair<size_t, size_t> adj = f2t->face2tet_[i];
-      if ( !f2t->is_outside_face(adj) ) {
-        buffer.push_back(adj.first);
-        buffer.push_back(adj.second);
+      const pair<size_t, size_t> ts = f2t->face2tet_[i];
+      if ( !f2t->is_outside_face(ts) ) {
+        buffer.push_back(ts.first);
+        buffer.push_back(ts.second);
       }
     }
     adjt_.resize(2, buffer.size()/2);
@@ -122,8 +122,8 @@ public:
             nods(colon(), tets(colon(), adjt_(1, i)))*ones<double>(4, 1)/4.0);
         stiff_[i] = (volume[adjt_(0, i)]+volume[adjt_(1, i)])/(dist*dist);
       }
-      double total = sum(volume);
-      stiff_ /= std::cbrt(total);
+      double total = sum(stiff_);
+      stiff_ /= total;
     }
   }
   size_t Nx() const {
@@ -498,8 +498,6 @@ int SH_align_energy::HesSH(const double *f, vector<Triplet<double>> *hes) const 
 }
 //===============================================================================
 int cross_frame_opt::init(const mati_t &tets, const matd_t &nods, const cross_frame_args &args) {
-  tets_num_ = tets.size(2);
-  vert_num_ = nods.size(2);
   args_ = args;
 
   int success = 0;

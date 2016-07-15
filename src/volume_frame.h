@@ -55,7 +55,6 @@ private:
   int init(const mati_t &tets, const matd_t &nods, const cross_frame_args &args);
 private:
   cross_frame_args args_;
-  size_t vert_num_, tets_num_;
   std::vector<std::shared_ptr<Functional<double>>> buffer_;
   std::shared_ptr<Functional<double>> energy_;
 };
