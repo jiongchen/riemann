@@ -1,13 +1,14 @@
 #!/bin/bash
 
 echo -e "# ================================== Run cross frame field ======================================== #"
+
 EXE=../build/bin/test_vol_frame
-MESH=../dat/tets/sculpture.c59k.vtk
+MESH=../dat/tets/nut.vtk
 WS=1e0
 WA=1e3
 EPS=1e-8
 MAXITS=2000
-OUT_DIR=../result/volume_frame/sculpture-ws$WS-wa$WA
+OUT_DIR=../result/volume_frame/nut-ws$WS-wa$WA
 
 if [ ! -d "$OUT_DIR" ]; then
     mkdir -p $OUT_DIR
@@ -17,7 +18,10 @@ $EXE -i $MESH -t vtk -o $OUT_DIR --ws=$WS --wa=$WA --epsf=$EPS --maxits=$MAXITS 
 
 
 echo -e "# ============================== Visualize sigularity of frame field ============================== #"
+
 cd ../bin
+export LD_LIBRARY_PATH=./3rd:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=./sys:$LD_LIBRARY_PATH
 
 FF_EXE=./frame_field
 MESH_FILE=$OUT_DIR/tet.vtk

@@ -27,6 +27,18 @@ if(EIGEN3_FOUND)
   include_directories(${EIGEN3_INCLUDE_DIR})
 endif(EIGEN3_FOUND)
 
+# PETSC
+find_package(PETSc REQUIRED)
+if(PETSC_FOUND)
+  set(PETSC_DIR "/usr/lib/petscdir/3.4.2")
+  set(PETSC_ARCH "linux-gnu-cxx-opt")
+  include_directories(/usr/lib/openmpi/include)
+  include_directories(/usr/lib/openmpi/lib)
+  message("-- PETSc @ ${PETSC_INCLUDE_DIR}")
+  message("-- PETSc version: ${PETSC_VERSION}")
+  include_directories(${PETSC_INCLUDE_DIR})
+endif()
+
 # LBFGS
 find_package(LBFGS REQUIRED)
 if(LBFGS_FOUND)

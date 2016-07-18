@@ -5,7 +5,6 @@
 #include <jtflib/mesh/util.h>
 #include <hjlib/math/blas_lapack.h>
 #include <zjucad/matrix/lapack.h>
-#include <zjucad/linear_solver/linear_solver.h>
 #include <Eigen/Eigen>
 
 #ifdef USE_CHOLMOD
@@ -17,6 +16,7 @@
 #include "lbfgs_solve.h"
 #include "sh_zyz_convert.h"
 #include "util.h"
+#include "petsc_linear_solver.h"
 
 using namespace std;
 using namespace zjucad::matrix;
@@ -324,12 +324,12 @@ int cross_frame_opt::solve_laplacian(VectorXd &Fs) const {
   VectorXd dx = solver.solve(g);
   ASSERT(solver.info() == Success);
 #else
-  boost::property_tree::ptree pt;
-  pt.put("linear_solver/type.value", "PETsc");
-  shared_ptr<linear_solver> solver
-      (linear_solver::create(H.valuePtr(), H.innerIndexPtr(), H.outerIndexPtr(), H.nonZeros(), dim, dim, pt));
+  static shared_ptr<PETsc_imp> petsc_init = make_shared<PETsc_imp>();
+  shared_ptr<PETsc_CG_imp> solver =
+      make_shared<PETsc_CG_imp>(H.valuePtr(), H.innerIndexPtr(), H.outerIndexPtr(), H.nonZeros(),
+                                dim, dim, "sor");
   VectorXd dx = VectorXd::Zero(dim);
-  solver->solve(g.data(), dx.data(), dim, pt);
+  solver->solve(g.data(), dx.data(), dim);
 #endif
   
   Fs += dx;

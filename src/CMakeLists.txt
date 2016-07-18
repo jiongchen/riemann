@@ -49,7 +49,7 @@ add_library(riemann SHARED ${header} ${source}
                            wave_condition.f90 shell.f90 mips.f90 tet_arap.f90 aqp.f90 cubic_sym_sh.f90)
 target_link_libraries(riemann
     jtf-mesh
-    zjucad-linear-solver
+    ${PETSC_LIBRARIES}
     ${UMFPACK_LIBRARIES}
     ${ARPACK_LIBRARIES}
     alglib
