@@ -92,10 +92,11 @@ public:
       stiff_ /= total;
     }
   }
-  size_t Nx() const {
+  virtual ~SH_smooth_energy_tet() {}
+  virtual size_t Nx() const {
     return dim_;
   }
-  int Val(const double *abc, double *val) const {
+  virtual int Val(const double *abc, double *val) const {
     itr_matrix<const double *> ABC(3, dim_/3, abc);
     matd_t abcs = zeros<double>(3, 2); double value = 0;
     for (size_t i = 0; i < adjt_.size(2); ++i) {
@@ -105,7 +106,7 @@ public:
     }
     return 0;
   }
-  int Gra(const double *abc, double *gra) const {
+  virtual int Gra(const double *abc, double *gra) const {
     itr_matrix<const double *> ABC(3, dim_/3, abc);
     itr_matrix<double *> G(3, dim_/3, gra);
     matd_t abcs = zeros<double>(3, 2), g = zeros<double>(3, 2);
@@ -116,7 +117,7 @@ public:
     }
     return 0;
   }
-  int Hes(const double *abc, vector<Triplet<double>> *hes) const {
+  virtual int Hes(const double *abc, vector<Triplet<double>> *hes) const {
     return __LINE__;
   }
   int ValSH(const double *f, double *val) const {
@@ -151,7 +152,7 @@ public:
     }
     return 0;
   }
-private:
+protected:
   const mati_t &tets_;
   const double w_;
   const size_t dim_;
@@ -261,6 +262,30 @@ private:
   mati_t adjt_;
   matd_t stiff_;
   matd_t zyz_;
+};
+
+extern "C" {
+  void poly_smooth_tet_(double *val, const double *abc, const double *stiff);
+  void poly_smooth_tet_jac_(double *jac, const double *abc, const double *stiff);
+}
+
+class poly_smooth_energy_tet : public SH_smooth_energy_tet
+{
+public:
+  poly_smooth_energy_tet(const mati_t &tets, const matd_t &nods, const double w)
+      : SH_smooth_energy_tet(tets, nods, w) {}
+  size_t Nx() const {
+    return SH_smooth_energy_tet::dim_;
+  }
+  int Val(const double *abc, double *val) const {
+    return 0;
+  }
+  int Gra(const double *abc, double *gra) const {
+    return 0;
+  }
+  int Hes(const double *abc, vector<Triplet<double>> *hes) const {
+    return __LINE__;
+  }
 };
 
 //===============================================================================
