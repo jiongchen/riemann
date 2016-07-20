@@ -39,6 +39,7 @@ using matd_t=zjucad::matrix::matrix<double>;
 
 struct cross_frame_args
 {
+  std::string smooth_type;
   double ws, wa;
   double epsf;
   size_t maxits;
@@ -47,14 +48,14 @@ struct cross_frame_args
 class cross_frame_opt
 {
 public:
-  static cross_frame_opt* create(const mati_t &tets, const matd_t &nods, const cross_frame_args &args);
+  cross_frame_opt(const mati_t &tets, const matd_t &nods, const cross_frame_args &args);
   int solve_laplacian(Eigen::VectorXd &Fs) const;
   int solve_initial_frames(const Eigen::VectorXd &Fs, Eigen::VectorXd &abc) const;
-  int optimize_frames(Eigen::VectorXd &abc) const;
+  int optimize_frames(Eigen::VectorXd &abc);
 private:
-  int init(const mati_t &tets, const matd_t &nods, const cross_frame_args &args);
-private:
-  cross_frame_args args_;
+  const mati_t &tets_;
+  const matd_t &nods_;
+  const cross_frame_args args_;
   std::vector<std::shared_ptr<Functional<double>>> buffer_;
   std::shared_ptr<Functional<double>> energy_;
 };

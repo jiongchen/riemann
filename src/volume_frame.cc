@@ -269,51 +269,57 @@ extern "C" {
   void poly_smooth_tet_jac_(double *jac, const double *abc, const double *stiff);
 }
 
+/*
+ * About the magic number: f[I](s)=-2*sqrt(PI)/(15*sqrt(7))*(sqrt(7)Y40+sqrt(5)Y44)
+ * As [Liu12] proves, SH = 16PI/315 poly, so magic = 20
+ */
 class poly_smooth_energy_tet : public SH_smooth_energy_tet
 {
 public:
   poly_smooth_energy_tet(const mati_t &tets, const matd_t &nods, const double w)
-      : SH_smooth_energy_tet(tets, nods, w) {}
+      : SH_smooth_energy_tet(tets, nods, w), magic_(20.0) {}
   size_t Nx() const {
-    return SH_smooth_energy_tet::dim_;
+    return dim_;
   }
   int Val(const double *abc, double *val) const {
+    itr_matrix<const double *> ABC(3, dim_/3, abc);
+    matd_t abcs = zeros<double>(3, 2); double value = 0;
+    for (size_t i = 0; i < adjt_.size(2); ++i) {
+      abcs = ABC(colon(), adjt_(colon(), i));
+      poly_smooth_tet_(&value, &abcs[0], &stiff_[i]);
+      *val += magic_*w_*value;
+    }
     return 0;
   }
   int Gra(const double *abc, double *gra) const {
+    itr_matrix<const double *> ABC(3, dim_/3, abc);
+    itr_matrix<double *> G(3, dim_/3, gra);
+    matd_t abcs = zeros<double>(3, 2), g = zeros<double>(3, 2);
+    for (size_t i = 0; i < adjt_.size(2); ++i) {
+      abcs = ABC(colon(), adjt_(colon(), i));
+      poly_smooth_tet_jac_(&g[0], &abcs[0], &stiff_[i]);
+      G(colon(), adjt_(colon(), i)) += magic_*w_*g;
+    }
     return 0;
   }
   int Hes(const double *abc, vector<Triplet<double>> *hes) const {
     return __LINE__;
   }
+private:
+  const double magic_;
 };
 
 //===============================================================================
 
-int cross_frame_opt::init(const mati_t &tets, const matd_t &nods, const cross_frame_args &args) {
-  args_ = args;
-
-  int success = 0;
+cross_frame_opt::cross_frame_opt(const mati_t &tets, const matd_t &nods, const cross_frame_args &args)
+    : tets_(tets), nods_(nods), args_(args) {
   buffer_.push_back(make_shared<SH_smooth_energy_tet>(tets, nods, args_.ws));
   buffer_.push_back(make_shared<SH_align_energy_tet>(tets, nods, args_.wa));
-  try {
-    energy_ = make_shared<energy_t<double>>(buffer_);
-  } catch ( exception &e ) {
-    cerr << "[Exception] " << e.what() << endl;
-    success = 1;
-  }
-  return success;
-}
-
-cross_frame_opt* cross_frame_opt::create(const mati_t &tets, const matd_t &nods, const cross_frame_args &args) {
-  cross_frame_opt *handle = new cross_frame_opt;
-  if ( handle->init(tets, nods, args) )
-    return nullptr;
-  return handle;
 }
 
 int cross_frame_opt::solve_laplacian(VectorXd &Fs) const {
-  const size_t dim = 3*energy_->Nx();
+  ASSERT(buffer_.front().get());
+  const size_t dim = 3*buffer_.front()->Nx();
   Fs = VectorXd::Zero(dim);
   cout << "\t@linear solve dimension: " << dim << endl << endl;
 
@@ -377,7 +383,8 @@ int cross_frame_opt::solve_laplacian(VectorXd &Fs) const {
 }
 
 int cross_frame_opt::solve_initial_frames(const VectorXd &Fs, VectorXd &abc) const {
-  abc = VectorXd::Zero(energy_->Nx());
+  ASSERT(buffer_.front().get());
+  abc = VectorXd::Zero(buffer_.front()->Nx());
   
   #pragma omp parallel for
   for (size_t i = 0; i < abc.size()/3; ++i) {
@@ -393,10 +400,23 @@ int cross_frame_opt::solve_initial_frames(const VectorXd &Fs, VectorXd &abc) con
   return 0;
 }
 
-int cross_frame_opt::optimize_frames(VectorXd &abc) const {
+int cross_frame_opt::optimize_frames(VectorXd &abc) {
   const double epsf = args_.epsf, epsx = 0;
   const size_t maxits = args_.maxits;
 
+  if ( args_.smooth_type == "SH" ) {
+    ;
+  } else if ( args_.smooth_type == "POLY" ) {
+    buffer_.front().reset(new poly_smooth_energy_tet(tets_, nods_, args_.ws));
+  } else if ( args_.smooth_type == "L1" ) {
+
+  } else {
+    cerr << "[Error] unsupported smooth term\n";
+    return __LINE__;
+  }
+  
+  energy_ = make_shared<energy_t<double>>(buffer_);
+  
   {
     double vs = 0, va = 0;
     buffer_[0]->Val(abc.data(), &vs);

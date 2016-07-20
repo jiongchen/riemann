@@ -39,14 +39,14 @@ add_custom_command(OUTPUT aqp.f90
     DEPENDS aqp.mac
 )
 
-# add_custom_command(OUTPUT cubic_sym_sh.f90
-#   COMMAND "maxima" ARGS --userdir=${SRC_DIR} -b SH.mac
-#   DEPENDS SH.mac
-# )
+add_custom_command(OUTPUT poly_cubic.f90
+  COMMAND "maxima" ARGS --userdir=${SRC_DIR} -b poly_cubic.mac
+  DEPENDS poly_cubic.mac
+)
 
 add_library(riemann SHARED ${header} ${source}
                            quad_scalar_field.f90 dt_energy.f90
-                           wave_condition.f90 shell.f90 mips.f90 tet_arap.f90 aqp.f90 cubic_sym_sh.f90)
+                           wave_condition.f90 shell.f90 mips.f90 tet_arap.f90 aqp.f90 cubic_sym_sh.f90 poly_cubic.f90)
 target_link_libraries(riemann
     jtf-mesh
     ${PETSC_LIBRARIES}

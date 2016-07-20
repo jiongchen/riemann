@@ -1,0 +1,49 @@
+load(hj_fortran2)$
+
+optimprefix: tt$
+
+f: openw("poly_cubic.f90")$
+
+h(s) := s[1,1]^2*s[2,1]^2+s[2,1]^2*s[3,1]^2+s[3,1]^2*s[1,1]^2$
+
+RZ(theta) := block(
+  [R],
+  R: zeromatrix(3, 3),
+  R[3, 3]: 1,
+  R[1, 1]: cos(theta),
+  R[2, 2]: cos(theta),
+  R[1, 2]: -sin(theta),
+  R[2, 1]: sin(theta),
+  R
+)$
+
+RY(theta) := block(
+  [R],
+  R: zeromatrix(3, 3),
+  R[2, 2]: 1,
+  R[1, 1]: cos(theta),
+  R[3, 3]: cos(theta),
+  R[1, 3]: sin(theta),
+  R[3, 1]: -sin(theta),
+  R
+)$
+
+block(
+  [ABC, stiff],
+  ABC:   genmatrix(ABC, 3, 2),
+  stiff: genmatrix(stiff, 1, 1),
+  poly_smooth_tet(ABC, stiff) := block(
+    [Ra, Rb, P, rtn],
+    Ra: RZ(ABC[3, 1]).RY(ABC[2, 1]).RZ(ABC[1, 1]),
+    Rb: RZ(ABC[3, 2]).RY(ABC[2, 2]).RZ(ABC[1, 2]),
+    P: transpose(Rb).Ra,
+    rtn: 0,
+    for i:1 thru 3 do
+      rtn: rtn+h(col(P, i))+h(transpose(row(P, i))),
+    stiff*rtn
+  ),
+  with_stdout(f, val_jac_hes_to_f90(poly_smooth_tet, [ABC, stiff])),
+  return()
+)$
+
+close(f)$

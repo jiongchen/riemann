@@ -3,18 +3,19 @@
 echo -e "# ================================== Run cross frame field ======================================== #"
 
 EXE=../build/bin/test_vol_frame
-MESH=../dat/tets/nut.vtk
+MESH=../dat/tets/sphere.c13k.vtk
 WS=1e0
 WA=1e3
 EPS=1e-8
 MAXITS=2000
-OUT_DIR=../result/volume_frame/nut-ws$WS-wa$WA
+TYPE=$1
+OUT_DIR=../result/volume_frame/sphere-ws$WS-wa$WA-tp$TYPE
 
 if [ ! -d "$OUT_DIR" ]; then
     mkdir -p $OUT_DIR
 fi
 
-$EXE -i $MESH -t vtk -o $OUT_DIR --ws=$WS --wa=$WA --epsf=$EPS --maxits=$MAXITS | tee LOG.txt
+$EXE -i $MESH -t vtk -o $OUT_DIR --ws=$WS --wa=$WA --epsf=$EPS --maxits=$MAXITS --smooth_type=$TYPE | tee $OUT_DIR/log.txt
 
 
 echo -e "# ============================== Visualize sigularity of frame field ============================== #"

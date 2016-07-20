@@ -121,12 +121,35 @@ static int zyz_vert_to_tet(const mati_t &tets, const VectorXd &abc, MatrixXd& zy
   return 0;
 }
 
+extern "C" {
+  void poly_smooth_tet_(double *val, const double *abc, const double *stiff);
+  void cubic_sym_smooth_tet_(double *val, const double *abc, const double *stiff);
+}
+
+static int verify_sh_scale() {
+  cout << "---------------TEST CASE----------------" << endl;
+  srand(time(NULL));
+  Vector3d abc = Vector3d::Random();
+  cout << "zyz: " << abc.transpose() << endl;
+  const double stiff = 1.0;
+  double v0 = 0, v1 = 0;
+  poly_smooth_tet_(&v0, abc.data(), &stiff);
+  cubic_sym_smooth_tet_(&v1, abc.data(), &stiff);
+  v1 *= 4*M_PI/(15*15*7);
+  cout << "SH: " << v1 << endl;
+  cout << "Poly: " << v0 << endl;
+  cout << "SH/poly: " << v1/v0 << endl;
+  cout << 16*M_PI/315 << endl;
+  return 0;
+}
+
 int main(int argc, char *argv[])
 {
 #if 0
   test_lbfgs_opt();
   test_alignment_energy();
   test_sh_to_zyz();
+  verify_sh_scale();
   return __LINE__;
 #endif
   po::options_description desc("Available options"); {
@@ -134,6 +157,7 @@ int main(int argc, char *argv[])
         ("help,h", "produce help message")
         ("mesh,i",          po::value<string>(), "input mesh")
         ("type,t",          po::value<string>(), "mesh file type")
+        ("smooth_type",     po::value<string>(), "type of smooth term")
         ("ws",              po::value<double>(), "smoothness weight")
         ("wa",              po::value<double>(), "alignment weight")
         ("epsf",            po::value<double>(), "tolerance of energy convergence")
@@ -171,8 +195,9 @@ int main(int argc, char *argv[])
     args.wa =     vm["wa"].as<double>();
     args.epsf =   vm["epsf"].as<double>();
     args.maxits = vm["maxits"].as<size_t>();
+    args.smooth_type = vm["smooth_type"].as<string>();
   }
-  shared_ptr<cross_frame_opt> frame_opt(cross_frame_opt::create(tets, nods, args));
+  shared_ptr<cross_frame_opt> frame_opt = make_shared<cross_frame_opt>(tets, nods, args);
 
   cout << "[INFO] solve Laplacian\n";
   VectorXd Fs;
@@ -190,7 +215,8 @@ int main(int argc, char *argv[])
     Matrix3d R = RZ(abc[3*i+2])*RY(abc[3*i+1])*RZ(abc[3*i+0]);
     Map<Matrix3d>(&frames(0, i)) = R;
   }
-  frames *= 0.075;
+  const double len_scale = 0.075;
+  frames *= len_scale;
 
   matd_t center(3, tets.size(2));
   for (size_t i = 0; i < tets.size(2); ++i)
@@ -207,13 +233,10 @@ int main(int argc, char *argv[])
   string zfile = vm["output_folder"].as<string>()+string("/z.vtk");
   MatrixXd rz = frames.block(6, 0, 3, frames.cols());
   draw_vert_direct_field(zfile.c_str(), &center[0], center.size(2), rz.data());
-  
-  // interpolate frames on tet
-  MatrixXd tet_zyz(3, tets.size(2));
-  // zyz_vert_to_tet(tets, abc, tet_zyz);
-  tet_zyz = Map<const MatrixXd>(abc.data(), 3, abc.size()/3);
 
   // write zyz
+  MatrixXd tet_zyz(3, tets.size(2));
+  tet_zyz = Map<const MatrixXd>(abc.data(), 3, abc.size()/3);
   string zyz_file = vm["output_folder"].as<string>()+string("/zyz.txt");
   write_tet_zyz(zyz_file.c_str(), tet_zyz);
   
