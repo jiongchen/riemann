@@ -96,33 +96,33 @@ static void test_sh_to_zyz() {
   cout << "SH coeffs: " << sh.transpose() << endl << endl;
 }
 
-static int write_tet_zyz(const char *filename, const MatrixXd &tet_zyz) {
+static int write_tet_zyz(const char *filename, const double *zyz, const size_t elem_num) {
   ofstream ofs(filename);
   if ( ofs.fail() ) {
     cerr << "[Error] can not write to " << filename << endl;
     return __LINE__;
   }
-  ofs << tet_zyz.rows() << " " << tet_zyz.cols() << endl;
-  for (size_t i = 0; i < tet_zyz.cols(); ++i)
-    ofs << tet_zyz(0, i) << " " << tet_zyz(1, i) << " " << tet_zyz(2, i) << endl;
+  ofs << "3 " << elem_num << endl;
+  for (size_t i = 0; i < elem_num; ++i)
+    ofs << zyz[3*i+0] << " " << zyz[3*i+1] << " " << zyz[3*i+2] << endl;
   return 0;
 }
 
-static int zyz_vert_to_tet(const mati_t &tets, const VectorXd &abc, MatrixXd& zyz) {
-  zyz.setZero(3, tets.size(2));
+// static int zyz_vert_to_tet(const mati_t &tets, const VectorXd &abc, MatrixXd& zyz) {
+//   zyz.setZero(3, tets.size(2));
 
-  MatrixXd vert_sh(9, abc.size()/3);
-  for (size_t i = 0; i < vert_sh.cols(); ++i) {
-    zyz_to_sh(&abc[3*i], &vert_sh(0, i));
-  }
-  #pragma omp parallel for
-  for (size_t i = 0; i < tets.size(2); ++i) {
-    VectorXd tsh = (vert_sh.col(tets(0, i))+vert_sh.col(tets(1, i))
-                   +vert_sh.col(tets(2, i))+vert_sh.col(tets(3, i)))/4.0;
-    sh_to_zyz(tsh.data(), &zyz(0, i), 1000);
-  }
-  return 0;
-}
+//   MatrixXd vert_sh(9, abc.size()/3);
+//   for (size_t i = 0; i < vert_sh.cols(); ++i) {
+//     zyz_to_sh(&abc[3*i], &vert_sh(0, i));
+//   }
+//   #pragma omp parallel for
+//   for (size_t i = 0; i < tets.size(2); ++i) {
+//     VectorXd tsh = (vert_sh.col(tets(0, i))+vert_sh.col(tets(1, i))
+//                    +vert_sh.col(tets(2, i))+vert_sh.col(tets(3, i)))/4.0;
+//     sh_to_zyz(tsh.data(), &zyz(0, i), 1000);
+//   }
+//   return 0;
+// }
 
 static int verify_sh_scale() {
   cout << "---------------TEST CASE----------------" << endl;
@@ -225,10 +225,8 @@ int main(int argc, char *argv[])
   draw_vert_direct_field(zfile.c_str(), &center[0], center.size(2), rz.data());
 
   // write zyz
-  MatrixXd tet_zyz(3, tets.size(2));
-  tet_zyz = Map<const MatrixXd>(abc.data(), 3, abc.size()/3);
   string zyz_file = vm["output_folder"].as<string>()+string("/zyz.txt");
-  write_tet_zyz(zyz_file.c_str(), tet_zyz);
+  write_tet_zyz(zyz_file.c_str(), abc.data(), abc.size()/3);
   
   cout << "[Info] done\n";
   return 0;
