@@ -1,9 +1,8 @@
 #ifndef VOLUME_FRAME_H
 #define VOLUME_FRAME_H
 
+#include <Eigen/Dense>
 #include <zjucad/matrix/matrix.h>
-
-#include "def.h"
 
 namespace riemann {
 
@@ -37,13 +36,18 @@ static const double g_RXYZ [24][3][3]={
 using mati_t=zjucad::matrix::matrix<size_t>;
 using matd_t=zjucad::matrix::matrix<double>;
 
+template <typename T>
+class Functional;
+
 struct cross_frame_args
 {
-  std::string smooth_type;
+  std::string sm_type;
   double ws, wa;
   double epsf;
   size_t maxits;
 };
+
+void convert_zyz_to_mat(const Eigen::VectorXd &abc, Eigen::VectorXd &mat);
 
 class cross_frame_opt
 {
@@ -51,13 +55,15 @@ public:
   cross_frame_opt(const mati_t &tets, const matd_t &nods, const cross_frame_args &args);
   int solve_laplacian(Eigen::VectorXd &Fs) const;
   int solve_initial_frames(const Eigen::VectorXd &Fs, Eigen::VectorXd &abc) const;
-  int optimize_frames(Eigen::VectorXd &abc);
+  int optimize_frames(Eigen::VectorXd &abc) const;
+
+  int opt_frms_fixed_bnd_SH(Eigen::VectorXd &abc);
+  int opt_frms_fixed_bnd_L1(Eigen::VectorXd &mat);
 private:
   const mati_t &tets_;
   const matd_t &nods_;
   const cross_frame_args args_;
   std::vector<std::shared_ptr<Functional<double>>> buffer_;
-  std::shared_ptr<Functional<double>> energy_;
 };
 
 }

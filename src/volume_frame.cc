@@ -11,12 +11,14 @@
   #include <Eigen/CholmodSupport>
 #endif
 
+#include "def.h"
 #include "config.h"
 #include "grad_operator.h"
 #include "lbfgs_solve.h"
 #include "sh_zyz_convert.h"
 #include "util.h"
 #include "petsc_linear_solver.h"
+#include "geometry_extend.h"
 
 using namespace std;
 using namespace zjucad::matrix;
@@ -43,14 +45,25 @@ extern "C" {
 
   void cubic_sym_smooth_tet_(double *val, const double *abc, const double *stiff);
   void cubic_sym_smooth_tet_jac_(double *jac, const double *abc, const double *stiff);
+
+  void poly_smooth_tet_(double *val, const double *abc, const double *stiff);
+  void poly_smooth_tet_jac_(double *jac, const double *abc, const double *stiff);
   
 }
 
-/// @return zyz angle to align normal and axis z
 static inline void normal2zyz(const double *n, double *zyz) {
   zyz[0] = -atan2(n[1], n[0]);
   zyz[1] = -acos(n[2]);
   zyz[2] = 0;
+}
+
+void convert_zyz_to_mat(const VectorXd &abc, VectorXd &mat) {
+  const size_t elem_num = abc.size()/3;
+  if ( mat.size() != 9*elem_num )
+    mat.resize(9*elem_num);
+  #pragma omp parallel for
+  for (size_t i = 0; i < elem_num; ++i) 
+    Map<Matrix3d>(&mat[9*i], 3, 3) = RZ(abc[3*i+2])*RY(abc[3*i+1])*RZ(abc[3*i+0]);
 }
 
 //===============================================================================
@@ -264,18 +277,13 @@ private:
   matd_t zyz_;
 };
 
-extern "C" {
-  void poly_smooth_tet_(double *val, const double *abc, const double *stiff);
-  void poly_smooth_tet_jac_(double *jac, const double *abc, const double *stiff);
-}
-
-/*
- * About the magic number: f[I](s)=-2*sqrt(PI)/(15*sqrt(7))*(sqrt(7)Y40+sqrt(5)Y44)
- * As [Liu12] proves, SH = 16PI/315 poly, so magic = 20
- */
 class poly_smooth_energy_tet : public SH_smooth_energy_tet
 {
 public:
+  /*
+   * About the magic number: f[I](s)=-2*sqrt(PI)/(15*sqrt(7))*(sqrt(7)Y40+sqrt(5)Y44)
+   * As [Liu12] proves, SH = 16PI/315 poly, so magic = 20
+   */
   poly_smooth_energy_tet(const mati_t &tets, const matd_t &nods, const double w)
       : SH_smooth_energy_tet(tets, nods, w), magic_(20.0) {}
   size_t Nx() const {
@@ -307,6 +315,78 @@ public:
   }
 private:
   const double magic_;
+};
+
+//================================== TODO =======================================
+
+class l1_smooth_energy_tet : public SH_smooth_energy_tet
+{
+public:
+  l1_smooth_energy_tet(const mati_t &tets, const matd_t &nods, const double eps, const double w)
+      : SH_smooth_energy_tet(tets, nods, w), epsilon_(eps) {}
+  size_t Nx() const {
+    return 3*dim_;
+  }
+  int Val(const double *f, double *val) const {
+    itr_matrix<const double *> F(9, Nx()/9, f);
+    for (;;) {
+    }
+    return 0;
+  }
+  int Gra(const double *f, double *gra) const {
+    itr_matrix<const double *> F(9, Nx()/9, f);
+    return 0;
+  }
+  int Hes(const double *f, double *gra) const {
+    return __LINE__;
+  }
+private:
+  const double epsilon_;
+};
+
+class frame_orth_energy : public Functional<double>
+{
+public:
+  frame_orth_energy();
+  size_t Nx() const;
+  int Val(const double *f, double *val) const;
+  int Gra(const double *f, double *gra) const;
+  int Hes(const double *f, vector<Triplet<double>> *hes) {
+    return __LINE__;
+  }
+};
+
+class boundary_fix_energy : public Functional<double>
+{
+public:
+  boundary_fix_energy(const mati_t &tets, const matd_t &nods, const size_t var_dim, const double w)
+      : tets_(tets), var_dim_(var_dim), dim_(var_dim_*tets.size(2)), w_(w) {
+  }
+  size_t Nx() const {
+    return dim_;
+  }
+  int Val(const double *x, double *val) const {
+    itr_matrix<const double *> X(var_dim_, dim_/var_dim_, x);
+    for (;;) {
+    }
+    return 0;
+  }
+  int Gra(const double *x, double *gra) const {
+    itr_matrix<const double *> X(var_dim_, dim_/var_dim_, x);
+    itr_matrix<double *> G(var_dim_, dim_/var_dim_, gra);
+    for (;;) {
+    }
+    return 0;
+  }
+  int Hes(const double *x, vector<Triplet<double>> *hes) const {
+    return __LINE__;
+  }
+private:
+  const size_t var_dim_, dim_;
+  const double w_;
+  const mati_t &tets_;
+  
+  VectorXd x0_;
 };
 
 //===============================================================================
@@ -400,22 +480,11 @@ int cross_frame_opt::solve_initial_frames(const VectorXd &Fs, VectorXd &abc) con
   return 0;
 }
 
-int cross_frame_opt::optimize_frames(VectorXd &abc) {
+int cross_frame_opt::optimize_frames(VectorXd &abc) const {
   const double epsf = args_.epsf, epsx = 0;
   const size_t maxits = args_.maxits;
-
-  if ( args_.smooth_type == "SH" ) {
-    ;
-  } else if ( args_.smooth_type == "POLY" ) {
-    buffer_.front().reset(new poly_smooth_energy_tet(tets_, nods_, args_.ws));
-  } else if ( args_.smooth_type == "L1" ) {
-
-  } else {
-    cerr << "[Error] unsupported smooth term\n";
-    return __LINE__;
-  }
   
-  energy_ = make_shared<energy_t<double>>(buffer_);
+  shared_ptr<Functional<double>> energy_ = make_shared<energy_t<double>>(buffer_);
   
   {
     double vs = 0, va = 0;
@@ -441,6 +510,17 @@ int cross_frame_opt::optimize_frames(VectorXd &abc) {
     cout << "\t@post gradient norm: " << g.norm() << endl << endl;
   }
 
+  return 0;
+}
+
+int cross_frame_opt::opt_frms_fixed_bnd_SH(VectorXd &abc) {
+  // reset energy buffer
+  // call lbfgs to optimize
+  return 0;
+}
+
+int cross_frame_opt::opt_frms_fixed_bnd_L1(VectorXd &mat) {
+  // same energy 
   return 0;
 }
 

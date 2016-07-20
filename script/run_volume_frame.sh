@@ -8,14 +8,14 @@ WS=1e0
 WA=1e3
 EPS=1e-8
 MAXITS=2000
-TYPE=$1
+TYPE=SH
 OUT_DIR=../result/volume_frame/sphere-ws$WS-wa$WA-tp$TYPE
 
 if [ ! -d "$OUT_DIR" ]; then
     mkdir -p $OUT_DIR
 fi
 
-$EXE -i $MESH -t vtk -o $OUT_DIR --ws=$WS --wa=$WA --epsf=$EPS --maxits=$MAXITS --smooth_type=$TYPE | tee $OUT_DIR/log.txt
+$EXE -i $MESH -o $OUT_DIR --ws=$WS --wa=$WA --epsf=$EPS --maxits=$MAXITS --smooth_type=$TYPE | tee $OUT_DIR/log.txt
 
 
 echo -e "# ============================== Visualize sigularity of frame field ============================== #"

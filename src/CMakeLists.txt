@@ -44,9 +44,11 @@ add_custom_command(OUTPUT poly_cubic.f90
   DEPENDS poly_cubic.mac
 )
 
-add_library(riemann SHARED ${header} ${source}
-                           quad_scalar_field.f90 dt_energy.f90
-                           wave_condition.f90 shell.f90 mips.f90 tet_arap.f90 aqp.f90 cubic_sym_sh.f90 poly_cubic.f90)
+set(f90_source quad_scalar_field.f90 dt_energy.f90 wave_condition.f90
+               shell.f90 mips.f90 tet_arap.f90 aqp.f90 cubic_sym_sh.f90
+               poly_cubic.f90)
+
+add_library(riemann SHARED ${header} ${source} ${f90_source})
 target_link_libraries(riemann
     jtf-mesh
     ${PETSC_LIBRARIES}

@@ -4,6 +4,7 @@
 #include <jtflib/mesh/io.h>
 #include <boost/program_options.hpp>
 
+#include "src/def.h"
 #include "src/volume_frame.h"
 #include "src/vtk.h"
 #include "src/lbfgs_solve.h"
@@ -19,6 +20,8 @@ namespace po=boost::program_options;
 
 extern "C" {
   void cubic_sym_align_(double*, const double*, const double*, const double*);
+  void poly_smooth_tet_(double *val, const double *abc, const double *stiff);
+  void cubic_sym_smooth_tet_(double *val, const double *abc, const double *stiff);
 }
 
 class test_func : public Functional<double>
@@ -121,11 +124,6 @@ static int zyz_vert_to_tet(const mati_t &tets, const VectorXd &abc, MatrixXd& zy
   return 0;
 }
 
-extern "C" {
-  void poly_smooth_tet_(double *val, const double *abc, const double *stiff);
-  void cubic_sym_smooth_tet_(double *val, const double *abc, const double *stiff);
-}
-
 static int verify_sh_scale() {
   cout << "---------------TEST CASE----------------" << endl;
   srand(time(NULL));
@@ -156,7 +154,6 @@ int main(int argc, char *argv[])
     desc.add_options()
         ("help,h", "produce help message")
         ("mesh,i",          po::value<string>(), "input mesh")
-        ("type,t",          po::value<string>(), "mesh file type")
         ("smooth_type",     po::value<string>(), "type of smooth term")
         ("ws",              po::value<double>(), "smoothness weight")
         ("wa",              po::value<double>(), "alignment weight")
@@ -174,15 +171,7 @@ int main(int argc, char *argv[])
   }
 
   mati_t tets; matd_t nods;
-  if ( vm["type"].as<string>() == "zjumat" ) {
-    jtf::mesh::tet_mesh_read_from_zjumat(vm["mesh"].as<string>().c_str(), &nods, &tets);
-  } else if ( vm["type"].as<string>() == "vtk" ) {
-    jtf::mesh::tet_mesh_read_from_vtk(vm["mesh"].as<string>().c_str(), &nods, &tets);
-  } else {
-    cerr << "[Info] unsupported mesh file format\n";
-    return __LINE__;
-  }
-  
+  jtf::mesh::tet_mesh_read_from_vtk(vm["mesh"].as<string>().c_str(), &nods, &tets);
   {    
     string out = vm["output_folder"].as<string>()+string("/tet.vtk");
     ofstream ofs(out);
@@ -190,13 +179,14 @@ int main(int argc, char *argv[])
     ofs.close();
   }
 
-  cross_frame_args args; {
-    args.ws =     vm["ws"].as<double>();
-    args.wa =     vm["wa"].as<double>();
-    args.epsf =   vm["epsf"].as<double>();
-    args.maxits = vm["maxits"].as<size_t>();
-    args.smooth_type = vm["smooth_type"].as<string>();
-  }
+  cross_frame_args args = {
+    vm["smooth_type"].as<string>(),
+    vm["ws"].as<double>(),
+    vm["wa"].as<double>(),
+    vm["epsf"].as<double>(),
+    vm["maxits"].as<size_t>()
+  };
+  
   shared_ptr<cross_frame_opt> frame_opt = make_shared<cross_frame_opt>(tets, nods, args);
 
   cout << "[INFO] solve Laplacian\n";
@@ -210,11 +200,11 @@ int main(int argc, char *argv[])
   cout << "[INFO] optimize frames\n";
   frame_opt->optimize_frames(abc);
 
-  MatrixXd frames(9, tets.size(2));
-  for (size_t i = 0; i < tets.size(2); ++i) {
-    Matrix3d R = RZ(abc[3*i+2])*RY(abc[3*i+1])*RZ(abc[3*i+0]);
-    Map<Matrix3d>(&frames(0, i)) = R;
-  }
+  // write frame vectors
+  VectorXd fmat;
+  convert_zyz_to_mat(abc, fmat);
+
+  MatrixXd frames = Map<MatrixXd>(fmat.data(), 9, fmat.size()/9);
   const double len_scale = 0.075;
   frames *= len_scale;
 
