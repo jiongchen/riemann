@@ -48,7 +48,13 @@ extern "C" {
 
   void poly_smooth_tet_(double *val, const double *abc, const double *stiff);
   void poly_smooth_tet_jac_(double *jac, const double *abc, const double *stiff);
-  
+
+  void l1_cubic_sym_smooth_(double *val, const double *Rab, const double *eps, const double *stiff);
+  void l1_cubic_sym_smooth_jac_(double *jac, const double *Rab, const double *eps, const double *stiff);
+
+  void frm_orth_term_(double *val, const double *R, const double *stiff);
+  void frm_orth_term_jac_(double *jac, const double *R, const double *stiff);
+
 }
 
 static inline void normal2zyz(const double *n, double *zyz) {
@@ -329,12 +335,17 @@ public:
   }
   int Val(const double *f, double *val) const {
     itr_matrix<const double *> F(9, Nx()/9, f);
+    matd_t frms = zeros<double>(9, 2); double value = 0;
     for (;;) {
     }
     return 0;
   }
   int Gra(const double *f, double *gra) const {
     itr_matrix<const double *> F(9, Nx()/9, f);
+    itr_matrix<double *> G(9, Nx()/9, gra);
+    matd_t frms = zeros<double>(9, 2), g = zeros<double>(9, 2);
+    for (;;) {
+    }
     return 0;
   }
   int Hes(const double *f, double *gra) const {
@@ -347,13 +358,46 @@ private:
 class frame_orth_energy : public Functional<double>
 {
 public:
-  frame_orth_energy();
-  size_t Nx() const;
-  int Val(const double *f, double *val) const;
-  int Gra(const double *f, double *gra) const;
+  frame_orth_energy(const mati_t &tets, const matd_t &nods, const double w)
+      : tets_(tets), w_(w), dim_(9*tets.size(2)) {
+    volume_.resize(tets.size(2)); {
+      #pragma omp parallel for
+      for (size_t i = 0; i < tets.size(2); ++i) {
+        matd_t Ds = nods(colon(), tets(colon(1, 3), i))-nods(colon(), tets(0, i))*ones<double>(1, 3);
+        volume_[i] = fabs(det(Ds))/6.0;
+      }
+      const double sum_vol = sum(volume_);
+      volume_ /= sum_vol;
+    }
+  }
+  size_t Nx() const {
+    return dim_;
+  }
+  int Val(const double *f, double *val) const {
+    double value = 0;
+    for (size_t i = 0; i < tets_.size(2); ++i) {
+      frm_orth_term_(&value, f+9*i, &volume_[i]);
+      *val += w_*value;
+    }
+    return 0;
+  }
+  int Gra(const double *f, double *gra) const {
+    itr_matrix<double *> G(9, dim_/9, gra);
+    matd_t g = zeros<double>(9, 1);
+    for (size_t i = 0; i < tets_.size(2); ++i) {
+      frm_orth_term_jac_(&g[0], f+9*i, &volume_[i]);
+      G(colon(), i) += w_*g;
+    }
+  }
   int Hes(const double *f, vector<Triplet<double>> *hes) {
     return __LINE__;
   }
+ private:
+  const mati_t &tets_;
+  const double w_;
+  const size_t dim_;
+
+  matd_t volume_;
 };
 
 class boundary_fix_energy : public Functional<double>

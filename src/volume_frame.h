@@ -41,7 +41,6 @@ class Functional;
 
 struct cross_frame_args
 {
-  std::string sm_type;
   double ws, wa;
   double epsf;
   size_t maxits;

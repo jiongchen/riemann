@@ -108,22 +108,6 @@ static int write_tet_zyz(const char *filename, const double *zyz, const size_t e
   return 0;
 }
 
-// static int zyz_vert_to_tet(const mati_t &tets, const VectorXd &abc, MatrixXd& zyz) {
-//   zyz.setZero(3, tets.size(2));
-
-//   MatrixXd vert_sh(9, abc.size()/3);
-//   for (size_t i = 0; i < vert_sh.cols(); ++i) {
-//     zyz_to_sh(&abc[3*i], &vert_sh(0, i));
-//   }
-//   #pragma omp parallel for
-//   for (size_t i = 0; i < tets.size(2); ++i) {
-//     VectorXd tsh = (vert_sh.col(tets(0, i))+vert_sh.col(tets(1, i))
-//                    +vert_sh.col(tets(2, i))+vert_sh.col(tets(3, i)))/4.0;
-//     sh_to_zyz(tsh.data(), &zyz(0, i), 1000);
-//   }
-//   return 0;
-// }
-
 static int verify_sh_scale() {
   cout << "---------------TEST CASE----------------" << endl;
   srand(time(NULL));
@@ -154,7 +138,6 @@ int main(int argc, char *argv[])
     desc.add_options()
         ("help,h", "produce help message")
         ("mesh,i",          po::value<string>(), "input mesh")
-        ("smooth_type",     po::value<string>(), "type of smooth term")
         ("ws",              po::value<double>(), "smoothness weight")
         ("wa",              po::value<double>(), "alignment weight")
         ("epsf",            po::value<double>(), "tolerance of energy convergence")
@@ -180,7 +163,6 @@ int main(int argc, char *argv[])
   }
 
   cross_frame_args args = {
-    vm["smooth_type"].as<string>(),
     vm["ws"].as<double>(),
     vm["wa"].as<double>(),
     vm["epsf"].as<double>(),
@@ -208,21 +190,21 @@ int main(int argc, char *argv[])
   const double len_scale = 0.075;
   frames *= len_scale;
 
-  matd_t center(3, tets.size(2));
+  matd_t bc(3, tets.size(2));
   for (size_t i = 0; i < tets.size(2); ++i)
-    center(colon(), i) = nods(colon(), tets(colon(), i))*ones<double>(4, 1)/4.0;
+    bc(colon(), i) = nods(colon(), tets(colon(), i))*ones<double>(4, 1)/4.0;
   
   string xfile = vm["output_folder"].as<string>()+string("/x.vtk");
   MatrixXd rx = frames.block(0, 0, 3, frames.cols());
-  draw_vert_direct_field(xfile.c_str(), &center[0], center.size(2), rx.data());
+  draw_vert_direct_field(xfile.c_str(), &bc[0], bc.size(2), rx.data());
 
   string yfile = vm["output_folder"].as<string>()+string("/y.vtk");
   MatrixXd ry = frames.block(3, 0, 3, frames.cols());
-  draw_vert_direct_field(yfile.c_str(), &center[0], center.size(2), ry.data());
+  draw_vert_direct_field(yfile.c_str(), &bc[0], bc.size(2), ry.data());
 
   string zfile = vm["output_folder"].as<string>()+string("/z.vtk");
   MatrixXd rz = frames.block(6, 0, 3, frames.cols());
-  draw_vert_direct_field(zfile.c_str(), &center[0], center.size(2), rz.data());
+  draw_vert_direct_field(zfile.c_str(), &bc[0], bc.size(2), rz.data());
 
   // write zyz
   string zyz_file = vm["output_folder"].as<string>()+string("/zyz.txt");
