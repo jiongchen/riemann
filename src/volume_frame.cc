@@ -291,7 +291,8 @@ public:
    * As [Liu12] proves, SH = 16PI/315 poly, so magic = 20
    */
   poly_smooth_energy_tet(const mati_t &tets, const matd_t &nods, const double w)
-      : SH_smooth_energy_tet(tets, nods, w), magic_(20.0) {}
+      : SH_smooth_energy_tet(tets, nods, w), magic_(20.0) {
+  }
   size_t Nx() const {
     return dim_;
   }
@@ -323,20 +324,22 @@ private:
   const double magic_;
 };
 
-//================================== TODO =======================================
-
 class l1_smooth_energy_tet : public SH_smooth_energy_tet
 {
 public:
   l1_smooth_energy_tet(const mati_t &tets, const matd_t &nods, const double eps, const double w)
-      : SH_smooth_energy_tet(tets, nods, w), epsilon_(eps) {}
+      : SH_smooth_energy_tet(tets, nods, w), epsilon_(eps) {
+  }
   size_t Nx() const {
     return 3*dim_;
   }
   int Val(const double *f, double *val) const {
     itr_matrix<const double *> F(9, Nx()/9, f);
     matd_t frms = zeros<double>(9, 2); double value = 0;
-    for (;;) {
+    for (size_t i = 0; i < adjt_.size(2); ++i) {
+      frms = F(colon(), adjt_(colon(), i));
+      l1_cubic_sym_smooth_(&value, &frms[0], &epsilon_, &stiff_[i]);
+      *val += w_*value;
     }
     return 0;
   }
@@ -344,7 +347,10 @@ public:
     itr_matrix<const double *> F(9, Nx()/9, f);
     itr_matrix<double *> G(9, Nx()/9, gra);
     matd_t frms = zeros<double>(9, 2), g = zeros<double>(9, 2);
-    for (;;) {
+    for (size_t i = 0; i < adjt_.size(2); ++i) {
+      frms = F(colon(), adjt_(colon(), i));
+      l1_cubic_sym_smooth_jac_(&g[0], &frms[0], &epsilon_, &stiff_[i]);
+      G(colon(), adjt_(colon(), i)) += w_*g;
     }
     return 0;
   }
@@ -366,8 +372,8 @@ public:
         matd_t Ds = nods(colon(), tets(colon(1, 3), i))-nods(colon(), tets(0, i))*ones<double>(1, 3);
         volume_[i] = fabs(det(Ds))/6.0;
       }
-      const double sum_vol = sum(volume_);
-      volume_ /= sum_vol;
+      const double sum_volume = sum(volume_);
+      volume_ /= sum_volume;
     }
   }
   size_t Nx() const {
@@ -389,7 +395,7 @@ public:
       G(colon(), i) += w_*g;
     }
   }
-  int Hes(const double *f, vector<Triplet<double>> *hes) {
+  int Hes(const double *f, vector<Triplet<double>> *hes) const {
     return __LINE__;
   }
  private:
@@ -403,22 +409,48 @@ public:
 class boundary_fix_energy : public Functional<double>
 {
 public:
-  boundary_fix_energy(const mati_t &tets, const matd_t &nods, const size_t var_dim, const double w)
-      : tets_(tets), var_dim_(var_dim), dim_(var_dim_*tets.size(2)), w_(w) {
+  boundary_fix_energy(const mati_t &tets, const matd_t &nods, const VectorXd &x0,
+                      const size_t var_dim, const double w)
+      : tets_(tets), x0_(x0), var_dim_(var_dim), dim_(var_dim_*tets.size(2)), w_(w) {
+    shared_ptr<face2tet_adjacent> f2t(face2tet_adjacent::create(tets));
+    mati_t surf; bool check_order = true;
+    jtf::mesh::get_outside_face(*f2t, surf, check_order, &nods);
+  
+    stiff_.resize(surf.size(2)); {
+      #pragma omp parallel for
+      for (size_t i = 0; i < surf.size(2); ++i)
+        stiff_[i] = jtf::mesh::cal_face_area(nods(colon(), surf(colon(), i)));
+      double sum_area = sum(stiff_);
+      stiff_ /= sum_area;
+    }
+    
+    adjt_.resize(surf.size(2)); {
+      #pragma omp parallel for
+      for (size_t i = 0; i < surf.size(2); ++i) {
+        const pair<size_t, size_t> t = f2t->query(surf(0, i), surf(1, i), surf(2, i));
+        adjt_[i] = (t.first == -1) ? t.second : t.first;
+      }
+    }
   }
   size_t Nx() const {
     return dim_;
   }
   int Val(const double *x, double *val) const {
-    itr_matrix<const double *> X(var_dim_, dim_/var_dim_, x);
-    for (;;) {
+    Map<const MatrixXd> X(x, var_dim_, dim_/var_dim_);
+    Map<const MatrixXd> X0(x0_.data(), var_dim_, dim_/var_dim_);
+    for (size_t i = 0; i < adjt_.size(); ++i) {
+      const size_t tid = adjt_[i];
+      *val += w_*stiff_[i]*(X.col(tid)-X0.col(tid)).squaredNorm();
     }
     return 0;
   }
   int Gra(const double *x, double *gra) const {
-    itr_matrix<const double *> X(var_dim_, dim_/var_dim_, x);
-    itr_matrix<double *> G(var_dim_, dim_/var_dim_, gra);
-    for (;;) {
+    Map<const MatrixXd> X(x, var_dim_, dim_/var_dim_);
+    Map<const MatrixXd> X0(x0_.data(), var_dim_, dim_/var_dim_);
+    Map<MatrixXd> G(gra, var_dim_, dim_/var_dim_);
+    for (size_t i = 0; i < adjt_.size(); ++i) {
+      const size_t tid = adjt_[i];
+      G.col(tid) += w_*2.0*stiff_[i]*(X.col(tid)-X0.col(tid));
     }
     return 0;
   }
@@ -429,8 +461,10 @@ private:
   const size_t var_dim_, dim_;
   const double w_;
   const mati_t &tets_;
+  const VectorXd x0_;
   
-  VectorXd x0_;
+  mati_t adjt_;
+  matd_t stiff_;
 };
 
 //===============================================================================
@@ -557,14 +591,54 @@ int cross_frame_opt::optimize_frames(VectorXd &abc) const {
   return 0;
 }
 
-int cross_frame_opt::opt_frms_fixed_bnd_SH(VectorXd &abc) {
-  // reset energy buffer
-  // call lbfgs to optimize
+//===============================================================================
+
+frame_smoother::frame_smoother(const mati_t &tets, const matd_t &nods, const smooth_args &args)
+    : tets_(tets), nods_(nods), args_(args) {
+}
+
+int frame_smoother::smoothSH(VectorXd &abc) const {
+  ASSERT(abc.size() == 3*tets_.size(2));
+  
+  vector<shared_ptr<Functional<double>>> buffer(2);
+  shared_ptr<Functional<double>> func;
+
+  buffer[0] = make_shared<SH_smooth_energy_tet>(tets_, nods_, args_.ws);
+  buffer[1] = make_shared<boundary_fix_energy>(tets_, nods_, abc, 3, args_.wp);
+  try {
+    func = make_shared<energy_t<double>>(buffer);
+  } catch ( ... ) {
+    cerr << "[Error] energy exceptions!" << endl;
+    exit(EXIT_FAILURE);
+  }
+
+  const double epsf = args_.epsf, epsx = 0;
+  const size_t maxits = args_.maxits;
+  lbfgs_solve(func, abc.data(), abc.size(), epsf, epsx, maxits);
+
   return 0;
 }
 
-int cross_frame_opt::opt_frms_fixed_bnd_L1(VectorXd &mat) {
-  // same energy 
+int frame_smoother::smoothL1(VectorXd &mat) const {
+  ASSERT(mat.size() == 9*tets_.size(2));
+  
+  vector<shared_ptr<Functional<double>>> buffer(3);
+  shared_ptr<Functional<double>> func;
+  
+  buffer[0] = make_shared<l1_smooth_energy_tet>(tets_, nods_, args_.abs_eps, args_.ws);
+  buffer[1] = make_shared<frame_orth_energy>(tets_, nods_, args_.wo);
+  buffer[2] = make_shared<boundary_fix_energy>(tets_, nods_, mat, 9, args_.wp);
+  try {
+    func = make_shared<energy_t<double>>(buffer);
+  } catch ( ... ) {
+    cerr << "[Error] energy exception!\n";
+    exit(EXIT_FAILURE);
+  }
+
+  const double epsf = args_.epsf, epsx = 0;
+  const size_t maxits = args_.maxits;
+  lbfgs_solve(func, mat.data(), mat.size(), epsf, epsx, maxits);
+  
   return 0;
 }
 

@@ -55,14 +55,31 @@ public:
   int solve_laplacian(Eigen::VectorXd &Fs) const;
   int solve_initial_frames(const Eigen::VectorXd &Fs, Eigen::VectorXd &abc) const;
   int optimize_frames(Eigen::VectorXd &abc) const;
-
-  int opt_frms_fixed_bnd_SH(Eigen::VectorXd &abc);
-  int opt_frms_fixed_bnd_L1(Eigen::VectorXd &mat);
 private:
   const mati_t &tets_;
   const matd_t &nods_;
   const cross_frame_args args_;
   std::vector<std::shared_ptr<Functional<double>>> buffer_;
+};
+
+struct smooth_args
+{
+  double abs_eps;
+  double ws, wo, wp;
+  double epsf;
+  size_t maxits;
+};
+
+class frame_smoother
+{
+public:
+  frame_smoother(const mati_t &tets, const matd_t &nods, const smooth_args &args);
+  int smoothSH(Eigen::VectorXd &abc) const;
+  int smoothL1(Eigen::VectorXd &mat) const;
+private:
+  const mati_t &tets_;
+  const matd_t &nods_;
+  const smooth_args args_;
 };
 
 }

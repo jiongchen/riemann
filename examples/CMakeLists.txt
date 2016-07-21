@@ -196,3 +196,9 @@ target_link_libraries(test_vol_frame
   riemann
   ${Boost_LIBRARIES}
 )
+
+add_executable(compare_cubic_smooth compare_cubic_smooth.cc)
+target_link_libraries(compare_cubic_smooth
+  riemann
+  ${Boost_LIBRARIES}
+)
