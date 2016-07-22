@@ -3,12 +3,12 @@
 echo -e "# ================================== Run cross frame field ======================================== #"
 
 EXE=../build/bin/test_vol_frame
-MESH=../dat/tets/sphere.v51k.vtk
+MESH=../dat/tets/eightsmooth.vtk
 WS=1e0
 WA=1e3
 EPS=1e-8
 MAXITS=3000
-OUT_DIR=../result/volume_frame/sphere-dense-ws$WS-wa$WA
+OUT_DIR=../result/volume_frame/eight-ws$WS-wa$WA
 
 if [ ! -d "$OUT_DIR" ]; then
     mkdir -p $OUT_DIR

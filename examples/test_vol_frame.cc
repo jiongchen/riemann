@@ -183,13 +183,14 @@ int main(int argc, char *argv[])
   frame_opt->optimize_frames(abc);
 
   // write frame vectors
-  VectorXd fmat;
-  convert_zyz_to_mat(abc, fmat);
-
-  MatrixXd frames = Map<MatrixXd>(fmat.data(), 9, fmat.size()/9);
-  const double len_scale = 0.075;
-  frames *= len_scale;
-
+  MatrixXd frames; {
+    VectorXd fmat;
+    convert_zyz_to_mat(abc, fmat);
+    frames = Map<MatrixXd>(fmat.data(), 9, fmat.size()/9);
+    const double len_scale = 0.075;
+    frames *= len_scale;
+  }
+  
   matd_t bc(3, tets.size(2));
   for (size_t i = 0; i < tets.size(2); ++i)
     bc(colon(), i) = nods(colon(), tets(colon(), i))*ones<double>(4, 1)/4.0;

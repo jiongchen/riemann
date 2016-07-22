@@ -608,7 +608,7 @@ int frame_smoother::smoothSH(VectorXd &abc) const {
   try {
     func = make_shared<energy_t<double>>(buffer);
   } catch ( ... ) {
-    cerr << "[Error] energy exceptions!" << endl;
+    cerr << "[Error] SH energy exceptions!" << endl;
     exit(EXIT_FAILURE);
   }
 
@@ -631,14 +631,22 @@ int frame_smoother::smoothL1(VectorXd &mat) const {
   try {
     func = make_shared<energy_t<double>>(buffer);
   } catch ( ... ) {
-    cerr << "[Error] energy exception!\n";
+    cerr << "[Error] L1 energy exceptions!\n";
     exit(EXIT_FAILURE);
   }
 
   const double epsf = args_.epsf, epsx = 0;
   const size_t maxits = args_.maxits;
   lbfgs_solve(func, mat.data(), mat.size(), epsf, epsx, maxits);
-  
+
+  // make frames orthogonal
+  #pragma omp parallel for
+  for (size_t i = 0; i < mat.size()/9; ++i) {
+    matd_t ff = itr_matrix<const double *>(3, 3, &mat[9*i]);
+    matd_t U(3, 3), S(3, 3), VT(3, 3);
+    svd(ff, U, S, VT);
+    itr_matrix<double *>(3, 3, &mat[9*i]) = U*VT;
+  }
   return 0;
 }
 

@@ -49,3 +49,7 @@ It's just a spare-time project of my own, consisting of full/partial implementat
 [2016-03-29] Implement close-to-conformal deformations of volumes with charges as the conformal factor design tools [[Chern15]](http://dl.acm.org/citation.cfm?id=2766916).
 
 ![image] (/img/half_size/conformal_volume.png)
+
+[2016-07-14] Implement spherical harmonics based 3D cross frame field generation [[Huang11]](http://www.cad.zju.edu.cn/home/hj/11/3D-cross-frame.pdf).
+
+![image] (/img/half_size/singularity.png)

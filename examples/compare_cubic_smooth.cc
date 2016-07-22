@@ -27,16 +27,32 @@ static int write_tet_zyz(const char *filename, const double *zyz, const size_t e
   return 0;
 }
 
+static int write_tet_ff(const char *filename, const double *ff, const size_t elem_num) {
+  ofstream ofs(filename);
+  if ( ofs.fail() ) {
+    cerr << "[Error] can not write to " << filename << endl;
+    return __LINE__;
+  }
+  ofs << "9 " << elem_num << endl;
+  for (size_t i = 0; i < elem_num; ++i)
+    ofs << ff[9*i+0] << " " << ff[9*i+1] << " " << ff[9*i+2] << " "
+        << ff[9*i+3] << " " << ff[9*i+4] << " " << ff[9*i+5] << " "
+        << ff[9*i+6] << " " << ff[9*i+7] << " " << ff[9*i+8] << endl;
+  return 0;
+}
+
 int main(int argc, char *argv[])
 {
   po::options_description desc("Available options"); {
     desc.add_options()
         ("help,h", "produce help message")
         ("mesh,i",          po::value<string>(), "input mesh")
+        ("sm_type",         po::value<string>(), "smooth type")
         ("abs_eps",         po::value<double>(), "abs approximation")
         ("ws",              po::value<double>(), "smooth weight")
         ("wo",              po::value<double>(), "orth weight")
         ("wp",              po::value<double>(), "boundary weight")
+        ("epsf",            po::value<double>()->default_value(1e-8), "epsf")
         ("maxits",          po::value<size_t>(), "maximum iterations")
         ("output_folder,o", po::value<string>(), "output folder")
         ;
@@ -59,8 +75,8 @@ int main(int argc, char *argv[])
   }
 
   // GET INITAL VALUE
-  const double ws = 0.5, wa = 1e3, epsf = 1e-8;
-  const size_t maxits = 50;
+  const double ws = 0.01, wa = 1e3, epsf = 1e-8;
+  const size_t maxits = 10;
   cross_frame_args args = {ws, wa, epsf, maxits};
 
   shared_ptr<cross_frame_opt> frame_opt = make_shared<cross_frame_opt>(tets, nods, args);
@@ -83,7 +99,7 @@ int main(int argc, char *argv[])
     vm["ws"].as<double>(),
     vm["wo"].as<double>(),
     vm["wp"].as<double>(),
-    1e-8,
+    vm["epsf"].as<double>(),
     vm["maxits"].as<size_t>()
   };
 
@@ -91,40 +107,26 @@ int main(int argc, char *argv[])
 
   cout << "[Info] Fix boundary and opt smooth energy\n";
 
-  // smoother->smoothSH(abc);
+  if ( vm["sm_type"].as<string>() == "SH" ) {
+    cout << "\t**************** SH ****************\n";
+    smoother->smoothSH(abc);
 
-  VectorXd fmat;
-  convert_zyz_to_mat(abc, fmat);
-  smoother->smoothL1(fmat);
+    string zyz_file = vm["output_folder"].as<string>()+string("/frames.txt");
+    write_tet_zyz(zyz_file.c_str(), abc.data(), abc.size()/3);
 
-  
-  // // write frame vectors
-  // VectorXd fmat;
-  // convert_zyz_to_mat(abc, fmat);
+  } else if ( vm["sm_type"].as<string>() == "L1" ) {
+    cout << "\t**************** L1 ****************\n";
+    VectorXd fmat;
+    convert_zyz_to_mat(abc, fmat);
+    smoother->smoothL1(fmat);
 
-  MatrixXd frames = Map<MatrixXd>(fmat.data(), 9, fmat.size()/9);
-  const double len_scale = 0.075;
-  frames *= len_scale;
+    string ff_file = vm["output_folder"].as<string>()+string("/frames.txt");
+    write_tet_ff(ff_file.c_str(), fmat.data(), fmat.size()/9);
 
-  matd_t center(3, tets.size(2));
-  for (size_t i = 0; i < tets.size(2); ++i)
-    center(colon(), i) = nods(colon(), tets(colon(), i))*ones<double>(4, 1)/4.0;
-  
-  string xfile = vm["output_folder"].as<string>()+string("/x.vtk");
-  MatrixXd rx = frames.block(0, 0, 3, frames.cols());
-  draw_vert_direct_field(xfile.c_str(), &center[0], center.size(2), rx.data());
-
-  string yfile = vm["output_folder"].as<string>()+string("/y.vtk");
-  MatrixXd ry = frames.block(3, 0, 3, frames.cols());
-  draw_vert_direct_field(yfile.c_str(), &center[0], center.size(2), ry.data());
-
-  string zfile = vm["output_folder"].as<string>()+string("/z.vtk");
-  MatrixXd rz = frames.block(6, 0, 3, frames.cols());
-  draw_vert_direct_field(zfile.c_str(), &center[0], center.size(2), rz.data());
-
-  // // write zyz
-  // string zyz_file = vm["output_folder"].as<string>()+string("/zyz.txt");
-  // write_tet_zyz(zyz_file.c_str(), abc.data(), abc.size()/3);
+  } else {
+    cerr << "[Error] unsupported smooth term.\n";
+    return __LINE__;
+  }
   
   cout << "[Info] done\n";
   return 0;
