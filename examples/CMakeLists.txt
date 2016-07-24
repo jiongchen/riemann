@@ -195,10 +195,12 @@ add_executable(test_vol_frame test_vol_frame.cc)
 target_link_libraries(test_vol_frame
   riemann
   ${Boost_LIBRARIES}
+  zjucad-ptree
 )
 
 add_executable(compare_cubic_smooth compare_cubic_smooth.cc)
 target_link_libraries(compare_cubic_smooth
   riemann
   ${Boost_LIBRARIES}
+  zjucad-ptree
 )

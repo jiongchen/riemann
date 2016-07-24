@@ -2,7 +2,7 @@
 #include <fstream>
 #include <jtflib/mesh/mesh.h>
 #include <jtflib/mesh/io.h>
-#include <boost/program_options.hpp>
+#include <zjucad/ptree/ptree.h>
 
 #include "src/def.h"
 #include "src/volume_frame.h"
@@ -13,7 +13,6 @@ using namespace std;
 using namespace riemann;
 using namespace Eigen;
 using namespace zjucad::matrix;
-namespace po=boost::program_options;
 
 static int write_tet_zyz(const char *filename, const double *zyz, const size_t elem_num) {
   ofstream ofs(filename);
@@ -43,43 +42,29 @@ static int write_tet_ff(const char *filename, const double *ff, const size_t ele
 
 int main(int argc, char *argv[])
 {
-  po::options_description desc("Available options"); {
-    desc.add_options()
-        ("help,h", "produce help message")
-        ("mesh,i",          po::value<string>(), "input mesh")
-        ("sm_type",         po::value<string>(), "smooth type")
-        ("abs_eps",         po::value<double>(), "abs approximation")
-        ("ws",              po::value<double>(), "smooth weight")
-        ("wo",              po::value<double>(), "orth weight")
-        ("wp",              po::value<double>(), "boundary weight")
-        ("epsf",            po::value<double>()->default_value(1e-8), "epsf")
-        ("maxits",          po::value<size_t>(), "maximum iterations")
-        ("output_folder,o", po::value<string>(), "output folder")
-        ;
-  }
-  po::variables_map vm;
-  po::store(po::parse_command_line(argc, argv, desc), vm);
-  po::notify(vm);
-  if ( vm.count("help") ) {
-    cout << desc << endl;
-    return __LINE__;
-  }
+  boost::property_tree::ptree pt;
+  zjucad::read_cmdline(argc, argv, pt);
 
+  string out_folder = pt.get<string>("out_dir.value");
+  
   mati_t tets; matd_t nods;
-  jtf::mesh::tet_mesh_read_from_vtk(vm["mesh"].as<string>().c_str(), &nods, &tets);
+  jtf::mesh::tet_mesh_read_from_vtk(pt.get<string>("mesh.value").c_str(), &nods, &tets);
   {    
-    string out = vm["output_folder"].as<string>()+string("/tet.vtk");
-    ofstream ofs(out);
+    string outfile = out_folder+string("/tet.vtk");
+    ofstream ofs(outfile);
     tet2vtk(ofs, &nods[0], nods.size(2), &tets[0], tets.size(2));
     ofs.close();
   }
 
   // GET INITAL VALUE
-  const double ws = 0.01, wa = 1e3, epsf = 1e-8;
-  const size_t maxits = 10;
-  cross_frame_args args = {ws, wa, epsf, maxits};
+  boost::property_tree::ptree ptt; {
+    ptt.put("weight.smooth.value", 1e-1);
+    ptt.put("weight.align.value", 1e3);
+    ptt.put("lbfgs.epsf.value", 1e-8);
+    ptt.put("lbfgs.maxits.value", 10);
+  }
 
-  shared_ptr<cross_frame_opt> frame_opt = make_shared<cross_frame_opt>(tets, nods, args);
+  shared_ptr<cross_frame_opt> frame_opt = make_shared<cross_frame_opt>(tets, nods, ptt);
 
   cout << "[INFO] solve Laplacian\n";
   VectorXd Fs;
@@ -94,33 +79,26 @@ int main(int argc, char *argv[])
 
   
   // OPTIMZE SMOOTHNESS
-  smooth_args sm_args = {
-    vm["abs_eps"].as<double>(),
-    vm["ws"].as<double>(),
-    vm["wo"].as<double>(),
-    vm["wp"].as<double>(),
-    vm["epsf"].as<double>(),
-    vm["maxits"].as<size_t>()
-  };
-
-  shared_ptr<frame_smoother> smoother = make_shared<frame_smoother>(tets, nods, sm_args);
+  shared_ptr<frame_smoother> smoother = make_shared<frame_smoother>(tets, nods, pt);
 
   cout << "[Info] Fix boundary and opt smooth energy\n";
 
-  if ( vm["sm_type"].as<string>() == "SH" ) {
-    cout << "\t**************** SH ****************\n";
+  if ( pt.get<string>("sm_type.value") == "SH" ) {
+
+    cout << "**************** SH ****************\n";
     smoother->smoothSH(abc);
 
-    string zyz_file = vm["output_folder"].as<string>()+string("/frames.txt");
+    string zyz_file = out_folder+string("/frames.txt");
     write_tet_zyz(zyz_file.c_str(), abc.data(), abc.size()/3);
 
-  } else if ( vm["sm_type"].as<string>() == "L1" ) {
-    cout << "\t**************** L1 ****************\n";
+  } else if ( pt.get<string>("sm_type.value") == "L1" ) {
+
+    cout << "**************** L1 ****************\n";
     VectorXd fmat;
     convert_zyz_to_mat(abc, fmat);
     smoother->smoothL1(fmat);
 
-    string ff_file = vm["output_folder"].as<string>()+string("/frames.txt");
+    string ff_file = out_folder+string("/frames.txt");
     write_tet_ff(ff_file.c_str(), fmat.data(), fmat.size()/9);
 
   } else {

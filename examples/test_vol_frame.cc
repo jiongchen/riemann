@@ -2,7 +2,7 @@
 #include <fstream>
 #include <jtflib/mesh/mesh.h>
 #include <jtflib/mesh/io.h>
-#include <boost/program_options.hpp>
+#include <zjucad/ptree/ptree.h>
 
 #include "src/def.h"
 #include "src/volume_frame.h"
@@ -16,7 +16,6 @@ using namespace std;
 using namespace riemann;
 using namespace Eigen;
 using namespace zjucad::matrix;
-namespace po=boost::program_options;
 
 extern "C" {
   void cubic_sym_align_(double*, const double*, const double*, const double*);
@@ -134,42 +133,22 @@ int main(int argc, char *argv[])
   verify_sh_scale();
   return __LINE__;
 #endif
-  po::options_description desc("Available options"); {
-    desc.add_options()
-        ("help,h", "produce help message")
-        ("mesh,i",          po::value<string>(), "input mesh")
-        ("ws",              po::value<double>(), "smoothness weight")
-        ("wa",              po::value<double>(), "alignment weight")
-        ("epsf",            po::value<double>(), "tolerance of energy convergence")
-        ("maxits",          po::value<size_t>(), "maximum iter for LBFGS")
-        ("output_folder,o", po::value<string>(), "output folder")
-        ;
-  }
-  po::variables_map vm;
-  po::store(po::parse_command_line(argc, argv, desc), vm);
-  po::notify(vm);
-  if ( vm.count("help") ) {
-    cout << desc << endl;
-    return __LINE__;
-  }
 
+  boost::property_tree::ptree pt;
+  zjucad::read_cmdline(argc, argv, pt);
+  
+  const string out_folder = pt.get<string>("out_dir.value");
+  
   mati_t tets; matd_t nods;
-  jtf::mesh::tet_mesh_read_from_vtk(vm["mesh"].as<string>().c_str(), &nods, &tets);
+  jtf::mesh::tet_mesh_read_from_vtk(pt.get<string>("mesh.value").c_str(), &nods, &tets);
   {    
-    string out = vm["output_folder"].as<string>()+string("/tet.vtk");
-    ofstream ofs(out);
+    string outfile = out_folder+string("/tet.vtk");
+    ofstream ofs(outfile);
     tet2vtk(ofs, &nods[0], nods.size(2), &tets[0], tets.size(2));
     ofs.close();
   }
-
-  cross_frame_args args = {
-    vm["ws"].as<double>(),
-    vm["wa"].as<double>(),
-    vm["epsf"].as<double>(),
-    vm["maxits"].as<size_t>()
-  };
   
-  shared_ptr<cross_frame_opt> frame_opt = make_shared<cross_frame_opt>(tets, nods, args);
+  shared_ptr<cross_frame_opt> frame_opt = make_shared<cross_frame_opt>(tets, nods, pt);
 
   cout << "[INFO] solve Laplacian\n";
   VectorXd Fs;
@@ -195,20 +174,20 @@ int main(int argc, char *argv[])
   for (size_t i = 0; i < tets.size(2); ++i)
     bc(colon(), i) = nods(colon(), tets(colon(), i))*ones<double>(4, 1)/4.0;
   
-  string xfile = vm["output_folder"].as<string>()+string("/x.vtk");
+  string xfile = out_folder+string("/x.vtk");
   MatrixXd rx = frames.block(0, 0, 3, frames.cols());
   draw_vert_direct_field(xfile.c_str(), &bc[0], bc.size(2), rx.data());
 
-  string yfile = vm["output_folder"].as<string>()+string("/y.vtk");
+  string yfile = out_folder+string("/y.vtk");
   MatrixXd ry = frames.block(3, 0, 3, frames.cols());
   draw_vert_direct_field(yfile.c_str(), &bc[0], bc.size(2), ry.data());
 
-  string zfile = vm["output_folder"].as<string>()+string("/z.vtk");
+  string zfile = out_folder+string("/z.vtk");
   MatrixXd rz = frames.block(6, 0, 3, frames.cols());
   draw_vert_direct_field(zfile.c_str(), &bc[0], bc.size(2), rz.data());
 
   // write zyz
-  string zyz_file = vm["output_folder"].as<string>()+string("/zyz.txt");
+  string zyz_file = out_folder+string("/zyz.txt");
   write_tet_zyz(zyz_file.c_str(), abc.data(), abc.size()/3);
   
   cout << "[Info] done\n";

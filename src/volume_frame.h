@@ -3,6 +3,7 @@
 
 #include <Eigen/Dense>
 #include <zjucad/matrix/matrix.h>
+#include <boost/property_tree/ptree.hpp>
 
 namespace riemann {
 
@@ -35,51 +36,37 @@ static const double g_RXYZ [24][3][3]={
 
 using mati_t=zjucad::matrix::matrix<size_t>;
 using matd_t=zjucad::matrix::matrix<double>;
+using boost::property_tree::ptree;
 
 template <typename T>
 class Functional;
-
-struct cross_frame_args
-{
-  double ws, wa;
-  double epsf;
-  size_t maxits;
-};
 
 void convert_zyz_to_mat(const Eigen::VectorXd &abc, Eigen::VectorXd &mat);
 
 class cross_frame_opt
 {
 public:
-  cross_frame_opt(const mati_t &tets, const matd_t &nods, const cross_frame_args &args);
+  cross_frame_opt(const mati_t &tets, const matd_t &nods, const ptree &pt);
   int solve_laplacian(Eigen::VectorXd &Fs) const;
   int solve_initial_frames(const Eigen::VectorXd &Fs, Eigen::VectorXd &abc) const;
   int optimize_frames(Eigen::VectorXd &abc) const;
 private:
   const mati_t &tets_;
   const matd_t &nods_;
-  const cross_frame_args args_;
+  const ptree &pt_;
   std::vector<std::shared_ptr<Functional<double>>> buffer_;
-};
-
-struct smooth_args
-{
-  double abs_eps;
-  double ws, wo, wp;
-  double epsf;
-  size_t maxits;
 };
 
 class frame_smoother
 {
 public:
-  frame_smoother(const mati_t &tets, const matd_t &nods, const smooth_args &args);
+  frame_smoother(const mati_t &tets, const matd_t &nods, const ptree &pt);
   int smoothSH(Eigen::VectorXd &abc) const;
   int smoothL1(Eigen::VectorXd &mat) const;
 private:
   const mati_t &tets_;
   const matd_t &nods_;
-  const smooth_args args_;
+  const ptree &pt_;
 };
 
 }

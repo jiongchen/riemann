@@ -5,11 +5,8 @@
 #include <jtflib/mesh/util.h>
 #include <hjlib/math/blas_lapack.h>
 #include <zjucad/matrix/lapack.h>
-#include <Eigen/Eigen>
-
-#ifdef USE_CHOLMOD
-  #include <Eigen/CholmodSupport>
-#endif
+#include <Eigen/Sparse>
+#include <Eigen/CholmodSupport>
 
 #include "def.h"
 #include "config.h"
@@ -469,10 +466,12 @@ private:
 
 //===============================================================================
 
-cross_frame_opt::cross_frame_opt(const mati_t &tets, const matd_t &nods, const cross_frame_args &args)
-    : tets_(tets), nods_(nods), args_(args) {
-  buffer_.push_back(make_shared<SH_smooth_energy_tet>(tets, nods, args_.ws));
-  buffer_.push_back(make_shared<SH_align_energy_tet>(tets, nods, args_.wa));
+cross_frame_opt::cross_frame_opt(const mati_t &tets, const matd_t &nods, const ptree &pt)
+    : tets_(tets), nods_(nods), pt_(pt) {
+  const double ws = pt_.get<double>("weight.smooth.value");
+  const double wa = pt_.get<double>("weight.align.value");
+  buffer_.push_back(make_shared<SH_smooth_energy_tet>(tets, nods, ws));
+  buffer_.push_back(make_shared<SH_align_energy_tet>(tets, nods, wa));
 }
 
 int cross_frame_opt::solve_laplacian(VectorXd &Fs) const {
@@ -506,20 +505,21 @@ int cross_frame_opt::solve_laplacian(VectorXd &Fs) const {
     H.makeCompressed();
   }
 
-#ifdef USE_CHOLMOD
-  CholmodSimplicialLLT<SparseMatrix<double>> solver;
-  solver.compute(H);
-  ASSERT(solver.info() == Success);
-  VectorXd dx = solver.solve(g);
-  ASSERT(solver.info() == Success);
-#else
-  static shared_ptr<PETsc_imp> petsc_init = make_shared<PETsc_imp>();
-  shared_ptr<PETsc_CG_imp> solver =
-      make_shared<PETsc_CG_imp>(H.valuePtr(), H.innerIndexPtr(), H.outerIndexPtr(), H.nonZeros(),
-                                dim, dim, "sor");
+  const string linear_solver = pt_.get<string>("lins.type.value", "PETSc");
   VectorXd dx = VectorXd::Zero(dim);
-  solver->solve(g.data(), dx.data(), dim);
-#endif
+  if ( linear_solver == "PETSc" ) {
+    static shared_ptr<PETsc_imp> petsc_init = make_shared<PETsc_imp>();
+    shared_ptr<PETsc_CG_imp> solver =
+        make_shared<PETsc_CG_imp>(H.valuePtr(), H.innerIndexPtr(), H.outerIndexPtr(), H.nonZeros(),
+                                  dim, dim, "sor");
+    solver->solve(g.data(), dx.data(), dim);
+  } else {
+    CholmodSimplicialLLT<SparseMatrix<double>> solver;
+    solver.compute(H);
+    ASSERT(solver.info() == Success);
+    dx = solver.solve(g);
+    ASSERT(solver.info() == Success);
+  }
   
   Fs += dx;
   
@@ -559,8 +559,8 @@ int cross_frame_opt::solve_initial_frames(const VectorXd &Fs, VectorXd &abc) con
 }
 
 int cross_frame_opt::optimize_frames(VectorXd &abc) const {
-  const double epsf = args_.epsf, epsx = 0;
-  const size_t maxits = args_.maxits;
+  const double epsf = pt_.get<double>("lbfgs.epsf.value"), epsx = 0;
+  const size_t maxits = pt_.get<size_t>("lbfgs.maxits.value");
   
   shared_ptr<Functional<double>> energy_ = make_shared<energy_t<double>>(buffer_);
   
@@ -593,8 +593,8 @@ int cross_frame_opt::optimize_frames(VectorXd &abc) const {
 
 //===============================================================================
 
-frame_smoother::frame_smoother(const mati_t &tets, const matd_t &nods, const smooth_args &args)
-    : tets_(tets), nods_(nods), args_(args) {
+frame_smoother::frame_smoother(const mati_t &tets, const matd_t &nods, const ptree &pt)
+    : tets_(tets), nods_(nods), pt_(pt) {
 }
 
 int frame_smoother::smoothSH(VectorXd &abc) const {
@@ -603,8 +603,10 @@ int frame_smoother::smoothSH(VectorXd &abc) const {
   vector<shared_ptr<Functional<double>>> buffer(2);
   shared_ptr<Functional<double>> func;
 
-  buffer[0] = make_shared<SH_smooth_energy_tet>(tets_, nods_, args_.ws);
-  buffer[1] = make_shared<boundary_fix_energy>(tets_, nods_, abc, 3, args_.wp);
+  const double ws = pt_.get<double>("weight.smooth.value"),
+      wp = pt_.get<double>("weight.boundary.value");
+  buffer[0] = make_shared<SH_smooth_energy_tet>(tets_, nods_, ws);
+  buffer[1] = make_shared<boundary_fix_energy>(tets_, nods_, abc, 3, wp);
   try {
     func = make_shared<energy_t<double>>(buffer);
   } catch ( ... ) {
@@ -612,8 +614,8 @@ int frame_smoother::smoothSH(VectorXd &abc) const {
     exit(EXIT_FAILURE);
   }
 
-  const double epsf = args_.epsf, epsx = 0;
-  const size_t maxits = args_.maxits;
+  const double epsf = pt_.get<double>("lbfgs.epsf.value"), epsx = 0;
+  const size_t maxits = pt_.get<size_t>("lbfgs.maxits.value");
   lbfgs_solve(func, abc.data(), abc.size(), epsf, epsx, maxits);
 
   return 0;
@@ -624,10 +626,14 @@ int frame_smoother::smoothL1(VectorXd &mat) const {
   
   vector<shared_ptr<Functional<double>>> buffer(3);
   shared_ptr<Functional<double>> func;
-  
-  buffer[0] = make_shared<l1_smooth_energy_tet>(tets_, nods_, args_.abs_eps, args_.ws);
-  buffer[1] = make_shared<frame_orth_energy>(tets_, nods_, args_.wo);
-  buffer[2] = make_shared<boundary_fix_energy>(tets_, nods_, mat, 9, args_.wp);
+
+  const double abs_eps = pt_.get<double>("abs_eps.value"),
+      ws = pt_.get<double>("weight.smooth.value"),
+      wo = pt_.get<double>("weight.orth.value"),
+      wp = pt_.get<double>("weight.boundary.value");
+  buffer[0] = make_shared<l1_smooth_energy_tet>(tets_, nods_, abs_eps, ws);
+  buffer[1] = make_shared<frame_orth_energy>(tets_, nods_, wo);
+  buffer[2] = make_shared<boundary_fix_energy>(tets_, nods_, mat, 9, wp);
   try {
     func = make_shared<energy_t<double>>(buffer);
   } catch ( ... ) {
@@ -635,18 +641,19 @@ int frame_smoother::smoothL1(VectorXd &mat) const {
     exit(EXIT_FAILURE);
   }
 
-  const double epsf = args_.epsf, epsx = 0;
-  const size_t maxits = args_.maxits;
+  const double epsf = pt_.get<double>("lbfgs.epsf.value"), epsx = 0;
+  const size_t maxits = pt_.get<size_t>("lbfgs.maxits.value");
   lbfgs_solve(func, mat.data(), mat.size(), epsf, epsx, maxits);
 
   // make frames orthogonal
-  #pragma omp parallel for
+#pragma omp parallel for
   for (size_t i = 0; i < mat.size()/9; ++i) {
     matd_t ff = itr_matrix<const double *>(3, 3, &mat[9*i]);
     matd_t U(3, 3), S(3, 3), VT(3, 3);
     svd(ff, U, S, VT);
     itr_matrix<double *>(3, 3, &mat[9*i]) = U*VT;
   }
+  
   return 0;
 }
 

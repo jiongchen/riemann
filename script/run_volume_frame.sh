@@ -14,7 +14,7 @@ if [ ! -d "$OUT_DIR" ]; then
     mkdir -p $OUT_DIR
 fi
 
-$EXE -i $MESH -o $OUT_DIR --ws=$WS --wa=$WA --epsf=$EPS --maxits=$MAXITS | tee $OUT_DIR/log.txt
+$EXE mesh=$MESH out_dir=$OUT_DIR weight.smooth=$WS weight.align=$WA lbfgs.epsf=$EPS lbfgs.maxits=$MAXITS | tee $OUT_DIR/log.txt
 
 
 echo -e "# ============================== Visualize sigularity of frame field ============================== #"
