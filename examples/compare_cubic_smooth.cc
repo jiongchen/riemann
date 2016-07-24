@@ -61,7 +61,7 @@ int main(int argc, char *argv[])
     ptt.put("weight.smooth.value", 1e-1);
     ptt.put("weight.align.value", 1e3);
     ptt.put("lbfgs.epsf.value", 1e-8);
-    ptt.put("lbfgs.maxits.value", 10);
+    ptt.put("lbfgs.maxits.value", 2);
   }
 
   shared_ptr<cross_frame_opt> frame_opt = make_shared<cross_frame_opt>(tets, nods, ptt);
@@ -77,6 +77,9 @@ int main(int argc, char *argv[])
   cout << "[INFO] optimize frames\n";
   frame_opt->optimize_frames(abc);
 
+  // write initial zyz
+  string init_zyz_file = out_folder+string("/init_zyz.txt");
+  write_tet_zyz(init_zyz_file.c_str(), abc.data(), abc.size()/3);
   
   // OPTIMZE SMOOTHNESS
   shared_ptr<frame_smoother> smoother = make_shared<frame_smoother>(tets, nods, pt);

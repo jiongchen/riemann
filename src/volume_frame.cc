@@ -618,6 +618,15 @@ int frame_smoother::smoothSH(VectorXd &abc) const {
   const size_t maxits = pt_.get<size_t>("lbfgs.maxits.value");
   lbfgs_solve(func, abc.data(), abc.size(), epsf, epsx, maxits);
 
+  VectorXd fmat;
+  convert_zyz_to_mat(abc, fmat);
+
+  const double abs_eps = pt_.get<double>("abs_eps.value");
+  buffer.push_back(make_shared<l1_smooth_energy_tet>(tets_, nods_, abs_eps, ws));
+  double post_smooth_val = 0;
+  buffer.back()->Val(&fmat[0], &post_smooth_val);
+  cout << "\t FINAL SMOOTH ENERGY: " << post_smooth_val << endl;
+  
   return 0;
 }
 
@@ -653,6 +662,10 @@ int frame_smoother::smoothL1(VectorXd &mat) const {
     svd(ff, U, S, VT);
     itr_matrix<double *>(3, 3, &mat[9*i]) = U*VT;
   }
+
+  double post_smooth_val = 0;
+  buffer[0]->Val(mat.data(), &post_smooth_val);
+  cout << "\t FINAL SMOOTH ENERGY: " << post_smooth_val << endl;
   
   return 0;
 }

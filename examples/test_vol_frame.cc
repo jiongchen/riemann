@@ -141,7 +141,7 @@ int main(int argc, char *argv[])
   
   mati_t tets; matd_t nods;
   jtf::mesh::tet_mesh_read_from_vtk(pt.get<string>("mesh.value").c_str(), &nods, &tets);
-  {    
+  {
     string outfile = out_folder+string("/tet.vtk");
     ofstream ofs(outfile);
     tet2vtk(ofs, &nods[0], nods.size(2), &tets[0], tets.size(2));
