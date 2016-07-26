@@ -597,36 +597,77 @@ frame_smoother::frame_smoother(const mati_t &tets, const matd_t &nods, const ptr
     : tets_(tets), nods_(nods), pt_(pt) {
 }
 
+static shared_ptr<Functional<double>> g_func, g_smooth;
+static size_t g_count;
+
+static void callback_sh(const real_1d_array &x, double &func, real_1d_array &grad, void *ptr) {
+  const size_t dim = g_func->Nx();
+  const double *ptrx = x.getcontent();
+  double *ptrg = grad.getcontent();
+
+  func = 0;
+  g_func->Val(ptrx, &func);
+
+  std::fill(ptrg, ptrg+dim, 0);
+  g_func->Gra(ptrx, ptrg);
+
+  if ( g_count % 100 == 0 ) {
+    VectorXd fmat;
+    Map<const VectorXd> X(ptrx, dim);
+    convert_zyz_to_mat(X, fmat);
+    double value = 0;
+    g_smooth->Val(fmat.data(), &value);
+    cout << "\t # ITER " << g_count << ", " << value << endl;
+  }
+
+  ++g_count;
+}
+
+static void callback_l1(const real_1d_array &x, double &func, real_1d_array &grad, void *ptr) {
+  const size_t dim = g_func->Nx();
+  const double *ptrx = x.getcontent();
+  double *ptrg = grad.getcontent();
+
+  func = 0;
+  g_func->Val(ptrx, &func);
+
+  std::fill(ptrg, ptrg+dim, 0);
+  g_func->Gra(ptrx, ptrg);
+
+  if ( g_count % 100 == 0 ) {
+    double value = 0;
+    g_smooth->Val(ptrx, &value);
+    cout << "\t # ITER " << g_count << ", " << value << endl;
+  }
+
+  ++g_count;
+}
+
 int frame_smoother::smoothSH(VectorXd &abc) const {
   ASSERT(abc.size() == 3*tets_.size(2));
   
   vector<shared_ptr<Functional<double>>> buffer(2);
-  shared_ptr<Functional<double>> func;
 
   const double ws = pt_.get<double>("weight.smooth.value"),
       wp = pt_.get<double>("weight.boundary.value");
   buffer[0] = make_shared<SH_smooth_energy_tet>(tets_, nods_, ws);
   buffer[1] = make_shared<boundary_fix_energy>(tets_, nods_, abc, 3, wp);
   try {
-    func = make_shared<energy_t<double>>(buffer);
+    g_func = make_shared<energy_t<double>>(buffer);
   } catch ( ... ) {
     cerr << "[Error] SH energy exceptions!" << endl;
     exit(EXIT_FAILURE);
   }
 
+  const double abs_eps = pt_.get<double>("abs_eps.value");
+  g_smooth = make_shared<l1_smooth_energy_tet>(tets_, nods_, abs_eps, ws);
+
+  g_count = 0;
+   
   const double epsf = pt_.get<double>("lbfgs.epsf.value"), epsx = 0;
   const size_t maxits = pt_.get<size_t>("lbfgs.maxits.value");
-  lbfgs_solve(func, abc.data(), abc.size(), epsf, epsx, maxits);
+  lbfgs_solve(callback_sh, abc.data(), abc.size(), epsf, epsx, maxits);
 
-  VectorXd fmat;
-  convert_zyz_to_mat(abc, fmat);
-
-  const double abs_eps = pt_.get<double>("abs_eps.value");
-  buffer.push_back(make_shared<l1_smooth_energy_tet>(tets_, nods_, abs_eps, ws));
-  double post_smooth_val = 0;
-  buffer.back()->Val(&fmat[0], &post_smooth_val);
-  cout << "\t FINAL SMOOTH ENERGY: " << post_smooth_val << endl;
-  
   return 0;
 }
 
@@ -634,7 +675,6 @@ int frame_smoother::smoothL1(VectorXd &mat) const {
   ASSERT(mat.size() == 9*tets_.size(2));
   
   vector<shared_ptr<Functional<double>>> buffer(3);
-  shared_ptr<Functional<double>> func;
 
   const double abs_eps = pt_.get<double>("abs_eps.value"),
       ws = pt_.get<double>("weight.smooth.value"),
@@ -644,15 +684,19 @@ int frame_smoother::smoothL1(VectorXd &mat) const {
   buffer[1] = make_shared<frame_orth_energy>(tets_, nods_, wo);
   buffer[2] = make_shared<boundary_fix_energy>(tets_, nods_, mat, 9, wp);
   try {
-    func = make_shared<energy_t<double>>(buffer);
+    g_func = make_shared<energy_t<double>>(buffer);
   } catch ( ... ) {
     cerr << "[Error] L1 energy exceptions!\n";
     exit(EXIT_FAILURE);
   }
 
+  g_smooth = buffer[0];
+
+  g_count = 0;
+  
   const double epsf = pt_.get<double>("lbfgs.epsf.value"), epsx = 0;
   const size_t maxits = pt_.get<size_t>("lbfgs.maxits.value");
-  lbfgs_solve(func, mat.data(), mat.size(), epsf, epsx, maxits);
+  lbfgs_solve(callback_l1, mat.data(), mat.size(), epsf, epsx, maxits);
 
   // make frames orthogonal
 #pragma omp parallel for
@@ -663,10 +707,6 @@ int frame_smoother::smoothL1(VectorXd &mat) const {
     itr_matrix<double *>(3, 3, &mat[9*i]) = U*VT;
   }
 
-  double post_smooth_val = 0;
-  buffer[0]->Val(mat.data(), &post_smooth_val);
-  cout << "\t FINAL SMOOTH ENERGY: " << post_smooth_val << endl;
-  
   return 0;
 }
 

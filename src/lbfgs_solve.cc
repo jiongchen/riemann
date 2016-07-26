@@ -2,7 +2,6 @@
 
 #include <iostream>
 #include <lbfgs.h>
-#include <optimization.h>
 
 #include "def.h"
 
@@ -111,6 +110,32 @@ int lbfgs_solve(const shared_ptr<Functional<double>> &f,
   minlbfgscreate(1, x, state);
   minlbfgssetcond(state, epsg, epsf, epsx, maxits);
   alglib::minlbfgsoptimize(state, function1_grad);
+  minlbfgsresults(state, x, rep);
+
+  const double *ptrx = x.getcontent();
+  std::copy(ptrx, ptrx+dim, X);
+  
+  cout << "\t# LBFGS RETURN: " << int(rep.terminationtype)
+       << ", ITERATIONS: " << int(rep.iterationscount) << endl;
+  return 0;
+}
+
+int lbfgs_solve(alglib_callback_t cb,
+                double *X, const size_t dim,
+                const double EpsF, const double EpsX,
+                const size_t maxiter) {
+  real_1d_array x;
+  x.setcontent(dim, X);
+  double epsg = 0.0000000001;
+  double epsf = EpsF;
+  double epsx = EpsX;
+  ae_int_t maxits = maxiter;
+  minlbfgsstate state;
+  minlbfgsreport rep;
+
+  minlbfgscreate(1, x, state);
+  minlbfgssetcond(state, epsg, epsf, epsx, maxits);
+  alglib::minlbfgsoptimize(state, cb);
   minlbfgsresults(state, x, rep);
 
   const double *ptrx = x.getcontent();

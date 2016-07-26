@@ -3,7 +3,7 @@
 echo -e "# ================================== Run cross frame field ======================================== #"
 
 EXE=../build/bin/compare_cubic_smooth
-MESH=../dat/tets/nut.vtk
+MESH=../dat/tets/sculpture.c59k.vtk
 
 TYPE=$1
 
@@ -11,12 +11,12 @@ WS=1e0
 WP=1e3
 
 ABS=0.1
-WO=1e3
+WO=2e3
 
 ESPF=1e-8
 MAXITS=2000
 
-OUT_DIR=../result/compare_smooth/nut-abs$ABS-ws$WS-wo$WO-wp$WP-tp$TYPE
+OUT_DIR=../result/compare_smooth/sculpture-abs$ABS-ws$WS-wo$WO-wp$WP-tp$TYPE
 
 if [ ! -d "$OUT_DIR" ]; then
     mkdir -p $OUT_DIR
@@ -46,12 +46,12 @@ INIT_SING_FILE=$OUT_DIR/init_sing.vtk
 FRAME_FILE=$OUT_DIR/frames.txt
 SING_FILE=$OUT_DIR/sing.vtk
 
-$FF_EXE prog=draw_3d_frame_sing tet=$MESH_FILE zyz=$INIT_ZYZ_FILE out=$INIT_SING_FILE
+$FF_EXE prog=draw_3d_frame_sing tet=$MESH_FILE zyz=$INIT_ZYZ_FILE out=$INIT_SING_FILE > /dev/null
 
 if [ "$TYPE" == "SH" ]; then
-    $FF_EXE prog=draw_3d_frame_sing tet=$MESH_FILE zyz=$FRAME_FILE out=$SING_FILE
+    $FF_EXE prog=draw_3d_frame_sing tet=$MESH_FILE zyz=$FRAME_FILE out=$SING_FILE > /dev/null
 elif [ "$TYPE" == "L1" ]; then
-    $FF_EXE prog=draw_3d_frame_sing tet=$MESH_FILE ff=$FRAME_FILE out=$SING_FILE
+    $FF_EXE prog=draw_3d_frame_sing tet=$MESH_FILE ff=$FRAME_FILE out=$SING_FILE > /dev/null
 else
     echo -e "{error} return"
 fi

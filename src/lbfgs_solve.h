@@ -2,6 +2,7 @@
 #define LBFGS_SOLVE_H
 
 #include <memory>
+#include <optimization.h>
 
 namespace riemann {
 
@@ -75,6 +76,14 @@ int lbfgs_solve(const std::shared_ptr<Functional<double>> &f,
                 const double EpsF = 0, const double EpsX = 0,
                 const size_t maxiter = 0);
 
+using alglib::real_1d_array;
+
+typedef void (*alglib_callback_t)(const real_1d_array &x, double &func, real_1d_array &grad, void *ptr);
+
+int lbfgs_solve(alglib_callback_t cb,
+                double *X, const size_t dim,
+                const double EpsF = 0, const double EpsX = 0,
+                const size_t maxiter = 0);
 }
 
 #endif
