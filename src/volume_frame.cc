@@ -321,149 +321,6 @@ private:
   const double magic_;
 };
 
-class l1_smooth_energy_tet : public SH_smooth_energy_tet
-{
-public:
-  l1_smooth_energy_tet(const mati_t &tets, const matd_t &nods, const double eps, const double w)
-      : SH_smooth_energy_tet(tets, nods, w), epsilon_(eps) {
-  }
-  size_t Nx() const {
-    return 3*dim_;
-  }
-  int Val(const double *f, double *val) const {
-    itr_matrix<const double *> F(9, Nx()/9, f);
-    matd_t frms = zeros<double>(9, 2); double value = 0;
-    for (size_t i = 0; i < adjt_.size(2); ++i) {
-      frms = F(colon(), adjt_(colon(), i));
-      l1_cubic_sym_smooth_(&value, &frms[0], &epsilon_, &stiff_[i]);
-      *val += w_*value;
-    }
-    return 0;
-  }
-  int Gra(const double *f, double *gra) const {
-    itr_matrix<const double *> F(9, Nx()/9, f);
-    itr_matrix<double *> G(9, Nx()/9, gra);
-    matd_t frms = zeros<double>(9, 2), g = zeros<double>(9, 2);
-    for (size_t i = 0; i < adjt_.size(2); ++i) {
-      frms = F(colon(), adjt_(colon(), i));
-      l1_cubic_sym_smooth_jac_(&g[0], &frms[0], &epsilon_, &stiff_[i]);
-      G(colon(), adjt_(colon(), i)) += w_*g;
-    }
-    return 0;
-  }
-  int Hes(const double *f, double *gra) const {
-    return __LINE__;
-  }
-private:
-  const double epsilon_;
-};
-
-class frame_orth_energy : public Functional<double>
-{
-public:
-  frame_orth_energy(const mati_t &tets, const matd_t &nods, const double w)
-      : tets_(tets), w_(w), dim_(9*tets.size(2)) {
-    volume_.resize(tets.size(2)); {
-      #pragma omp parallel for
-      for (size_t i = 0; i < tets.size(2); ++i) {
-        matd_t Ds = nods(colon(), tets(colon(1, 3), i))-nods(colon(), tets(0, i))*ones<double>(1, 3);
-        volume_[i] = fabs(det(Ds))/6.0;
-      }
-      const double sum_volume = sum(volume_);
-      volume_ /= sum_volume;
-    }
-  }
-  size_t Nx() const {
-    return dim_;
-  }
-  int Val(const double *f, double *val) const {
-    double value = 0;
-    for (size_t i = 0; i < tets_.size(2); ++i) {
-      frm_orth_term_(&value, f+9*i, &volume_[i]);
-      *val += w_*value;
-    }
-    return 0;
-  }
-  int Gra(const double *f, double *gra) const {
-    itr_matrix<double *> G(9, dim_/9, gra);
-    matd_t g = zeros<double>(9, 1);
-    for (size_t i = 0; i < tets_.size(2); ++i) {
-      frm_orth_term_jac_(&g[0], f+9*i, &volume_[i]);
-      G(colon(), i) += w_*g;
-    }
-  }
-  int Hes(const double *f, vector<Triplet<double>> *hes) const {
-    return __LINE__;
-  }
- private:
-  const mati_t &tets_;
-  const double w_;
-  const size_t dim_;
-
-  matd_t volume_;
-};
-
-class boundary_fix_energy : public Functional<double>
-{
-public:
-  boundary_fix_energy(const mati_t &tets, const matd_t &nods, const VectorXd &x0,
-                      const size_t var_dim, const double w)
-      : tets_(tets), x0_(x0), var_dim_(var_dim), dim_(var_dim_*tets.size(2)), w_(w) {
-    shared_ptr<face2tet_adjacent> f2t(face2tet_adjacent::create(tets));
-    mati_t surf; bool check_order = true;
-    jtf::mesh::get_outside_face(*f2t, surf, check_order, &nods);
-  
-    stiff_.resize(surf.size(2)); {
-      #pragma omp parallel for
-      for (size_t i = 0; i < surf.size(2); ++i)
-        stiff_[i] = jtf::mesh::cal_face_area(nods(colon(), surf(colon(), i)));
-      double sum_area = sum(stiff_);
-      stiff_ /= sum_area;
-    }
-    
-    adjt_.resize(surf.size(2)); {
-      #pragma omp parallel for
-      for (size_t i = 0; i < surf.size(2); ++i) {
-        const pair<size_t, size_t> t = f2t->query(surf(0, i), surf(1, i), surf(2, i));
-        adjt_[i] = (t.first == -1) ? t.second : t.first;
-      }
-    }
-  }
-  size_t Nx() const {
-    return dim_;
-  }
-  int Val(const double *x, double *val) const {
-    Map<const MatrixXd> X(x, var_dim_, dim_/var_dim_);
-    Map<const MatrixXd> X0(x0_.data(), var_dim_, dim_/var_dim_);
-    for (size_t i = 0; i < adjt_.size(); ++i) {
-      const size_t tid = adjt_[i];
-      *val += w_*stiff_[i]*(X.col(tid)-X0.col(tid)).squaredNorm();
-    }
-    return 0;
-  }
-  int Gra(const double *x, double *gra) const {
-    Map<const MatrixXd> X(x, var_dim_, dim_/var_dim_);
-    Map<const MatrixXd> X0(x0_.data(), var_dim_, dim_/var_dim_);
-    Map<MatrixXd> G(gra, var_dim_, dim_/var_dim_);
-    for (size_t i = 0; i < adjt_.size(); ++i) {
-      const size_t tid = adjt_[i];
-      G.col(tid) += w_*2.0*stiff_[i]*(X.col(tid)-X0.col(tid));
-    }
-    return 0;
-  }
-  int Hes(const double *x, vector<Triplet<double>> *hes) const {
-    return __LINE__;
-  }
-private:
-  const size_t var_dim_, dim_;
-  const double w_;
-  const mati_t &tets_;
-  const VectorXd x0_;
-  
-  mati_t adjt_;
-  matd_t stiff_;
-};
-
 //===============================================================================
 
 cross_frame_opt::cross_frame_opt(const mati_t &tets, const matd_t &nods, const ptree &pt)
@@ -592,9 +449,198 @@ int cross_frame_opt::optimize_frames(VectorXd &abc) const {
 }
 
 //===============================================================================
+//-------------------------------------------------------------------------------
+//===============================================================================
+
+class l1_smooth_fix_boundary : public SH_smooth_energy_tet
+{
+public:
+  l1_smooth_fix_boundary(const mati_t &tets, const matd_t &nods, const VectorXd &x0,
+                         const mati_t &g2l, const size_t sub_dim,
+                         const double epsilon, const double w)
+      : SH_smooth_energy_tet(tets, nods, w),
+        g2l_(g2l), sub_dim_(sub_dim), epsilon_(epsilon), x0_(x0) {
+  }
+  size_t Nx() const {
+    return sub_dim_;
+  }
+  int Val(const double *x, double *val) const {
+    VectorXd xstar;
+    get_full_space_var(x, xstar);
+    
+    itr_matrix<const double *> F(9, xstar.size()/9, xstar.data());
+
+    matd_t frms = zeros<double>(9, 2); double value = 0;
+    for (size_t i = 0; i < adjt_.size(2); ++i) {
+      frms = F(colon(), adjt_(colon(), i));
+      l1_cubic_sym_smooth_(&value, &frms[0], &epsilon_, &stiff_[i]);
+      *val += w_*value;
+    }
+    return 0;
+  }
+  int Gra(const double *x, double *gra) const {
+    VectorXd xstar;
+    get_full_space_var(x, xstar);
+
+    itr_matrix<const double *> F(9, xstar.size()/9, xstar.data());
+    itr_matrix<double *> G(sub_dim_, 1, gra);
+
+    matd_t frms = zeros<double>(9, 2), g = zeros<double>(9, 2);
+    for (size_t i = 0; i < adjt_.size(2); ++i) {
+      frms = F(colon(), adjt_(colon(), i));
+      l1_cubic_sym_smooth_jac_(&g[0], &frms[0], &epsilon_, &stiff_[i]);
+      size_t idx = g2l_[9*adjt_(0, i)];
+      if ( idx != -1 )
+        G(colon(idx, idx+8)) += w_*g(colon(), 0);
+      idx = g2l_[9*adjt_(1, i)];
+      if ( idx != -1 )
+        G(colon(idx, idx+8)) += w_*g(colon(), 1);
+    }
+    return 0;
+  }
+  int Hes(const double *x, vector<Triplet<double>> *hes) const {
+    return __LINE__;
+  }
+private:
+  void get_full_space_var(const double *x, VectorXd &xstar) const {
+    xstar = x0_;
+    #pragma omp parallel for
+    for (size_t i = 0; i < g2l_.size(); ++i) {
+      if ( g2l_[i] != -1 )
+        xstar[i] = x[g2l_[i]];
+    }
+  }
+private:
+  const size_t sub_dim_;
+  const double epsilon_;
+  const VectorXd x0_;
+  const mati_t &g2l_;
+};
+
+class sh_smooth_fix_boundary : public SH_smooth_energy_tet
+{
+public:
+  sh_smooth_fix_boundary(const mati_t &tets, const matd_t &nods, const VectorXd &x0,
+                         const mati_t &g2l, const size_t sub_dim, const double w)
+      : SH_smooth_energy_tet(tets, nods, w), sub_dim_(sub_dim), x0_(x0), g2l_(g2l) {
+  }
+  size_t Nx() const {
+    return sub_dim_;
+  }
+  int Val(const double *x, double *val) const {
+    VectorXd xstar;
+    get_full_space_var(x, xstar);
+
+    itr_matrix<const double *> ABC(3, xstar.size()/3, xstar.data());
+
+    matd_t zyz = zeros<double>(3, 2); double value = 0;
+    for (size_t i = 0; i < adjt_.size(2); ++i) {
+      zyz = ABC(colon(), adjt_(colon(), i));
+      cubic_sym_smooth_tet_(&value, &zyz[0], &stiff_[i]);
+      *val += w_*value;
+    }
+    return 0;
+  }
+  int Gra(const double *x, double *gra) const {
+    VectorXd xstar;
+    get_full_space_var(x, xstar);
+    
+    itr_matrix<const double *> ABC(3, xstar.size()/3, xstar.data());
+    itr_matrix<double *> G(sub_dim_, 1, gra);
+
+    matd_t zyz = zeros<double>(3, 2), g = zeros<double>(3, 2);
+    for (size_t i = 0; i < adjt_.size(2); ++i) {
+      zyz = ABC(colon(), adjt_(colon(), i));
+      cubic_sym_smooth_tet_jac_(&g[0], &zyz[0], &stiff_[i]);
+      size_t idx = g2l_[3*adjt_(0, i)];
+      if ( idx != -1 )
+        G(colon(idx, idx+2)) += w_*g(colon(), 0);
+      idx = g2l_[3*adjt_(1, i)];
+      if ( idx != -1 )
+        G(colon(idx, idx+2)) += w_*g(colon(), 1);
+    }
+    return 0;
+  }
+  int Hes(const double *x, vector<Triplet<double>> *hes) const {
+    return __LINE__;
+  }
+private:
+  void get_full_space_var(const double *x, VectorXd &xstar) const {
+    xstar = x0_;
+    #pragma omp parallel for
+    for (size_t i = 0; i < g2l_.size(); ++i) {
+      if ( g2l_[i] != -1 )
+        xstar[i] = x[g2l_[i]];
+    }
+  }
+private:
+  const size_t sub_dim_;
+  const VectorXd x0_;
+  const mati_t &g2l_;
+};
+
+class frame_orth_energy : public Functional<double>
+{
+public:
+  frame_orth_energy(const mati_t &tets, const matd_t &nods,
+                    const mati_t &g2l, const size_t sub_dim, const double w)
+      : tets_(tets), g2l_(g2l), sub_dim_(sub_dim), w_(w) {
+    vector<double> vol; {
+      size_t cnt = 0;
+      for (size_t i = 0; i < tets.size(2); ++i) {
+        if ( g2l_[9*i] == -1 )
+          continue;
+        matd_t Ds = nods(colon(), tets(colon(1, 3), i))-nods(colon(), tets(0, i))*ones<double>(1, 3);
+        vol.push_back(fabs(det(Ds))/6.0);
+      }
+    }
+    ASSERT(vol.size() == sub_dim/9);
+    volume_ = Map<VectorXd>(&vol[0], vol.size());
+    volume_.normalize();
+  }
+  size_t Nx() const {
+    return sub_dim_;
+  }
+  int Val(const double *f, double *val) const {
+    double value = 0;
+    for (size_t i = 0; i < Nx()/9; ++i) {
+      frm_orth_term_(&value, f+9*i, &volume_[i]);
+      *val += w_*value;
+    }
+    return 0;
+  }
+  int Gra(const double *f, double *gra) const {
+    itr_matrix<double *> G(9, Nx()/9, gra);
+    matd_t g = zeros<double>(9, 1);
+    for (size_t i = 0; i < Nx()/9; ++i) {
+      frm_orth_term_jac_(&g[0], f+9*i, &volume_[i]);
+      G(colon(), i) += w_*g;
+    }
+    return 0;
+  }
+  int Hes(const double *f, vector<Triplet<double>> *hes) const {
+    return __LINE__;
+  }
+private:
+  const mati_t &tets_;
+  const mati_t &g2l_;
+  const size_t sub_dim_;
+  const double w_;
+  VectorXd volume_;
+};
 
 frame_smoother::frame_smoother(const mati_t &tets, const matd_t &nods, const ptree &pt)
     : tets_(tets), nods_(nods), pt_(pt) {
+  is_bnd_tet_ = zeros<int>(tets.size(2), 1);
+
+  shared_ptr<face2tet_adjacent> f2t(face2tet_adjacent::create(tets));
+  mati_t surf; bool check_order = true;
+  jtf::mesh::get_outside_face(*f2t, surf, check_order, &nods);
+  for (size_t i = 0; i < surf.size(2); ++i) {
+    const pair<size_t, size_t> t = f2t->query(surf(0, i), surf(1, i), surf(2, i));
+    size_t adjt = (t.first == -1) ? t.second : t.first;
+    is_bnd_tet_[adjt] = 1;
+  }
 }
 
 static shared_ptr<Functional<double>> g_func, g_smooth;
@@ -612,12 +658,12 @@ static void callback_sh(const real_1d_array &x, double &func, real_1d_array &gra
   g_func->Gra(ptrx, ptrg);
 
   if ( g_count % 100 == 0 ) {
-    VectorXd fmat;
-    Map<const VectorXd> X(ptrx, dim);
-    convert_zyz_to_mat(X, fmat);
-    double value = 0;
-    g_smooth->Val(fmat.data(), &value);
-    cout << "\t # ITER " << g_count << ", " << value << endl;
+    // VectorXd fmat;
+    // Map<const VectorXd> X(ptrx, dim);
+    // convert_zyz_to_mat(X, fmat);
+    // double value = 0;
+    // g_smooth->Val(fmat.data(), &value);
+    cout << "\t # ITER " << g_count << ", " << func << endl;
   }
 
   ++g_count;
@@ -635,9 +681,9 @@ static void callback_l1(const real_1d_array &x, double &func, real_1d_array &gra
   g_func->Gra(ptrx, ptrg);
 
   if ( g_count % 100 == 0 ) {
-    double value = 0;
-    g_smooth->Val(ptrx, &value);
-    cout << "\t # ITER " << g_count << ", " << value << endl;
+    // double value = 0;
+    // g_smooth->Val(ptrx, &value);
+    cout << "\t # ITER " << g_count << ", " << func << endl;
   }
 
   ++g_count;
@@ -646,43 +692,61 @@ static void callback_l1(const real_1d_array &x, double &func, real_1d_array &gra
 int frame_smoother::smoothSH(VectorXd &abc) const {
   ASSERT(abc.size() == 3*tets_.size(2));
   
-  vector<shared_ptr<Functional<double>>> buffer(2);
-
-  const double ws = pt_.get<double>("weight.smooth.value"),
-      wp = pt_.get<double>("weight.boundary.value");
-  buffer[0] = make_shared<SH_smooth_energy_tet>(tets_, nods_, ws);
-  buffer[1] = make_shared<boundary_fix_energy>(tets_, nods_, abc, 3, wp);
-  try {
-    g_func = make_shared<energy_t<double>>(buffer);
-  } catch ( ... ) {
-    cerr << "[Error] SH energy exceptions!" << endl;
-    exit(EXIT_FAILURE);
+  mati_t g2l(abc.size());
+  size_t cnt = 0;
+  for (size_t i = 0; i < is_bnd_tet_.size(); ++i) {
+    if ( is_bnd_tet_[i] ) {
+      g2l(colon(3*i, 3*i+2)) = -1;
+    } else {
+      g2l(colon(3*i, 3*i+2)) = colon(cnt, cnt+2);
+      cnt += 3;
+    }
   }
+  ASSERT(cnt == abc.size()-3*sum(is_bnd_tet_));
 
-  const double abs_eps = pt_.get<double>("abs_eps.value");
-  g_smooth = make_shared<l1_smooth_energy_tet>(tets_, nods_, abs_eps, ws);
+  const double ws = pt_.get<double>("weight.smooth.value");
+  g_func = make_shared<sh_smooth_fix_boundary>(tets_, nods_, abc, g2l, cnt, ws);
+
+  // const double abs_eps = pt_.get<double>("abs_eps.value");
+  // g_smooth = make_shared<l1_smooth_energy_tet>(tets_, nods_, abs_eps, ws);
 
   g_count = 0;
    
   const double epsf = pt_.get<double>("lbfgs.epsf.value"), epsx = 0;
   const size_t maxits = pt_.get<size_t>("lbfgs.maxits.value");
-  lbfgs_solve(callback_sh, abc.data(), abc.size(), epsf, epsx, maxits);
 
+  VectorXd xopt = abc;
+  rm_vector_row(xopt, g2l);
+  
+  lbfgs_solve(callback_sh, xopt.data(), xopt.size(), epsf, epsx, maxits);
+
+  rc_vector_row(xopt, g2l, abc);
+  
   return 0;
 }
 
 int frame_smoother::smoothL1(VectorXd &mat) const {
   ASSERT(mat.size() == 9*tets_.size(2));
+
+  mati_t g2l(mat.size());
+  size_t cnt = 0;
+  for (size_t i = 0; i < is_bnd_tet_.size(); ++i) {
+    if ( is_bnd_tet_[i] ) {
+      g2l(colon(9*i, 9*i+8)) = -1;
+    } else {
+      g2l(colon(9*i, 9*i+8)) = colon(cnt, cnt+8);
+      cnt += 9;
+    }
+  }
+  ASSERT(cnt == mat.size()-9*sum(is_bnd_tet_));
   
-  vector<shared_ptr<Functional<double>>> buffer(3);
+  vector<shared_ptr<Functional<double>>> buffer(2);
 
   const double abs_eps = pt_.get<double>("abs_eps.value"),
       ws = pt_.get<double>("weight.smooth.value"),
-      wo = pt_.get<double>("weight.orth.value"),
-      wp = pt_.get<double>("weight.boundary.value");
-  buffer[0] = make_shared<l1_smooth_energy_tet>(tets_, nods_, abs_eps, ws);
-  buffer[1] = make_shared<frame_orth_energy>(tets_, nods_, wo);
-  buffer[2] = make_shared<boundary_fix_energy>(tets_, nods_, mat, 9, wp);
+      wo = pt_.get<double>("weight.orth.value");
+  buffer[0] = make_shared<l1_smooth_fix_boundary>(tets_, nods_, mat, g2l, cnt, abs_eps, ws);
+  buffer[1] = make_shared<frame_orth_energy>(tets_, nods_, g2l, cnt, wo);
   try {
     g_func = make_shared<energy_t<double>>(buffer);
   } catch ( ... ) {
@@ -690,16 +754,22 @@ int frame_smoother::smoothL1(VectorXd &mat) const {
     exit(EXIT_FAILURE);
   }
 
-  g_smooth = buffer[0];
+  //  g_smooth = buffer[0];
 
   g_count = 0;
   
   const double epsf = pt_.get<double>("lbfgs.epsf.value"), epsx = 0;
   const size_t maxits = pt_.get<size_t>("lbfgs.maxits.value");
-  lbfgs_solve(callback_l1, mat.data(), mat.size(), epsf, epsx, maxits);
 
+  VectorXd xopt = mat;
+  rm_vector_row(xopt, g2l);
+  
+  lbfgs_solve(callback_l1, xopt.data(), xopt.size(), epsf, epsx, maxits);
+
+  rc_vector_row(xopt, g2l, mat);
+  
   // make frames orthogonal
-#pragma omp parallel for
+  #pragma omp parallel for
   for (size_t i = 0; i < mat.size()/9; ++i) {
     matd_t ff = itr_matrix<const double *>(3, 3, &mat[9*i]);
     matd_t U(3, 3), S(3, 3), VT(3, 3);

@@ -67,6 +67,7 @@ private:
   const mati_t &tets_;
   const matd_t &nods_;
   const ptree &pt_;
+  zjucad::matrix::matrix<int> is_bnd_tet_;
 };
 
 }

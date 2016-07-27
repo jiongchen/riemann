@@ -75,9 +75,9 @@ void rm_spmat_col_row(Eigen::SparseMatrix<T> &A,
   A.setFromTriplets(trips.begin(), trips.end());
 }
 
-template <typename T>
+template <typename T, class Con>
 void rm_vector_row(Eigen::Matrix<T, -1, 1> &b,
-                   const std::vector<size_t> &g2l) {
+                   const Con &g2l) {
   size_t new_size = 0;
   for (size_t i = 0; i < g2l.size(); ++i) {
     if ( g2l[i] != -1 )
@@ -92,8 +92,8 @@ void rm_vector_row(Eigen::Matrix<T, -1, 1> &b,
   b = sub;
 }
 
-template <typename T>
-void rc_vector_row(const Eigen::Matrix<T, -1, 1> &l, const std::vector<size_t> &g2l, Eigen::Matrix<T, -1, 1> &g) {
+template <typename T, class Con>
+void rc_vector_row(const Eigen::Matrix<T, -1, 1> &l, const Con &g2l, Eigen::Matrix<T, -1, 1> &g) {
 #pragma omp parallel for
   for (size_t i = 0; i < g2l.size(); ++i) {
     if ( g2l[i] != -1 )

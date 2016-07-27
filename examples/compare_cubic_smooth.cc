@@ -66,15 +66,15 @@ int main(int argc, char *argv[])
 
   shared_ptr<cross_frame_opt> frame_opt = make_shared<cross_frame_opt>(tets, nods, ptt);
 
-  cout << "[INFO] solve Laplacian\n";
+  cout << "[INFO] solve Laplacian" << endl;
   VectorXd Fs;
   frame_opt->solve_laplacian(Fs);
 
-  cout << "[INFO] solve for initial zyz angles\n";
+  cout << "[INFO] solve for initial zyz angles" << endl;
   VectorXd abc;
   frame_opt->solve_initial_frames(Fs, abc);
 
-  cout << "[INFO] optimize frames\n";
+  cout << "[INFO] optimize frames" << endl;
   frame_opt->optimize_frames(abc);
 
   // write initial zyz
@@ -82,13 +82,12 @@ int main(int argc, char *argv[])
   write_tet_zyz(init_zyz_file.c_str(), abc.data(), abc.size()/3);
   
   // OPTIMZE SMOOTHNESS
+  cout << "[INFO] init frame smoother" << endl;
   shared_ptr<frame_smoother> smoother = make_shared<frame_smoother>(tets, nods, pt);
 
-  cout << "[Info] Fix boundary and opt smooth energy\n";
-
   if ( pt.get<string>("sm_type.value") == "SH" ) {
-
-    cout << "**************** SH ****************\n";
+    
+    cout << "[INFO] smooth internal frames via SH" << endl;
     smoother->smoothSH(abc);
 
     string zyz_file = out_folder+string("/frames.txt");
@@ -96,7 +95,7 @@ int main(int argc, char *argv[])
 
   } else if ( pt.get<string>("sm_type.value") == "L1" ) {
 
-    cout << "**************** L1 ****************\n";
+    cout << "[INFO] smooth internal frames via L1" << endl;
     VectorXd fmat;
     convert_zyz_to_mat(abc, fmat);
     smoother->smoothL1(fmat);
