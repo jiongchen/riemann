@@ -10,12 +10,12 @@ TYPE=$1
 WS=1e0
 
 ABS=0.1
-WO=3e1
+WO=$2
 
-ESPF=1e-8
+ESPF=0
 MAXITS=2000
 
-OUT_DIR=../result/compare_smooth/sphere-abs$ABS-ws$WS-wo$WO-tp$TYPE
+OUT_DIR=../result/compare_smooth/sphere-c13k-abs$ABS-ws$WS-wo$WO-tp$TYPE
 
 if [ ! -d "$OUT_DIR" ]; then
     mkdir -p $OUT_DIR

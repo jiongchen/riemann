@@ -18,9 +18,9 @@ block(
     Ra: addcol(col(Rab, 1), col(Rab, 2), col(Rab, 3)),
     Rb: addcol(col(Rab, 4), col(Rab, 5), col(Rab, 6)),
     P: transpose(Rb).Ra,
-    rtn: l1_approx(col(P, 1), epsilon[1,1])
-        +l1_approx(col(P, 2), epsilon[1,1])
-        +l1_approx(col(P, 3), epsilon[1,1]),
+    rtn: 0,
+    for i:1 thru 3 do
+      rtn: rtn+l1_approx(col(P,i), epsilon[1,1])+l1_approx(transpose(row(P,i)), epsilon[1,1]),
     stiff*rtn
   ),
   with_stdout(f, val_jac_hes_to_f90(l1_cubic_sym_smooth, [Rab, epsilon, stiff])),

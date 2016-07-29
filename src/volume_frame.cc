@@ -1,5 +1,6 @@
 #include "volume_frame.h"
 
+#include <iomanip>
 #include <zjucad/matrix/itr_matrix.h>
 #include <jtflib/mesh/mesh.h>
 #include <jtflib/mesh/util.h>
@@ -7,6 +8,7 @@
 #include <zjucad/matrix/lapack.h>
 #include <Eigen/Sparse>
 #include <Eigen/CholmodSupport>
+#include <unsupported/Eigen/MatrixFunctions>
 
 #include "def.h"
 #include "config.h"
@@ -452,6 +454,34 @@ int cross_frame_opt::optimize_frames(VectorXd &abc) const {
 //-------------------------------------------------------------------------------
 //===============================================================================
 
+class best_matching_energy : public SH_smooth_energy_tet
+{
+public:
+  best_matching_energy(const mati_t &tets, const matd_t &nods, const double w)
+      : SH_smooth_energy_tet(tets, nods, w) {
+  }
+  size_t Nx() const {
+    return 3*dim_;
+  }
+  int Val(const double *f, double *val) const {
+    itr_matrix<const double *> F(9, Nx()/9, f);
+    matd_t frms = zeros<double>(9, 2); double value = 0;
+    Matrix3d T;
+    for (size_t i = 0; i < adjt_.size(2); ++i) {
+      frms = F(colon(), adjt_(colon(), i));
+      T = Map<Matrix3d>(&frms(0, 1), 3, 3).transpose()*Map<Matrix3d>(&frms(0, 0), 3, 3);
+      *val += w_*stiff_[i]*T.log().squaredNorm();
+    }
+    return 0;
+  }
+  int Gra(const double *f, double *gra) const {
+    return __LINE__;
+  }
+  int Hes(const double *f, vector<Triplet<double>> *hes) const {
+    return __LINE__;
+  }
+};
+  
 class l1_smooth_fix_boundary : public SH_smooth_energy_tet
 {
 public:
@@ -585,18 +615,16 @@ public:
   frame_orth_energy(const mati_t &tets, const matd_t &nods,
                     const mati_t &g2l, const size_t sub_dim, const double w)
       : tets_(tets), g2l_(g2l), sub_dim_(sub_dim), w_(w) {
-    vector<double> vol; {
+    volume_.resize(sub_dim_/9); {
       size_t cnt = 0;
       for (size_t i = 0; i < tets.size(2); ++i) {
         if ( g2l_[9*i] == -1 )
           continue;
         matd_t Ds = nods(colon(), tets(colon(1, 3), i))-nods(colon(), tets(0, i))*ones<double>(1, 3);
-        vol.push_back(fabs(det(Ds))/6.0);
+        volume_[cnt++] = fabs(det(Ds))/6.0;
       }
+      volume_.normalize();
     }
-    ASSERT(vol.size() == sub_dim/9);
-    volume_ = Map<VectorXd>(&vol[0], vol.size());
-    volume_.normalize();
   }
   size_t Nx() const {
     return sub_dim_;
@@ -641,12 +669,13 @@ frame_smoother::frame_smoother(const mati_t &tets, const matd_t &nods, const ptr
     size_t adjt = (t.first == -1) ? t.second : t.first;
     is_bnd_tet_[adjt] = 1;
   }
+  cout << setprecision(10);
 }
 
-static shared_ptr<Functional<double>> g_func, g_smooth;
+static shared_ptr<Functional<double>> g_func;
 static size_t g_count;
 
-static void callback_sh(const real_1d_array &x, double &func, real_1d_array &grad, void *ptr) {
+static void cb(const real_1d_array &x, double &func, real_1d_array &grad, void *ptr) {
   const size_t dim = g_func->Nx();
   const double *ptrx = x.getcontent();
   double *ptrg = grad.getcontent();
@@ -657,36 +686,17 @@ static void callback_sh(const real_1d_array &x, double &func, real_1d_array &gra
   std::fill(ptrg, ptrg+dim, 0);
   g_func->Gra(ptrx, ptrg);
 
-  if ( g_count % 100 == 0 ) {
-    // VectorXd fmat;
-    // Map<const VectorXd> X(ptrx, dim);
-    // convert_zyz_to_mat(X, fmat);
-    // double value = 0;
-    // g_smooth->Val(fmat.data(), &value);
+  if ( g_count % 100 == 0 )
     cout << "\t # ITER " << g_count << ", " << func << endl;
-  }
-
+  
   ++g_count;
 }
 
-static void callback_l1(const real_1d_array &x, double &func, real_1d_array &grad, void *ptr) {
-  const size_t dim = g_func->Nx();
-  const double *ptrx = x.getcontent();
-  double *ptrg = grad.getcontent();
-
-  func = 0;
-  g_func->Val(ptrx, &func);
-
-  std::fill(ptrg, ptrg+dim, 0);
-  g_func->Gra(ptrx, ptrg);
-
-  if ( g_count % 100 == 0 ) {
-    // double value = 0;
-    // g_smooth->Val(ptrx, &value);
-    cout << "\t # ITER " << g_count << ", " << func << endl;
-  }
-
-  ++g_count;
+static inline double query_best_match(const mati_t &tets, const matd_t &nods, const double w, const double *frame) {
+  shared_ptr<best_matching_energy> bm = make_shared<best_matching_energy>(tets, nods, w);
+  double value = 0;
+  bm->Val(frame, &value);
+  return value;
 }
 
 int frame_smoother::smoothSH(VectorXd &abc) const {
@@ -707,9 +717,6 @@ int frame_smoother::smoothSH(VectorXd &abc) const {
   const double ws = pt_.get<double>("weight.smooth.value");
   g_func = make_shared<sh_smooth_fix_boundary>(tets_, nods_, abc, g2l, cnt, ws);
 
-  // const double abs_eps = pt_.get<double>("abs_eps.value");
-  // g_smooth = make_shared<l1_smooth_energy_tet>(tets_, nods_, abs_eps, ws);
-
   g_count = 0;
    
   const double epsf = pt_.get<double>("lbfgs.epsf.value"), epsx = 0;
@@ -718,10 +725,14 @@ int frame_smoother::smoothSH(VectorXd &abc) const {
   VectorXd xopt = abc;
   rm_vector_row(xopt, g2l);
   
-  lbfgs_solve(callback_sh, xopt.data(), xopt.size(), epsf, epsx, maxits);
+  lbfgs_solve(cb, xopt.data(), xopt.size(), epsf, epsx, maxits);
 
   rc_vector_row(xopt, g2l, abc);
-  
+
+  VectorXd mat;
+  convert_zyz_to_mat(abc, mat);
+  cout << "\t ## BEST MATCHING: " << query_best_match(tets_, nods_, ws, mat.data()) << endl;
+
   return 0;
 }
 
@@ -754,8 +765,6 @@ int frame_smoother::smoothL1(VectorXd &mat) const {
     exit(EXIT_FAILURE);
   }
 
-  //  g_smooth = buffer[0];
-
   g_count = 0;
   
   const double epsf = pt_.get<double>("lbfgs.epsf.value"), epsx = 0;
@@ -764,7 +773,7 @@ int frame_smoother::smoothL1(VectorXd &mat) const {
   VectorXd xopt = mat;
   rm_vector_row(xopt, g2l);
   
-  lbfgs_solve(callback_l1, xopt.data(), xopt.size(), epsf, epsx, maxits);
+  lbfgs_solve(cb, xopt.data(), xopt.size(), epsf, epsx, maxits);
 
   rc_vector_row(xopt, g2l, mat);
   
@@ -777,6 +786,8 @@ int frame_smoother::smoothL1(VectorXd &mat) const {
     itr_matrix<double *>(3, 3, &mat[9*i]) = U*VT;
   }
 
+  cout << "\t ## BEST MATCHING: " << query_best_match(tets_, nods_, ws, mat.data()) << endl;
+  
   return 0;
 }
 

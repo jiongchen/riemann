@@ -3,9 +3,9 @@
 echo -e "# ================================== Run cross frame field ======================================== #"
 
 EXE=../build/bin/test_vol_frame
-MESH=../dat/tets/eightsmooth.vtk
+MESH=../dat/tets/eight.vtk
 WS=1e0
-WA=1e3
+WA=$1
 EPS=1e-8
 MAXITS=3000
 OUT_DIR=../result/volume_frame/eight-ws$WS-wa$WA
