@@ -7,18 +7,16 @@ LP(l, x) := legendre_p(l, x)$
 
 ALP(l, m, x) := assoc_legendre_p(l, m, x)$
 
-ALP_cos(l, m, theta) := (-1)^m*(sin(theta))^abs(m)*subst(cos(theta), x, diff(LP(l, x), x, abs(m)))$
-
 K(l, m) := sqrt((2*l+1)/(4*%pi)*((l-abs(m))!/(l+abs(m))!))$
 
 SH(l, m, theta, phi) := 
   if m > 0 then
-    sqrt(2)*K(l, m)*cos(m*phi)*ALP_cos(l, m, theta) /*subst(cos(theta), x, ALP(l, m, x))*/
+    sqrt(2)*K(l, m)*cos(m*phi)*trigsimp(ALP(l, m, cos(theta)))
   else 
     if m < 0 then
-      sqrt(2)*K(l, m)*sin(-m*phi)*ALP_cos(l, -m, theta) /*subst(cos(theta), x, ALP(l, -m, x))*/
+      sqrt(2)*K(l, m)*sin(-m*phi)*trigsimp(ALP(l, -m, cos(theta)))
     else
-      K(l, 0)*ALP_cos(l, 0, theta)$ /*subst(cos(theta), x, ALP(l, 0, x))$*/
+      K(l, 0)*trigsimp(ALP(l, 0, cos(theta)))$
 
 /* factor(trigsimp(SH(3, 0, theta, phi))); */
 
@@ -89,7 +87,8 @@ rot_sh_x(alpha, l) := block(
 )$
 
 RZ4_ALPHA:       rot_sh_z(alpha, 4)$
-RX2_POS_HALF_PI: rot_sh_x(%pi/2, 2)$
+RX1_POS_HALF_PI: rot_sh_x(%pi/2, 1);
+RX2_POS_HALF_PI: rot_sh_x(%pi/2, 2);
 RX4_POS_HALF_PI: rot_sh_x(%pi/2, 4)$
 RX4_NEG_HALF_PI: transpose(RX4_POS_HALF_PI)$
 CUB_SYM_H_COEF: transpose(matrix([0, 0, 0, 0, sqrt(7), 0, 0, 0, sqrt(5)]))$

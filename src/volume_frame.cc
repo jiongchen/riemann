@@ -454,10 +454,10 @@ int cross_frame_opt::optimize_frames(VectorXd &abc) const {
 //-------------------------------------------------------------------------------
 //===============================================================================
 
-class best_matching_energy : public SH_smooth_energy_tet
+class log_space_smooth_energy : public SH_smooth_energy_tet
 {
 public:
-  best_matching_energy(const mati_t &tets, const matd_t &nods, const double w)
+  log_space_smooth_energy(const mati_t &tets, const matd_t &nods, const double w)
       : SH_smooth_energy_tet(tets, nods, w) {
   }
   size_t Nx() const {
@@ -692,8 +692,9 @@ static void cb(const real_1d_array &x, double &func, real_1d_array &grad, void *
   ++g_count;
 }
 
-static inline double query_best_match(const mati_t &tets, const matd_t &nods, const double w, const double *frame) {
-  shared_ptr<best_matching_energy> bm = make_shared<best_matching_energy>(tets, nods, w);
+static inline double query_log_smoothness(const mati_t &tets, const matd_t &nods,
+                                          const double w, const double *frame) {
+  shared_ptr<log_space_smooth_energy> bm = make_shared<log_space_smooth_energy>(tets, nods, w);
   double value = 0;
   bm->Val(frame, &value);
   return value;
@@ -731,7 +732,7 @@ int frame_smoother::smoothSH(VectorXd &abc) const {
 
   VectorXd mat;
   convert_zyz_to_mat(abc, mat);
-  cout << "\t ## BEST MATCHING: " << query_best_match(tets_, nods_, ws, mat.data()) << endl;
+  cout << "\t ## BEST MATCHING: " << query_log_smoothness(tets_, nods_, ws, mat.data()) << endl;
 
   return 0;
 }
@@ -786,7 +787,7 @@ int frame_smoother::smoothL1(VectorXd &mat) const {
     itr_matrix<double *>(3, 3, &mat[9*i]) = U*VT;
   }
 
-  cout << "\t ## BEST MATCHING: " << query_best_match(tets_, nods_, ws, mat.data()) << endl;
+  cout << "\t ## BEST MATCHING: " << query_log_smoothness(tets_, nods_, ws, mat.data()) << endl;
   
   return 0;
 }
