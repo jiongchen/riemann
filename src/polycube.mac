@@ -1,0 +1,54 @@
+load(cj_function)$
+load(hj_fortran2)$
+
+optimprefix: tt$
+
+absolute(x, eps) := sqrt(x^2+eps)$
+one_norm(x, eps) := absolute(x[1,1], eps)+absolute(x[2,1], eps)+absolute(x[3,1], eps)$
+
+f: openw("polycube.f90")$
+
+block(
+  [X, eps],
+  X:   genmatrix(X, 3, 3),
+  eps: genmatrix(eps, 1, 1),
+  surf_normal_align(X, eps) := block(
+    [n, norm_n, area],
+    n: ratsimp(CROSS(col(X, 2)-col(X, 1), col(X, 3)-col(X, 2))),
+    norm_n: NORM(n),
+    area: 0.5*norm_n,
+    n: n/norm_n,
+    matrix([ area*one_norm(n, eps[1,1]) ])
+  ),
+  with_stdout(f, val_jac_hes_to_f90(surf_normal_align, [X, eps])),
+  return()
+)$
+
+block(
+  [X],
+  X: genmatrix(X, 3, 3),
+  triangle_area(X) := block(
+    [n],
+    n: ratsimp(CROSS(col(X, 2)-col(X, 1), col(X, 3)-col(X, 2))),
+    matrix([ 0.5*NORM(n) ])
+  ),
+  with_stdout(f, val_jac_hes_to_f90(triangle_area, [X])),
+  return()
+)$
+
+block(
+  [X, D, R],
+  X: genmatrix(X, 3, 4),
+  D: genmatrix(D, 3, 3),
+  R: genmatrix(R, 3, 3),
+  tet_distortion(X, D, R) := block(
+    [Ds, F],
+    Ds: addcol(col(X, 2)-col(X, 1), col(X, 3)-col(X, 1), col(X, 4)-col(X, 1)),
+    F: Ds.D,
+    matrix([ 0.5*mat_norm(F-R, frobenius)^2 ])
+  ),
+  with_stdout(f, val_jac_hes_to_f90(tet_distortion, [X, D, R])),
+  return()
+)$
+
+close(f)$

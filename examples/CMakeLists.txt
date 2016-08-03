@@ -204,3 +204,10 @@ target_link_libraries(compare_cubic_smooth
   ${Boost_LIBRARIES}
   zjucad-ptree
 )
+
+add_executable(test_polycube test_polycube.cc)
+target_link_libraries(test_polycube
+  riemann
+  ${Boost_LIBRARIES}
+  zjucad-ptree
+)
