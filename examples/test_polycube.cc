@@ -29,6 +29,7 @@ int main(int argc, char *argv[])
   shared_ptr<polycube_solver> polycube = make_shared<polycube_solver>(tets, nods, pt);
 #if 0
   polycube->unit_test();
+  return __LINE__;
 #endif
 
   matd_t param_nods = nods;

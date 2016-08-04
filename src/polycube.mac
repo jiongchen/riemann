@@ -6,6 +6,42 @@ optimprefix: tt$
 absolute(x, eps) := sqrt(x^2+eps)$
 one_norm(x, eps) := absolute(x[1,1], eps)+absolute(x[2,1], eps)+absolute(x[3,1], eps)$
 
+/* surf_normal_align_d1(x, epsilon) := block( */
+/*   [n], */
+/*   n: ratsimp(CROSS(col(x, 2)-col(x, 1), col(x, 3)-col(x, 2))), */
+/*   0.5*absolute(n[1, 1], epsilon) */
+/* )$ */
+
+/* surf_normal_align_d2(x, epsilon) := block( */
+/*   [n], */
+/*   n: ratsimp(CROSS(col(x, 2)-col(x, 1), col(x, 3)-col(x, 2))), */
+/*   0.5*absolute(n[2, 1], epsilon) */
+/* )$ */
+
+/* surf_normal_align_d3(x, epsilon) := block( */
+/*   [n], */
+/*   n: ratsimp(CROSS(col(x, 2)-col(x, 1), col(x, 3)-col(x, 2))), */
+/*   0.5*absolute(n[3, 1], epsilon) */
+/* )$ */
+
+/* NODS: matrix([ax, bx, cx], [ay, by, cy], [az, bz, cz]); */
+
+/* VAL: surf_normal_align_d1(NODS, eps)$ */
+/* GRA: GRAD(VAL, NODS)$ */
+/* HES: GRAD(GRA, NODS)$ */
+/* f90(optimize(FLATTEN(HES))); */
+
+/* VAL: surf_normal_align_d2(NODS, eps)$ */
+/* GRA: GRAD(VAL, NODS)$ */
+/* HES: GRAD(GRA, NODS)$ */
+/* f90(optimize(FLATTEN(HES))); */
+
+/* VAL: surf_normal_align_d3(NODS, eps)$ */
+/* GRA: GRAD(VAL, NODS)$ */
+/* HES: GRAD(GRA, NODS)$ */
+/* f90(optimize(FLATTEN(HES))); */
+
+
 f: openw("polycube.f90")$
 
 block(
@@ -13,12 +49,9 @@ block(
   X:   genmatrix(X, 3, 3),
   eps: genmatrix(eps, 1, 1),
   surf_normal_align(X, eps) := block(
-    [n, norm_n, area],
+    [n],
     n: ratsimp(CROSS(col(X, 2)-col(X, 1), col(X, 3)-col(X, 2))),
-    norm_n: NORM(n),
-    area: 0.5*norm_n,
-    n: n/norm_n,
-    matrix([ area*one_norm(n, eps[1,1]) ])
+    matrix([ 0.5*one_norm(n, eps[1,1]) ])
   ),
   with_stdout(f, val_jac_hes_to_f90(surf_normal_align, [X, eps])),
   return()
