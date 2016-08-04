@@ -21,7 +21,6 @@ class polycube_solver
 public:
   polycube_solver(const mati_t &tets, const matd_t &nods, ptree &pt);
   int deform(matd_t &x) const;
-  int unit_test() const;
 private:
   double eval_polycube_error(const matd_t &x) const;
 private:

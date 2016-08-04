@@ -210,4 +210,5 @@ target_link_libraries(test_polycube
   riemann
   ${Boost_LIBRARIES}
   zjucad-ptree
+  lapack
 )

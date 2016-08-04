@@ -6,7 +6,6 @@
 #include <zjucad/matrix/itr_matrix.h>
 #include <jtflib/mesh/mesh.h>
 #include <Eigen/CholmodSupport>
-#include <zjucad/matrix/io.h>
 #include <Eigen/Eigenvalues>
 
 #include "config.h"
@@ -248,64 +247,6 @@ private:
 //===============================================================================
 //-------------------------------------------------------------------------------
 //===============================================================================
-
-int polycube_solver::unit_test() const {
-  {
-    matd_t nods = zeros<double>(3, 3);
-    double area = 0;
-    nods(0, 1) = 1; nods(1, 1) = -1;
-    nods(0, 2) = 1; nods(1, 2) = 1;
-    triangle_area_(&area, &nods[0]);
-    cout << "area: " << area << endl;
-  }
-  {
-    srand(time(NULL));
-    matd_t nods = rand(3, 4);
-    matd_t dm = nods(colon(), colon(1, 3))-nods(colon(), 0)*ones<double>(1, 3);
-    inv(dm);
-
-    matd_t F = (nods(colon(), colon(1, 3))-nods(colon(), 0)*ones<double>(1, 3))*dm;
-    matd_t U, S, VT;
-    svd(F, U, S, VT);
-    matd_t R = U*VT;
-    double value = 0;
-    tet_distortion_(&value, &nods[0], &dm[0], &R[0]);
-    cout << "distortion: " << value << endl;
-  }
-  {
-    matd_t nods = rand(3, 3);
-    double value = 0, eps = 0.1;
-    surf_normal_align_(&value, &nods[0], &eps);
-    cout << "normal align: " << value << endl;
-  }
-  {
-    matd_t A = rand(3, 3);
-    matd_t ATA = trans(A)*A;
-    cout << ATA << endl;
-    
-    matd_t e(3, 1);
-    eig(ATA, e);
-    matd_t diag(3, 3);
-    for (size_t i = 0; i < 3; ++i)
-      diag(i, i) = e[i];
-    cout << ATA*diag*trans(ATA) << endl;
-  }
-  {
-    matd_t A = rand(3, 3);
-    const double eps = 1;
-    matd_t H(9, 9);
-    surf_normal_align_hes_(&H[0], &A[0], &eps);
-    cout << "H: " << H << endl;
-    
-    matd_t Ht = zeros<double>(9, 9);
-    for (int i = 0; i < 3; ++i) {
-      matd_t tmp = zeros<double>(9, 9);
-      area_normal_align_hes(&A[0], eps, i, &tmp[0]);
-      Ht += tmp;
-    }
-    cout << "Ht: " << Ht << endl;
-  }
-}
 
 polycube_solver::polycube_solver(const mati_t &tets, const matd_t &nods, ptree &pt)
     : tets_(tets), pt_(pt) {
