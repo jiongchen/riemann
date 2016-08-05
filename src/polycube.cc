@@ -30,10 +30,13 @@ extern "C" {
 
   void triangle_area_(double *val, const double *x);
   void triangle_area_jac_(double *jac, const double *x);
+
+  void tri_area_normal_(double *out, const double *x);
+  void tri_area_normal_jac_(double *out, const double *x);
   
 }
 
-void area_normal_align_hes(const double *x, const double eps, const int id, double *out);
+// void area_normal_align_hes(const double *x, const double eps, const int id, double *out);
 
 static inline void calc_def_grad(const double *x, const double *Dm, double *grad) {
   itr_matrix<const double *> X(3, 4, x);
@@ -52,7 +55,8 @@ public:
       triangle_area_(&area, &vert[0]);
       sum_area_ += area;
     }
-    cout << "[Info] surface area: " << sum_area_ << endl;
+    cout << "[INFO] surface area: " << sum_area_ << endl;
+    cout << "[INFO] mean area: " << sum_area_/surf_.size(2) << endl;
   }
   size_t Nx() const {
     return dim_;
@@ -94,14 +98,6 @@ class surf_normal_align_energy : public Functional<double>
 public:
   surf_normal_align_energy(const mati_t &surf, const matd_t &nods, const double eps, const double w)
       : surf_(surf), dim_(nods.size()), eps_(eps), w_(w) {
-    // matd_t vert = zeros<double>(3, 3);
-    // double sum_area = 0, value = 0;
-    // for (size_t i = 0; i < surf.size(2); ++i) {
-    //   vert = nods(colon(), surf(colon(), i));
-    //   triangle_area_(&value, &vert[0]);
-    //   sum_area += value;
-    // }
-    // w_ /= sum_area;
   }
   size_t Nx() const {
     return dim_;
@@ -130,16 +126,23 @@ public:
     itr_matrix<const double *> X(3, dim_/3, x);
     matd_t vert = zeros<double>(3, 3), H = zeros<double>(9, 9), Htmp = zeros<double>(9, 9);
     matd_t e = zeros<double>(9, 1), diag = zeros<double>(9, 9);
+    matd_t gn = zeros<double>(3, 9), n = zeros<double>(3, 1);
     for (size_t i = 0; i < surf_.size(2); ++i) {
       vert = X(colon(), surf_(colon(), i));
-      for (int m = 0; m < 3; ++m) {
-        area_normal_align_hes(&vert[0], eps_, m, &Htmp[0]);
-        eig(Htmp, e);
-        for (size_t k = 0; k < 9; ++k)
-          diag(k, k) = std::max(0.0, e[k]);
-        Htmp = temp(Htmp*temp(diag*trans(Htmp)));
-        H += Htmp;
+      tri_area_normal_(&n[0], &vert[0]);
+      tri_area_normal_jac_(&gn[0], &vert[0]);
+      for (int k = 0; k < 3; ++k) {
+        const double absn = std::sqrt(n[k]*n[k]+eps_);
+        H += eps_/std::pow(absn, 3)*trans(gn(k, colon()))*gn(k, colon());
       }
+      // for (int m = 0; m < 3; ++m) {
+      //   area_normal_align_hes(&vert[0], eps_, m, &Htmp[0]);
+      //   eig(Htmp, e);
+      //   for (size_t k = 0; k < 9; ++k)
+      //     diag(k, k) = std::max(0.0, e[k]);
+      //   Htmp = temp(Htmp*temp(diag*trans(Htmp)));
+      //   H += Htmp;
+      // }
       for (size_t p = 0; p < 9; ++p) {
         for (size_t q = 0; q < 9; ++q) {
           const size_t I = 3*surf_(p/3, i)+p%3;
@@ -245,7 +248,7 @@ private:
 };
 
 //===============================================================================
-//-------------------------------------------------------------------------------
+//-------------------------------- SOLVER ---------------------------------------
 //===============================================================================
 
 polycube_solver::polycube_solver(const mati_t &tets, const matd_t &nods, ptree &pt)
@@ -259,74 +262,78 @@ polycube_solver::polycube_solver(const mati_t &tets, const matd_t &nods, ptree &
   const double wd = pt.get<double>("weight.distortion.value");
   
   buffer_.resize(2);
-  buffer_[0] = alig_ = make_shared<surf_normal_align_energy>(tets, nods, eps, w1);
-  buffer_[1] = arap_ = make_shared<tet_distortion_energy>(tets, nods, wd);
-  energy_ = make_shared<energy_t<double>>(buffer_);
+  buffer_[0] = make_shared<surf_normal_align_energy>(tets, nods, eps, w1);
+  buffer_[1] = make_shared<tet_distortion_energy>(tets, nods, wd);
+  try {
+    energy_ = make_shared<energy_t<double>>(buffer_);
+  } catch ( ... ) {
+    cerr << "[ERROR] exception!" << endl;
+    exit(1);
+  }
   
   area_cons_ = make_shared<area_preserving_cons>(surf_, nods);
 }
 
-double polycube_solver::eval_polycube_error(const matd_t &x) const {
-  double area_sum = 0, align_sum = 0;
-  double area = 0, align = 0;
-  matd_t vert = zeros<double>(3, 3);
-  const double eps = alig_->get_eps();
-  
-  for (size_t i = 0; i < surf_.size(2); ++i) {
-    vert = x(colon(), surf_(colon(), i));
-    surf_normal_align_(&align, &vert[0], &eps);
+static double eval_polycube_error(const mati_t &surf, const matd_t &x) {
+  double area_sum = 0, area = 0;
+  double align_sum = 0, align = 0;
+  matd_t vert = zeros<double>(3, 3), n = zeros<double>(3, 1);
+  for (size_t i = 0; i < surf.size(2); ++i) {
+    vert = x(colon(), surf(colon(), i));
+    tri_area_normal_(&n[0], &vert[0]);
     triangle_area_(&area, &vert[0]);
+    align_sum += fabs(n[0])+fabs(n[1])+fabs(n[2]);
     area_sum += area;
-    align_sum += align;
   }
-
   return align_sum-area_sum;
 }
 
 int polycube_solver::deform(matd_t &x) const {
   const size_t dim = energy_->Nx();
   ASSERT(x.size() == dim);
-  Map<VectorXd> xstar(&x[0], dim);
 
+  const auto alig = dynamic_pointer_cast<surf_normal_align_energy>(buffer_[0]);
+  const auto arap = dynamic_pointer_cast<tet_distortion_energy>(buffer_[1]);
+
+  Map<VectorXd> xstar(&x[0], dim);
   CholmodSimplicialLDLT<SparseMatrix<double>> solver;
 
   const size_t maxits = pt_.get<size_t>("maxits.value");
   matd_t error = zeros<double>(maxits, 1);
   size_t args_update_count = 0, d0 = 0, count = 0;
-  for (size_t iter = 0; iter < maxits; ++iter)
-  {
+
+  for (size_t iter = 0; iter < maxits; ++iter) {
     // evaluate polycube error
-    error[iter] = eval_polycube_error(x);
+    error[iter] = eval_polycube_error(surf_, x);
     if ( iter % 10 == 0 )
       cout << "\t # iter " << iter << ", polycube error: " << error[iter] << endl;
 
     // convergence test
     if ( fabs(error[iter]) < 0.001 || args_update_count > 20 ) {
-      cout << "[INFO] polycube solver converged after " << iter << " iterations" << endl;
+      cout << "\t @polycube solver converged after " << iter << " iterations" << endl;
       break;
     }
     
-    // update parameters for L1 energy
-    if ( count == 20 ) //>= 5 && sum(fabs(error(colon(iter-4, iter))-error(colon(iter-5, iter-1)))) < fabs(error[d0])/100 ) {
-    {
-      cout << "\t ! UPDATE" << endl;
-      ++args_update_count;
-      count = 0;
-      d0 = iter+1;
-      alig_->scaling_args(2, 0.5);
-    }
-    ++count;
+    // // update parameters for L1 energy
+    // ++count;
+    // if ( count == 20 ) {// && sum(fabs(error(colon(iter-4, iter))-error(colon(iter-5, iter-1)))) < fabs(error[d0])/100 ) {
+    //   cout << "\t ! UPDATE" << endl;
+    //   ++args_update_count;
+    //   count = 0;
+    //   d0 = iter+1;
+    //   alig_->scaling_args(2, 0.5);
+    // }
     
     // update rotation
-    arap_->update_rotation(&x[0]);
+    arap->update_rotation(&x[0]);
 
-    // Schur complement for constrained optimization
+    // Schur complement
     double ve = 0; {
       energy_->Val(&x[0], &ve);
       if ( iter % 10 == 0 ) {
         cout << "\t\t energy value: " << ve << endl;
         double vtmp = 0;
-        alig_->Val(&x[0], &vtmp);
+        alig->Val(&x[0], &vtmp);
         cout << "\t\t alignment: " << vtmp << endl;
         cout << "\t\t distortion: " << ve-vtmp << endl;
       }
@@ -351,7 +358,6 @@ int polycube_solver::deform(matd_t &x) const {
 
     solver.compute(H);
     ASSERT(solver.info() == Success);
-
     double lambda = (-gc.dot(solver.solve(g))+vc)/(gc.dot(solver.solve(gc)));
     VectorXd dx = -solver.solve(g)-lambda*solver.solve(gc);
     xstar += dx;

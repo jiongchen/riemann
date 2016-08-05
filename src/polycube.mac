@@ -50,8 +50,8 @@ block(
   eps: genmatrix(eps, 1, 1),
   surf_normal_align(X, eps) := block(
     [n],
-    n: ratsimp(CROSS(col(X, 2)-col(X, 1), col(X, 3)-col(X, 2))),
-    matrix([ 0.5*one_norm(n, eps[1,1]) ])
+    n: ratsimp(CROSS(col(X, 2)-col(X, 1), col(X, 3)-col(X, 2))/2),
+    matrix([ one_norm(n, eps[1,1]) ])
   ),
   with_stdout(f, val_jac_hes_to_f90(surf_normal_align, [X, eps])),
   return()
@@ -63,7 +63,7 @@ block(
   triangle_area(X) := block(
     [n],
     n: ratsimp(CROSS(col(X, 2)-col(X, 1), col(X, 3)-col(X, 2))),
-    matrix([ 0.5*NORM(n) ])
+    matrix([ NORM(n)/2 ])
   ),
   with_stdout(f, val_jac_hes_to_f90(triangle_area, [X])),
   return()

@@ -27,7 +27,10 @@ extern "C" {
 
   void triangle_area_(double *val, const double *x);
   void triangle_area_jac_(double *jac, const double *x);
-  
+
+  void tri_area_normal_(double *out, const double *x);
+  void tri_area_normal_jac_(double *out, const double *x);
+
 }
 
 namespace riemann {
@@ -81,7 +84,7 @@ static void test_lapack_eig() {
 
 static void test_component_wise_hes() {
   matd_t A = 1000*rand(3, 3);
-  const double eps = 1;
+  const double eps = 100;
 
   matd_t H(9, 9);
   surf_normal_align_hes_(&H[0], &A[0], &eps);
@@ -92,18 +95,44 @@ static void test_component_wise_hes() {
     area_normal_align_hes(&A[0], eps, i, &tmp[0]);
     Ht += tmp;
   }
-  cout << "Hessian diff norm: " << norm(H-Ht) << endl;  
+  cout << "Hessian diff rel error: " << norm(H-Ht)/norm(H) << endl;  
+}
+
+static void test_area_normal() {
+  cout << "---------------- TEST CASE ----------------" << endl;
+  matd_t x = 10*rand(3, 3);
+  matd_t n = zeros<double>(3, 1);
+  const double eps = 100;
+
+  tri_area_normal_(&n[0], &x[0]);
+  double a1 = sqrt(n[0]*n[0]+eps)+sqrt(n[1]*n[1]+eps)+sqrt(n[2]*n[2]+eps);
+  double a2 = 0;
+  surf_normal_align_(&a2, &x[0], &eps);
+  cout << "a1 value: " << a1 << endl << "a2 value: " << a2 << endl;
+  cout << "align diff rel error: " << (a1-a2)/a2 << endl;
+
+  matd_t g1 = zeros<double>(9, 1);
+  matd_t jac = zeros<double>(3, 9);
+  tri_area_normal_jac_(&jac[0], &x[0]);
+  for (int i = 0; i < 3; ++i) {
+    g1 += n[i]/sqrt(n[i]*n[i]+eps)*trans(jac(i, colon()));
+  }
+  matd_t g2 = zeros<double>(9, 1);
+  surf_normal_align_jac_(&g2[0], &x[0], &eps);
+  cout << "g1 norm: " << norm(g1) << endl << "g2 norm: " << norm(g2) << endl;
+  cout << "align grad rel error: " << norm(g1-g2)/norm(g2) << endl;
 }
 
 int main(int argc, char *argv[])
 {
-#if 1
+#if 0
   srand(time(NULL));
   test_calc_tri_area();
   test_calc_distortion();
   test_calc_normal_align();
   test_lapack_eig();
   test_component_wise_hes();
+  test_area_normal();
   return __LINE__;
 #endif
   
@@ -122,6 +151,7 @@ int main(int argc, char *argv[])
 
   shared_ptr<polycube_solver> polycube = make_shared<polycube_solver>(tets, nods, pt);
 
+  cout << "[INFO] deform..." << endl;
   matd_t param_nods = nods;
   polycube->deform(param_nods);
 
