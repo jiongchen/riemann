@@ -117,13 +117,6 @@ public:
       double eps = eps_*surf_area_[i];
       surf_normal_align_(&value, &vert[0], &eps);
       *val += w_*value;
-#if 0
-      matd_t n = zeros<double>(3, 1);
-      tri_area_normal_(&n[0], &vert[0]);
-      const double v2 = std::sqrt(n[0]*n[0]+eps)+std::sqrt(n[1]*n[1]+eps)+std::sqrt(n[2]*n[2]+eps);
-      cout << value-v2 << endl;
-      getchar();
-#endif
     }
     return 0;
   }
@@ -141,12 +134,12 @@ public:
   }
   int Hes(const double *x, vector<Triplet<double>> *hes) const {
     const itr_matrix<const double *> X(3, dim_/3, x);
-    matd_t vert = zeros<double>(3, 3), H = zeros<double>(9, 9);
-    matd_t gn = zeros<double>(3, 9), n = zeros<double>(3, 1);
-    matd_t e = zeros<double>(9, 1), diag = zeros<double>(9, 9), Hc = diag;
+    matd_t vert = zeros<double>(3, 3);
+    matd_t H(9, 9), e(9, 1), Hc(9, 9), diag = zeros<double>(9, 9);
     for (size_t i = 0; i < surf_.size(2); ++i) {
       vert = X(colon(), surf_(colon(), i));
       const double eps = eps_*surf_area_[i];
+#if 1
       H = zeros<double>(9, 9);
       for (int k = 0; k < 3; ++k) {
         area_normal_align_hes(&Hc[0], &vert[0], eps, k);
@@ -155,6 +148,16 @@ public:
           diag(ei, ei) = std::max(0.0, e[ei]);
         H += Hc*diag*trans(Hc);
       }
+#else
+      Matrix<double, 9, 9> H; Matrix<double, 3, 9> gn;
+      Vector3d n, dia;
+      tri_area_normal_(n.data(), &vert[0]);
+      tri_area_normal_jac_(gn.data(), &vert[0]);
+      dia[0] = eps/std::pow(n[0]*n[0]+eps, 3.0/2);
+      dia[1] = eps/std::pow(n[1]*n[1]+eps, 3.0/2);
+      dia[2] = eps/std::pow(n[2]*n[2]+eps, 3.0/2);
+      H = gn.transpose()*dia.asDiagonal()*gn;
+#endif
       for (size_t p = 0; p < 9; ++p) {
         for (size_t q = 0; q < 9; ++q) {
           const size_t I = 3*surf_(p/3, i)+p%3;
@@ -327,7 +330,7 @@ int polycube_solver::deform(matd_t &x) const {
     }
     
     // update parameters for L1 energy
-    if ( iter > 0 && iter % 100 == 0 ) {
+    if ( iter > 0 && iter % 20 == 0 ) {
       cout << "\t@UPDATE" << endl;
       ++args_update_count;
       alig->scaling_args(2, 0.5);
@@ -355,6 +358,7 @@ int polycube_solver::deform(matd_t &x) const {
       energy_->Hes(&x[0], &trips);
       H.reserve(trips.size());
       H.setFromTriplets(trips.begin(), trips.end());
+      H.makeCompressed();
     }
     double vc = 0; {
       area_cons_->Val(&x[0], &vc);

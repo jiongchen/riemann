@@ -53,3 +53,7 @@ It's just a spare-time project of my own, consisting of full/partial implementat
 [2016-07-14] Implement spherical harmonics based 3D cross frame field generation [[Huang11]](http://www.cad.zju.edu.cn/home/hj/11/3D-cross-frame.pdf).
 
 ![image] (/img/half_size/singularity.png)
+
+[2016-08-08] Implement the core parts of L1 polycube [[Huang14]](http://www.cad.zju.edu.cn/home/hj/14/l1-poly/l1-poly.pdf).
+
+![image] (/img/half_size/l1_polycube.png)
