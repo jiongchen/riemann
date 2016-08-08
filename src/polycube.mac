@@ -8,20 +8,20 @@ one_norm(x, eps) := absolute(x[1,1], eps)+absolute(x[2,1], eps)+absolute(x[3,1],
 
 /* surf_normal_align_d1(x, epsilon) := block( */
 /*   [n], */
-/*   n: ratsimp(CROSS(col(x, 2)-col(x, 1), col(x, 3)-col(x, 2))), */
-/*   0.5*absolute(n[1, 1], epsilon) */
+/*   n: ratsimp(CROSS(col(x, 2)-col(x, 1), col(x, 3)-col(x, 2))/2), */
+/*   absolute(n[1, 1], epsilon) */
 /* )$ */
 
 /* surf_normal_align_d2(x, epsilon) := block( */
 /*   [n], */
-/*   n: ratsimp(CROSS(col(x, 2)-col(x, 1), col(x, 3)-col(x, 2))), */
-/*   0.5*absolute(n[2, 1], epsilon) */
+/*   n: ratsimp(CROSS(col(x, 2)-col(x, 1), col(x, 3)-col(x, 2))/2), */
+/*   absolute(n[2, 1], epsilon) */
 /* )$ */
 
 /* surf_normal_align_d3(x, epsilon) := block( */
 /*   [n], */
-/*   n: ratsimp(CROSS(col(x, 2)-col(x, 1), col(x, 3)-col(x, 2))), */
-/*   0.5*absolute(n[3, 1], epsilon) */
+/*   n: ratsimp(CROSS(col(x, 2)-col(x, 1), col(x, 3)-col(x, 2))/2), */
+/*   absolute(n[3, 1], epsilon) */
 /* )$ */
 
 /* NODS: matrix([ax, bx, cx], [ay, by, cy], [az, bz, cz]); */
