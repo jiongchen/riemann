@@ -27,6 +27,7 @@ find_path (PETSC_INCLUDE_DIR petsc.h
   HINTS ENV PETSC_DIR
   PATHS
   ${PETSC_DIR}/include
+  ${PETSC_DIR}/${PETSC_ARCH}/include
   # Debian paths
   /usr/lib/petscdir/3.4
   /usr/lib/petscdir/3.3 /usr/lib/petscdir/3.2 /usr/lib/petscdir/3.1

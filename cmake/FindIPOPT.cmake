@@ -51,6 +51,7 @@ ELSEIF(APPLE)
 ELSE( WIN32 )
    find_path(IPOPT_INCLUDE_DIR NAMES IpNLP.hpp
      PATHS  "$ENV{IPOPT_HOME}/include/coin"
+            "$ENV{HOME}/usr/include/coin"
             "/usr/include/coin"
     
    )
@@ -58,6 +59,7 @@ ELSE( WIN32 )
    find_library( IPOPT_LIBRARY 
                  ipopt
                  PATHS "$ENV{IPOPT_HOME}/lib"
+		       "$ENV{HOME}/usr/lib"
                        "/usr/lib" )   
     
     #wrong config under Debian workaround

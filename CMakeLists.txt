@@ -28,8 +28,8 @@ if(EIGEN3_FOUND)
 endif(EIGEN3_FOUND)
 
 # PETSC
-set(PETSC_DIR "/usr/lib/petscdir/3.4.2")
-set(PETSC_ARCH "linux-gnu-cxx-opt")
+set(PETSC_DIR "/usr/lib/petscdir/3.6.2")
+set(PETSC_ARCH "x86_64-linux-gnu-real")
 find_package(PETSc REQUIRED)
 if(PETSC_FOUND)
   include_directories(/usr/lib/openmpi/include)

@@ -46,10 +46,21 @@
   VecCreateSeqWithArray(comm, n, a, v)
 #endif
 
-#if PETSC_VERSION_GT(3, 2, 0)
-#include <petsc-private/matimpl.h>
+#if PETSC_VERSION_LT(3, 5, 0)
+#  define KSPSetOperators_SAME_PC(ksp, A, B) KSPSetOperators(ksp, A, B, SAME_PRECONDITIONER)
 #else
-#include <private/matimpl.h>
+#  define KSPSetOperators_SAME_PC(ksp, A, B) \
+  KSPSetOperators(ksp, A, B); \
+  KSPSetReusePreconditioner(ksp, PETSC_TRUE)
+#endif
+
+#if PETSC_VERSION_GT(3, 4, 0)
+  #include <petsc/private/matimpl.h>
+#else
+  #if PETSC_VERSION_GT(3, 2, 0)
+    #include <petsc-private/matimpl.h>
+  #endif
+  #include <private/matimpl.h>
 #endif
 
 #include <hjlib/sparse/sparse.h>
@@ -96,7 +107,7 @@ class PETsc_CG_imp
           row, col, &ptr_[0], &idx_[0], const_cast<double *>(val), &A_);
     }
     KSPCreate(comm,&solver);
-    KSPSetOperators(solver, A_, A_, SAME_PRECONDITIONER);
+    KSPSetOperators_SAME_PC(solver, A_, A_);
     PC pc;
     KSPGetPC(solver,&pc);
     PCSetType(pc, pc_str);
