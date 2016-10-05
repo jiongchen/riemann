@@ -1,0 +1,32 @@
+load(hj_fortran2)$
+load(cj_function)$
+
+optimprefix: tt$
+
+f: openw("mls.f90")$
+
+block(
+  MT: genmatrix(MT, 2, 3),
+  X:  genmatrix(X,  2, 1),
+  AB: genmatrix(AB, 2, 2),
+  CD: genmatrix(CD, 2, 2),
+
+  mls_line_seg(MT, X, AB, CD) := block(
+    [M, T, p, q, se, w],
+    M: addcol(col(MT, 1), col(MT, 2)),
+    T: col(MT, 3),
+
+    p: (1-t)*col(AB, 1)+t*col(AB, 2),
+    q: (1-t)*col(CD, 1)+t*col(CD, 2),
+
+    se: NORM(M.p+T-q)^2,
+    w: NORM(col(AB, 2)-col(AB, 1)) / NORM(p-X)^4,
+
+    matrix([ ratsimp(integrate(w*se, t, 0, 1)) ])
+  ),
+
+  with_stdout(f, val_jac_hes_to_f90(mls_line_seg, [MT, X, AB, CD])),
+  return()
+)$
+
+close(f)$
