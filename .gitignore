@@ -10,3 +10,4 @@
 !/script/*.sh
 !/script/*.wxm
 !/script/*.tex
+!/script/*.mk
