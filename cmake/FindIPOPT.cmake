@@ -68,7 +68,8 @@ ELSE( WIN32 )
    
    # set optional path to HSL Solver
    find_path(IPOPT_HSL_LIBRARY_DIR NAMES libhsl.so
-     PATHS "$ENV{IPOPT_HSL_LIBRARY_PATH}"
+     PATHS "/usr/local/lib"
+     "$ENV{IPOPT_HSL_LIBRARY_PATH}"
            "$ENV{HOME}/opt/HSL/lib"
    )
    

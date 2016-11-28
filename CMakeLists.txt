@@ -63,6 +63,7 @@ endif(SuiteSparse_FOUND)
 find_package(IPOPT REQUIRED)
 if(IPOPT_FOUND)
   message("-- IPOPT @ ${IPOPT_INCLUDE_DIRS}")
+  message("-- IPOPT lib @ ${IPOPT_LIBRARIES}")
   include_directories(${IPOPT_INCLUDE_DIRS})
 endif(IPOPT_FOUND)
 
