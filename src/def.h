@@ -33,6 +33,9 @@ public:
   virtual size_t Nf() const = 0;
   virtual int Val(const T *x, T *val) const = 0;
   virtual int Jac(const T *x, const size_t off, std::vector<Eigen::Triplet<T>> *jac) const = 0;
+  virtual int Hes(const T *x, const size_t off, std::vector<std::vector<Eigen::Triplet<T>>> *hes) const {
+    return __LINE__;
+  }
 };
 
 template <typename T>
@@ -168,6 +171,18 @@ public:
     for (auto &c : buffer_) {
       if ( c.get() ) {
         c->Jac(x, offset, jac);
+        offset += c->Nf();
+      }
+    }
+    return 0;
+  }
+  int Hes(const T *x, const size_t off, std::vector<std::vector<Eigen::Triplet<T>>> *hes) const {
+    if ( hes->size() != fdim_ )
+      hes->resize(fdim_);
+    size_t offset = 0;
+    for (auto &c : buffer_) {
+      if ( c.get() ) {
+        c->Hes(x, offset, hes);
         offset += c->Nf();
       }
     }
