@@ -15,6 +15,7 @@ ipopt_opt_framework::ipopt_opt_framework(const std::shared_ptr<Functional<Number
                                          Number *x0)
     : obj_(obj), con_(con), x0_(x0), dim_(obj_->Nx())
 {
+  // obj can not be null, con can (unconstrained problem).
   K_.resize(dim_, dim_); {
     vector<Triplet<Number>> trips;
     obj_->Hes(x0, &trips);
@@ -84,9 +85,9 @@ bool ipopt_opt_framework::get_starting_point(Index n, bool init_x, Number* x,
                                              Index m, bool init_lambda,
                                              Number* lambda)
 {
-  ASSERT(init_x == true);
-  ASSERT(init_z == false);
-  ASSERT(init_lambda == false);
+  assert(init_x == true);
+  assert(init_z == false);
+  assert(init_lambda == false);
 
   std::copy(x0_, x0_+dim_, x);
 
@@ -95,7 +96,7 @@ bool ipopt_opt_framework::get_starting_point(Index n, bool init_x, Number* x,
 
 bool ipopt_opt_framework::eval_f(Index n, const Number* x, bool new_x, Number& obj_value)
 {
-  ASSERT(n == obj_->Nx());
+  assert(n == obj_->Nx());
 
   obj_value = 0;
   obj_->Val(x, &obj_value);
@@ -105,7 +106,7 @@ bool ipopt_opt_framework::eval_f(Index n, const Number* x, bool new_x, Number& o
   
 bool ipopt_opt_framework::eval_grad_f(Index n, const Number* x, bool new_x, Number* grad_f)
 {
-  ASSERT(n == obj_->Nx());
+  assert(n == obj_->Nx());
 
   std::fill(grad_f, grad_f+n, 0);
   obj_->Gra(x, grad_f);
@@ -164,13 +165,13 @@ bool ipopt_opt_framework::eval_h(Index n, const Number* x, bool new_x,
                                  Index* jCol, Number* values)
 {
   if (values == NULL) {
-    size_t cnt = 0;
+    size_t count = 0;
     for (size_t j = 0; j < lagH_.outerSize(); ++j) {
       for (SparseMatrix<Number>::InnerIterator it(lagH_, j); it; ++it) {
         if ( it.col() <= it.row() ) {
-          iRow[cnt] = it.row();
-          jCol[cnt] = it.col();
-          ++cnt;
+          iRow[count] = it.row();
+          jCol[count] = it.col();
+          ++count;
         }
       }
     }
@@ -182,27 +183,29 @@ bool ipopt_opt_framework::eval_h(Index n, const Number* x, bool new_x,
       K.setFromTriplets(trips.begin(), trips.end());
       K *= obj_factor;
     }
-    // query H
-    vector<SparseMatrix<Number>> H(m); {
-      vector<vector<Triplet<Number>>> trips(m);
-      con_->Hes(x, 0, &trips);
-      #pragma omp parallel for
-      for (size_t i = 0; i < trips.size(); ++i) {
-        H[i].resize(n, n);
-        H[i].setFromTriplets(trips[i].begin(), trips[i].end());
-        H[i] *= lambda[i];
-      }
-    }
 
-    for (auto &mat : H)
-      K += mat;
+    if ( con_.get () ) {
+      // query H
+      vector<SparseMatrix<Number>> H(m); {
+        vector<vector<Triplet<Number>>> trips(m);
+        con_->Hes(x, 0, &trips);
+        #pragma omp parallel for
+        for (size_t i = 0; i < trips.size(); ++i) {
+          H[i].resize(n, n);
+          H[i].setFromTriplets(trips[i].begin(), trips[i].end());
+          H[i] *= lambda[i];
+        }
+      }
+
+      for (auto &mat : H)
+        K += mat;
+    }
     
-    size_t cnt = 0;
+    size_t count = 0;
     for (size_t j = 0; j < K.outerSize(); ++j) {
       for (SparseMatrix<Number>::InnerIterator it(K, j); it; ++it) {
         if ( it.col() <= it.row() ) {
-          values[cnt] = it.value();
-          ++cnt;
+          values[count++] = it.value();
         }
       }
     }
