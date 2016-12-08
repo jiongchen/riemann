@@ -55,9 +55,9 @@ void rm_spmat_col_row(Eigen::SparseMatrix<T> &A,
   rm_spmat_col_row<T>(A, g2l);
 }
 
-template <typename T>
+template <typename T, class Con>
 void rm_spmat_col_row(Eigen::SparseMatrix<T> &A,
-                      const std::vector<size_t> &g2l) {
+                      const Con &g2l) {
   size_t new_size = 0;
   for (size_t i = 0; i < g2l.size(); ++i) {
     if ( g2l[i] != -1)
@@ -137,6 +137,11 @@ inline T cal_cot_val(const T *point_set) {
 template <typename T>
 inline T safe_acos(const T cosval) {
   return std::acos(std::min(1.0, std::max(-1.0, cosval)));
+}
+
+template <typename T>
+inline T safe_sqrt(const T val) {
+  return std::sqrt(std::max(static_cast<T>(0), val));
 }
 
 template <typename INT=size_t>
