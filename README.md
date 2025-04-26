@@ -1,8 +1,10 @@
-#Riemann#
+# Riemann
 
 It's just a spare-time project of my own, consisting of full/partial implementations of some papers in geometry processing, or whatever is amazing.
 
-## Log ##
+## Log
+
+[2025-04-26] Spent the whole afternoon recompiling this old code from my PhD days... Finally made it through! :sunglasses: :tada:
 
 [2015-04-15] Implement LSCM/DCP, see [[Mullen08]](https://hal.inria.fr/inria-00334477/document).
 
