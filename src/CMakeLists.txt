@@ -61,10 +61,9 @@ set(f90_source quad_scalar_field.f90 dt_energy.f90 wave_condition.f90
 add_library(riemann SHARED ${header} ${source} ${f90_source})
 target_link_libraries(riemann
     jtf-mesh
-    ${PETSC_LIBRARIES}
     ${UMFPACK_LIBRARIES}
     ${ARPACK_LIBRARIES}
-    alglib
-    minpack
-    lbfgs
+    ${ALGLIB_LIBRARIES}
+    ${LBFGS_LIBRARIES}    
+    ${MINPACK_LIBRARIES}
 )

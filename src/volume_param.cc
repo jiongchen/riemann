@@ -1,9 +1,8 @@
 #include "volume_param.h"
 
-#include <hjlib/math/blas_lapack.h>
-#include <zjucad/matrix/lapack.h>
-
 #include "def.h"
+#include "blas_lapack.h"
+#include <zjucad/matrix/lapack.h>
 
 namespace riemann {
 

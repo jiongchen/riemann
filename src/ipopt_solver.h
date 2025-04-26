@@ -1,6 +1,7 @@
 #ifndef WRAPPED_IPOPT_SOLVER_H
 #define WRAPPED_IPOPT_SOLVER_H
 
+#if 0
 #include <IpTNLP.hpp>
 #include <memory>
 #include <Eigen/Sparse>
@@ -60,5 +61,6 @@ protected:
 };
 
 }
+#endif
 
 #endif

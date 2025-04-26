@@ -3,7 +3,8 @@
 #include <zjucad/matrix/matrix.h>
 #include <jtflib/mesh/mesh.h>
 #include <jtflib/mesh/util.h>
-#include <hjlib/math/blas_lapack.h>
+
+#include "blas_lapack.h"
 #include <zjucad/matrix/lapack.h>
 
 using namespace std;

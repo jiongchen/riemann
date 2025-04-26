@@ -12,7 +12,7 @@
 #include <igl/cotmatrix.h>
 #include <igl/readOBJ.h>
 #include <igl/boundary_loop.h>
-#include <hjlib/math/blas_lapack.h>
+#include "src/blas_lapack.h"
 #include <zjucad/matrix/lapack.h>
 
 #include "src/config.h"

@@ -3,13 +3,13 @@
 #include <jtflib/mesh/mesh.h>
 #include <jtflib/mesh/io.h>
 #include <jtflib/mesh/util.h>
-#include <hjlib/math/blas_lapack.h>
-#include <zjucad/matrix/lapack.h>
 #include <zjucad/ptree/ptree.h>
 #include <zjucad/matrix/io.h>
 
 #include "src/polycube.h"
 #include "src/vtk.h"
+#include "src/blas_lapack.h"
+#include <zjucad/matrix/lapack.h>
 
 using namespace std;
 using namespace riemann;

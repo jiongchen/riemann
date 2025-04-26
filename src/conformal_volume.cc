@@ -2,14 +2,14 @@
 
 #include <iostream>
 #include <fstream>
-#include <hjlib/math/blas_lapack.h>
 #include <zjucad/matrix/itr_matrix.h>
-#include <zjucad/matrix/lapack.h>
 
 #include "config.h"
 #include "grad_operator.h"
 #include "util.h"
 #include "vtk.h"
+#include "blas_lapack.h"
+#include <zjucad/matrix/lapack.h>
 
 using namespace std;
 using namespace Eigen;

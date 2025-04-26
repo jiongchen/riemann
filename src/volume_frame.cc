@@ -4,8 +4,6 @@
 #include <zjucad/matrix/itr_matrix.h>
 #include <jtflib/mesh/mesh.h>
 #include <jtflib/mesh/util.h>
-#include <hjlib/math/blas_lapack.h>
-#include <zjucad/matrix/lapack.h>
 #include <Eigen/Sparse>
 #include <Eigen/CholmodSupport>
 #include <unsupported/Eigen/MatrixFunctions>
@@ -16,8 +14,9 @@
 #include "lbfgs_solve.h"
 #include "sh_zyz_convert.h"
 #include "util.h"
-#include "petsc_linear_solver.h"
 #include "geometry_extend.h"
+#include "blas_lapack.h"
+#include <zjucad/matrix/lapack.h>
 
 using namespace std;
 using namespace zjucad::matrix;
@@ -366,13 +365,7 @@ int cross_frame_opt::solve_laplacian(VectorXd &Fs) const {
 
   const string linear_solver = pt_.get<string>("lins.type.value", "PETSc");
   VectorXd dx = VectorXd::Zero(dim);
-  if ( linear_solver == "PETSc" ) {
-    static shared_ptr<PETsc_imp> petsc_init = make_shared<PETsc_imp>();
-    shared_ptr<PETsc_CG_imp> solver =
-        make_shared<PETsc_CG_imp>(H.valuePtr(), H.innerIndexPtr(), H.outerIndexPtr(), H.nonZeros(),
-                                  dim, dim, "sor");
-    solver->solve(g.data(), dx.data(), dim);
-  } else {
+  if ( true ) {
     CholmodSimplicialLLT<SparseMatrix<double>> solver;
     solver.compute(H);
     ASSERT(solver.info() == Success);

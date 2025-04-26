@@ -1,8 +1,6 @@
 #include "polycube.h"
 
 #include <iostream>
-#include <hjlib/math/blas_lapack.h>
-#include <zjucad/matrix/lapack.h>
 #include <zjucad/matrix/itr_matrix.h>
 #include <jtflib/mesh/mesh.h>
 #include <Eigen/CholmodSupport>
@@ -12,6 +10,9 @@
 
 #include "config.h"
 #include "def.h"
+#include "blas_lapack.h"
+
+#include <zjucad/matrix/lapack.h>
 
 using namespace std;
 using namespace Eigen;

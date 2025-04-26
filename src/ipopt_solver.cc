@@ -1,5 +1,6 @@
 #include "ipopt_solver.h"
 
+#if 0
 #include <iostream>
 
 #include "config.h"
@@ -225,3 +226,5 @@ void ipopt_opt_framework::finalize_solution(SolverReturn status,
 }
 
 }
+
+#endif

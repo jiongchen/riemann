@@ -1,6 +1,7 @@
 #include "image.h"
 
 #include <algorithm>
+#include <cmath>
 
 using namespace std;
 
@@ -36,9 +37,9 @@ double image_t::operator ()(const int x, const int y) const {
 
 double image_t::sample(const double x, const double y) const {
   // bilinear interpolation
-  double ax = x-floor(x), ay = y-floor(y);
+  double ax = x-std::floor(x), ay = y-std::floor(y);
   double bx = 1.0-ax, by = 1.0-ay;
-  int x0 = (int)floor(x), y0 = (int)floor(y);
+  int x0 = (int)std::floor(x), y0 = (int)std::floor(y);
   int x1 = x0+1, y1 = y0+1;
   clamp(x0, y0);
   clamp(x1, y1);

@@ -4,7 +4,7 @@
 #include <algorithm>
 #include <stdexcept>
 #include <vector>
-#include <eigen3/Eigen/Core>
+#include <Eigen/Core>
 
 // ARPACK interface
 extern "C" {
