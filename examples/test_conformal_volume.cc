@@ -33,7 +33,7 @@ int main(int argc, char *argv[])
   boost::filesystem::create_directories(json["output_dir"].asString());
 
   mati_t tets; matd_t nods;
-  jtf::mesh::tet_mesh_read_from_zjumat(json["mesh"].asString().c_str(), &nods, &tets);
+  jtf::mesh::tet_mesh_read_from_vtk(json["mesh"].asString().c_str(), &nods, &tets);
   matd_t verts = zeros<double>(4, nods.size(2));
   verts(colon(1, 3), colon()) = nods;
 

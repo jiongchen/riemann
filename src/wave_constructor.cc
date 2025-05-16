@@ -678,7 +678,7 @@ int wave_constructor::solve_wave_soft_feature() {
   const size_t fdim = constraint_->Nf();
   Map<VectorXd> X(&f_[0], xdim);
 
-  for (size_t iter = 0; iter < 10000; ++iter) {
+  for (size_t iter = 0; iter < 2000; ++iter) {
     VectorXd cv = VectorXd::Zero(fdim); {
       constraint_->Val(&X[0], cv.data());
       if ( iter % 100 == 0 ) {
@@ -699,7 +699,7 @@ int wave_constructor::solve_wave_soft_feature() {
     ASSERT(ltl_solver_.info() == Success);
     double x_norm = X.norm();
     X += dx;
-    if ( dx.norm() <= 1e-10*x_norm ) {
+    if ( dx.norm() <= 1e-6*x_norm ) {
       cout << "\t@converged\n";
       break;
     }

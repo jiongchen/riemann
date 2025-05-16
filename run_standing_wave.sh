@@ -2,14 +2,8 @@
 
 exe=build/examples/test_wave_construction
 
-mesh=dat/plane_re.obj
-frame=dat/plane_re.ef
-feature=dat/plane_re.fl
-
-mesh=dat/wave_special_mesh.obj
-frame=dat/wave_special_mesh.ef
-feature=dat/wave_special_mesh.fl
+mesh=dat/plane_re_sub2.obj
+frame=dat/plane_re_sub2.ef
+feature=dat/plane_re_sub2.fl
 
 ${exe} ${mesh} ${frame} ${feature}
-
-mv standing_wave result/

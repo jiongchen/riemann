@@ -1,5 +1,5 @@
 {
-	"mesh": "../../dat/ball.tet",
+	"mesh": "dat/tets/sphere.c13k.vtk",
 	"charges": [
 	{
 		"pos": [1.25, 0, 0],
@@ -14,5 +14,5 @@
 		"intensity": 500.0
 	}
 	],
-	"output_dir": "./conformal_volume" 
+	"output_dir": "result/conformal_volume" 
 }
