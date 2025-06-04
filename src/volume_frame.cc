@@ -363,10 +363,10 @@ int cross_frame_opt::solve_laplacian(VectorXd &Fs) const {
     H.makeCompressed();
   }
 
-  const string linear_solver = pt_.get<string>("lins.type.value", "PETSc");
+  //  const string linear_solver = pt_.get<string>("lins.type.value", "PETSc");
   VectorXd dx = VectorXd::Zero(dim);
   if ( true ) {
-    CholmodSimplicialLLT<SparseMatrix<double>> solver;
+    CholmodSupernodalLLT<SparseMatrix<double>> solver;
     solver.compute(H);
     ASSERT(solver.info() == Success);
     dx = solver.solve(g);
