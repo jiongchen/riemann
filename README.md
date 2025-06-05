@@ -48,9 +48,9 @@ It's just a spare-time project of my own, consisting of full/partial implementat
 
 ![image](img/half_size/arap_param.png)
 
-[2016-03-29] Implement close-to-conformal deformations of volumes with charges as the conformal factor design tools [[Chern15]](http://dl.acm.org/citation.cfm?id=2766916).
+[2016-03-29] Implement close-to-conformal deformations of volumes with charges as the conformal factor design tools [[Chern et al. 2015]](http://dl.acm.org/citation.cfm?id=2766916).
 
-![image](img/half_size/conformal_volume.png)
+![image](img/conformal_volume.png)
 
 [2016-07-14] Implement spherical harmonics based 3D cross frame field generation [[Huang et al. 2011]](http://www.cad.zju.edu.cn/home/hj/11/3D-cross-frame.pdf). Try `run_volume_frame.sh` for some examples.
 
@@ -58,4 +58,4 @@ It's just a spare-time project of my own, consisting of full/partial implementat
 
 [2016-08-08] Implement the core parts of L1 polycube [[Huang et al. 2014]](http://www.cad.zju.edu.cn/home/hj/14/l1-poly/l1-poly.pdf).
 
-![image](img/half_size/l1_polycube.png)
+![image](img/l1_polycube.png)
