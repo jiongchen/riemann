@@ -26,7 +26,9 @@ It's just a spare-time project of my own, consisting of full/partial implementat
 
 [2015-12-01] Implement a 3D bounded distortion solver according to [[Kovalsky et al. 2015]](http://www.wisdom.weizmann.ac.il/~ylipman/2015_LargeScaleBD.pdf).
 
-[2016-01-03] Implement spin transformations without considering boundary conditions [[Crane et al. 2011]](http://www.cs.columbia.edu/~keenan/Projects/SpinTransformations/paper.pdf).
+[2016-01-03] Implement spin transformations without considering boundary conditions [[Crane et al. 2011]](http://www.cs.columbia.edu/~keenan/Projects/SpinTransformations/paper.pdf). Try `run_spin_transform.sh`.
+
+![image](img/spin.png)
 
 [2016-02-18] Implement ARAP parameterization [[Liu et al. 2008]](http://www.cs.harvard.edu/~sjg/papers/arap.pdf).
 
