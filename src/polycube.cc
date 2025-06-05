@@ -311,7 +311,8 @@ int polycube_solver::deform(matd_t &x) const {
   const auto arap = dynamic_pointer_cast<tet_distortion_energy>(buffer_[1]);
 
   Map<VectorXd> xstar(&x[0], dim);
-  CholmodSimplicialLDLT<SparseMatrix<double>> solver;
+  CholmodSupernodalLLT<SparseMatrix<double>> solver;
+  //  CholmodSimplicia<SparseMatrix<double>> solver;
 
   const size_t maxits = pt_.get<size_t>("maxits.value");
   matd_t error = zeros<double>(maxits, 1);

@@ -3,11 +3,11 @@
 	"charges": [
 	{
 		"pos": [1.25, 0, 0],
-		"intensity": 1000.0
+		"intensity": 10000.0
 	},
 	{
 		"pos": [-1.25, 0, 0],
-		"intensity": 1000.0
+		"intensity": 10000.0
 	},
 	{
 		"pos": [0, 0, 2],

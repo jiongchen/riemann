@@ -142,7 +142,17 @@ int main(int argc, char *argv[])
   const string outdir = pt.get<string>("outdir.value");
   
   mati_t tets; matd_t nods;
-  jtf::mesh::tet_mesh_read_from_vtk(pt.get<string>("mesh.value").c_str(), &nods, &tets); {
+  jtf::mesh::tet_mesh_read_from_vtk(pt.get<string>("mesh.value").c_str(), &nods, &tets);
+
+  // normalize the mesh
+  matd_t center = nods*ones<double>(nods.size(2), 1)/nods.size(2);
+  nods -= center*ones<double>(1, nods.size(2));
+  matd_t rad(nods.size(2), 1);
+  for (size_t i = 0; i < nods.size(2); ++i) {
+    rad[i] = norm(nods(colon(), i));
+  }
+  nods /= max(rad);  
+  {
     string outfile = outdir+string("/orig.vtk");
     ofstream ofs(outfile);
     tet2vtk(ofs, &nods[0], nods.size(2), &tets[0], tets.size(2));
