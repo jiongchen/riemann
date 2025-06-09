@@ -1,22 +1,3 @@
-add_executable(test_lscm test_lscm.cc)
-target_link_libraries(test_lscm
-  ${Boost_LIBRARIES}
-  )
-
-add_executable(test_unit test_unit.cc)
-target_link_libraries(test_unit
-  riemann
-  zjucad-ptree
-  ${Boost_LIBRARIES}
-  lapack
-  )
-
-add_executable(test_dcp test_dcp.cc)
-target_link_libraries(test_dcp
-  riemann
-  ${Boost_LIBRARIES}
-  )
-
 add_executable(test_green_2d test_green_2d.cc)
 target_link_libraries(test_green_2d
   riemann
@@ -106,12 +87,6 @@ target_link_libraries(test_spin_trans
   ${Boost_LIBRARIES}
   )
 
-add_executable(test_arap_param test_arap_param.cc)
-target_link_libraries(test_arap_param
-  riemann
-  ${Boost_LIBRARIES}
-  )
-
 add_executable(test_local_edit test_local_edit.cc)
 target_link_libraries(test_local_edit
   riemann
@@ -126,13 +101,6 @@ target_link_libraries(test_conformal_volume
 
 add_executable(test_vol_frame test_vol_frame.cc)
 target_link_libraries(test_vol_frame
-  riemann
-  ${Boost_LIBRARIES}
-  zjucad-ptree
-  )
-
-add_executable(compare_cubic_smooth compare_cubic_smooth.cc)
-target_link_libraries(compare_cubic_smooth
   riemann
   ${Boost_LIBRARIES}
   zjucad-ptree
