@@ -53,5 +53,11 @@ if(MINPACK_FOUND)
   message("-- minpack @ ${MINPACK_INCLUDE_DIRS}")
 endif(MINPACK_FOUND)
 
+# Arpack
+find_package(Arpack REQUIRED)
+if(ARPACK_FOUND)
+  message("-- arpack @ ${ARPACK_LIBRARIES}")
+endif(ARPACK_FOUND)
+
 add_subdirectory(src)
 add_subdirectory(examples)
