@@ -1,8 +1,12 @@
 # Riemann
 
+[![CMake on a single platform](https://github.com/jiongchen/riemann/actions/workflows/cmake-single-platform.yml/badge.svg?branch=master)](https://github.com/jiongchen/riemann/actions/workflows/cmake-single-platform.yml)
+
 It's just a spare-time project of my own, consisting of full/partial implementations of some papers in geometry processing, or whatever is amazing.
 
 ## Log
+
+[2025-09-07] Added GitHub Actions workflow (`.git/workflows/build.yml`) to set up CI.
 
 [2025-04-26] Spent the whole afternoon recompiling this old code from my PhD days... Finally made it through! :sunglasses: :tada:
 
